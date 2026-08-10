@@ -1,0 +1,4 @@
+# SPA fallback — used by Netlify-compatible hosts.
+# On Render, also set Dashboard → Redirects/Rewrites:
+#   Source: /*   Destination: /index.html   Action: Rewrite
+/*    /index.html   200

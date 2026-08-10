@@ -1,0 +1,39 @@
+# GamiBAR — Render Static Site
+# If this service was created via the Dashboard (not Blueprint), you MUST also add
+# Redirects/Rewrites → Source: /*  Destination: /index.html  Action: Rewrite
+services:
+  - type: web
+    name: gamibar
+    runtime: static
+    branch: main
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      # Dynamic room / play paths (no physical HTML files)
+      - type: rewrite
+        source: /author/room/*
+        destination: /index.html
+      - type: rewrite
+        source: /play/*
+        destination: /index.html
+      # Catch-all SPA fallback (client-side routes)
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Set these in the Render Dashboard (build-time Vite embeds them):
+      # VITE_SUPABASE_URL
+      # VITE_SUPABASE_ANON_KEY
+      # VITE_PUBLIC_APP_URL

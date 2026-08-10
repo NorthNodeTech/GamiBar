@@ -1,0 +1,911 @@
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Rocket,
+  Upload,
+} from "lucide-react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { toast } from "sonner";
+
+import { AuthorWizardSteps } from "@/components/author/AuthorWizardSteps";
+import { GameModePicker } from "@/components/author/GameModePicker";
+import { GameTimerSettings } from "@/components/author/GameTimerSettings";
+import { ConnectDots } from "@/components/games/ConnectDots";
+import { AuthorShell } from "@/components/layout/AuthorShell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
+import {
+  CONNECT_DOTS_CONFIG,
+  generateConnectDotsPuzzle,
+  type ConnectDotsDifficulty,
+} from "@/lib/connect-dots";
+import { saveAuthorRoom } from "@/lib/game/client-session";
+import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
+import { getModeCatalog } from "@/lib/game/mode-catalog";
+import { createRoomFn } from "@/lib/game/room.functions";
+import { defaultTimerSeconds, formatTimerLong, gameInstruction } from "@/lib/game/timer";
+import type { ConnectDotsBoardConfig, GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
+import {
+  emptyQuizQuestions,
+  quizCompletionCount,
+  validateGamePayload,
+  validateJigsawFile,
+} from "@/lib/game/validation";
+import { listQuestionSets } from "@/lib/question-bank";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/author/create")({
+  beforeLoad: () => {
+    const auth = getStoredAuth();
+    if (!isAuthorAuthenticated(auth)) {
+      throw redirect({
+        to: "/author/login",
+        search: { redirect: sanitizeAuthorRedirect("/author/create") },
+      });
+    }
+  },
+  head: () => ({
+    meta: [{ title: "Create Session - GamiBAR" }],
+  }),
+  component: CreateRoomWizard,
+});
+
+type Step = "details" | "mode" | "configure" | "review";
+
+function CreateRoomWizard() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [step, setStep] = useState<Step>("details");
+  const [name, setName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [mode, setMode] = useState<GameMode | null>(null);
+  const [questions, setQuestions] = useState<QuizQuestionDraft[]>(() => emptyQuizQuestions("quiz"));
+  const [rewardCode, setRewardCode] = useState("");
+  const [connectDotsBoard, setConnectDotsBoard] = useState<ConnectDotsBoardConfig | null>(null);
+  const [connectDotsDifficulty, setConnectDotsDifficulty] =
+    useState<ConnectDotsDifficulty>("medium");
+  const [jigsawUrl, setJigsawUrl] = useState<string | null>(null);
+  const [jigsawMime, setJigsawMime] = useState<string | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState<number | null>(null);
+  const [activeQ, setActiveQ] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+
+  const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
+  const modeCatalog = getModeCatalog(mode);
+
+  useEffect(() => {
+    if (mode !== "connect_dots") return;
+    const puzzle = generateConnectDotsPuzzle(connectDotsDifficulty);
+    setConnectDotsBoard({
+      difficulty: puzzle.publicBoard.difficulty,
+      gridSize: puzzle.publicBoard.gridSize,
+      pairCount: puzzle.pairCount,
+      seed: puzzle.publicBoard.seed,
+      pairs: puzzle.publicBoard.pairs,
+      solution: puzzle.solution,
+    });
+    setTimerSeconds(puzzle.timeLimitSeconds);
+  }, [mode, connectDotsDifficulty]);
+
+  const payload: GamePayload | null = useMemo(() => {
+    if (!mode) return null;
+    if (mode === "quiz") {
+      return { mode: "quiz", questions, timeLimitSeconds: timerSeconds };
+    }
+    if (mode === "quiz_jigsaw") {
+      return {
+        mode: "quiz_jigsaw",
+        questions,
+        jigsaw: {
+          imageUrl: jigsawUrl,
+          imageMime: jigsawMime,
+          cols: GAME_CONFIG.quiz_jigsaw.cols,
+          rows: GAME_CONFIG.quiz_jigsaw.rows,
+        },
+        rewardCode: rewardCode.trim(),
+        timeLimitSeconds: timerSeconds,
+      };
+    }
+    if (mode === "jigsaw") {
+      return {
+        mode: "jigsaw",
+        jigsaw: {
+          imageUrl: jigsawUrl,
+          imageMime: jigsawMime,
+          cols: GAME_CONFIG.jigsaw.cols,
+          rows: GAME_CONFIG.jigsaw.rows,
+        },
+        timeLimitSeconds: timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
+      };
+    }
+    if (!connectDotsBoard) return null;
+    return {
+      mode: "connect_dots",
+      connectDots: connectDotsBoard,
+      timeLimitSeconds:
+        timerSeconds ??
+        CONNECT_DOTS_CONFIG[connectDotsBoard.difficulty].timeLimitSeconds,
+    };
+  }, [mode, questions, connectDotsBoard, jigsawUrl, jigsawMime, timerSeconds, rewardCode]);
+
+  const configValid = payload && mode ? validateGamePayload(mode, payload).ok : false;
+
+  const configureHint = useMemo(() => {
+    if (step !== "configure" || !mode || !payload) {
+      return step === "configure" && !mode ? "Pick a game type before building content." : null;
+    }
+    const result = validateGamePayload(mode, payload);
+    return result.ok ? null : result.error;
+  }, [step, mode, payload]);
+
+  const canContinue =
+    !submitting &&
+    (step === "details" ||
+      (step === "mode" && Boolean(mode)) ||
+      (step === "configure" && configValid));
+
+  const goNext = () => {
+    if (step === "details") {
+      if (!name.trim()) {
+        toast.error("Enter a room / session name.");
+        return;
+      }
+      setStep("mode");
+      return;
+    }
+    if (step === "mode") {
+      if (!mode) {
+        toast.error("Select a game type.");
+        return;
+      }
+      setStep("configure");
+      return;
+    }
+    if (step === "configure") {
+      if (!mode || !payload) return;
+      const v = validateGamePayload(mode, payload);
+      if (!v.ok) {
+        toast.error(v.error);
+        return;
+      }
+      setStep("review");
+    }
+  };
+
+  const goBack = () => {
+    if (step === "mode") setStep("details");
+    else if (step === "configure") setStep("mode");
+    else if (step === "review") setStep("configure");
+  };
+
+  const handleModeSelect = (next: GameMode) => {
+    setMode(next);
+    setTimerSeconds(defaultTimerSeconds(next));
+    if (next === "quiz" || next === "quiz_jigsaw") {
+      setQuestions(emptyQuizQuestions(next));
+      setActiveQ(0);
+    }
+  };
+
+  const handleImage = async (file: File | undefined) => {
+    if (!file) return;
+    const v = validateJigsawFile(file);
+    if (!v.ok) {
+      toast.error(v.error);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setJigsawUrl(String(reader.result));
+      setJigsawMime(file.type);
+      toast.success("Puzzle image locked in.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreate = async () => {
+    if (!mode || !payload || !user || !isAuthorAuthenticated(user)) return;
+    const v = validateGamePayload(mode, payload);
+    if (!v.ok) {
+      toast.error(v.error);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await createRoomFn({
+        data: {
+          name: name.trim(),
+          subject: subject.trim() || "General",
+          authorId: user.id,
+          authorName: user.name,
+          mode,
+          payload,
+        },
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      saveAuthorRoom({
+        roomId: result.room.id,
+        code: result.room.code,
+        authorToken: result.authorToken,
+      });
+      toast.success(`Room ${result.room.code} is ready.`);
+      navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create room.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const isCompactStep = step === "details";
+
+  return (
+    <AuthorShell>
+      <div
+        className={cn(
+          "mx-auto w-full pb-6 md:pb-8",
+          isCompactStep ? "max-w-lg" : "max-w-5xl",
+        )}
+      >
+        <Link
+          to="/author"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-[#525252] transition-colors hover:text-[#111111]"
+        >
+          <ChevronLeft className="size-4" />
+          Author home
+        </Link>
+
+        <div
+          className={cn(
+            "mt-3 rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]",
+            step === "mode" && "overflow-visible",
+          )}
+        >
+          <div className="border-b border-[var(--gamibar-border)] px-4 py-3.5 sm:px-5 sm:py-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--gamibar-brand)]">
+              Create session
+            </p>
+            <h1 className="mt-0.5 font-display text-xl font-extrabold text-[#111111] sm:text-2xl">
+              {step === "details" && "Session details"}
+              {step === "mode" && "Pick a game"}
+              {step === "configure" && "Game content"}
+              {step === "review" && "Launch preview"}
+            </h1>
+            {step === "details" && (
+              <p className="mt-1 text-sm text-[#525252]">
+                Name your room so students know they joined the right session.
+              </p>
+            )}
+            {step === "mode" && (
+              <p className="mt-1 text-sm text-[#525252]">
+                Choose the game that fits this lesson.
+              </p>
+            )}
+            {step === "configure" && mode && (
+              <p className="mt-1 text-sm text-[#525252]">
+                {mode === "quiz" &&
+                  `Add ${GAME_CONFIG.quiz.questionCount} multiple-choice questions for your class.`}
+                {mode === "quiz_jigsaw" &&
+                  `Add ${GAME_CONFIG.quiz_jigsaw.questionCount} questions, upload a puzzle image, and set a reward code.`}
+                {mode === "jigsaw" && "Upload one image - we split it into puzzle pieces automatically."}
+                {mode === "connect_dots" &&
+                  "Choose a difficulty - we generate one solvable puzzle for the whole class."}
+              </p>
+            )}
+            <AuthorWizardSteps current={step} compact className="mt-3 sm:mt-4" />
+          </div>
+
+          <div
+            className={cn(
+              "px-4 py-4 sm:px-5 sm:py-5",
+              step === "mode" && "overflow-visible",
+            )}
+          >
+            {step === "details" && (
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="room-name">Room / session name</Label>
+                  <Input
+                    id="room-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Biology Battle - Period 3"
+                    className="h-11 rounded-xl text-base"
+                    autoFocus
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="subject">Subject / topic (optional)</Label>
+                  <Input
+                    id="subject"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Biology, Algebra, History…"
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
+
+            {step === "mode" && <GameModePicker value={mode} onChange={handleModeSelect} />}
+
+            {step === "configure" && !mode && (
+              <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center">
+                <p className="text-sm font-medium text-[#111111]">No game selected</p>
+                <p className="mt-1 text-sm text-[#525252]">
+                  Go back and pick Quiz, Jigsaw, or Connect Dots.
+                </p>
+                <Button type="button" variant="outline" size="sm" className="mt-4 rounded-xl" onClick={goBack}>
+                  Pick a game
+                </Button>
+              </div>
+            )}
+
+            {step === "configure" && mode && (
+              <div className="grid gap-5">
+                <GameTimerSettings mode={mode} value={timerSeconds} onChange={setTimerSeconds} />
+
+                {mode === "quiz" && (
+                  <QuizEditor
+                    questions={questions}
+                    activeQ={activeQ}
+                    setActiveQ={setActiveQ}
+                    setQuestions={setQuestions}
+                    progress={quizProgress}
+                  />
+                )}
+
+                {mode === "quiz_jigsaw" && (
+                  <>
+                    {listQuestionSets().length > 0 && (
+                      <div className="rounded-2xl border border-[#E5E7EB] bg-[#FAFAFA] p-4">
+                        <Label className="text-xs uppercase tracking-wider text-[#737373]">
+                          Import from question bank
+                        </Label>
+                        <select
+                          className="mt-2 h-11 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm"
+                          defaultValue=""
+                          onChange={(e) => {
+                            const set = listQuestionSets().find((s) => s.id === e.target.value);
+                            if (!set) return;
+                            const count = GAME_CONFIG.quiz_jigsaw.questionCount;
+                            setQuestions(
+                              set.questions.slice(0, count).map((q, i) => ({
+                                ...q,
+                                id: `q-${i + 1}`,
+                              })),
+                            );
+                            if (set.subject) setSubject(set.subject);
+                            toast.success(`Loaded "${set.name}" (${Math.min(set.questions.length, count)} questions).`);
+                          }}
+                        >
+                          <option value="">Choose a saved set…</option>
+                          {listQuestionSets().map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} ({s.questions.length} questions)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <QuizEditor
+                      questions={questions}
+                      activeQ={activeQ}
+                      setActiveQ={setActiveQ}
+                      setQuestions={setQuestions}
+                      progress={quizProgress}
+                      accent="purple"
+                    />
+                    <JigsawUploader
+                      jigsawUrl={jigsawUrl}
+                      timerLabel={formatTimerLong(timerSeconds ?? GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600)}
+                      onFile={handleImage}
+                      label="Puzzle image"
+                      hint="Students reveal this image piece by piece as they answer correctly."
+                    />
+                    <div className="grid gap-2 rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5">
+                      <Label htmlFor="reward-code">Reward code</Label>
+                      <Input
+                        id="reward-code"
+                        value={rewardCode}
+                        onChange={(e) => setRewardCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. BIO2026"
+                        className="h-11 rounded-xl font-mono text-base uppercase tracking-widest"
+                        maxLength={16}
+                      />
+                      <p className="text-xs text-[#737373]">
+                        Shown to students when all 9 puzzle pieces are unlocked.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {mode === "jigsaw" && (
+                  <JigsawUploader
+                    jigsawUrl={jigsawUrl}
+                    timerLabel={formatTimerLong(timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)}
+                    onFile={handleImage}
+                  />
+                )}
+
+                {mode === "connect_dots" && connectDotsBoard && (
+                  <ConnectDotsConfigurator
+                    difficulty={connectDotsDifficulty}
+                    onDifficultyChange={setConnectDotsDifficulty}
+                    board={connectDotsBoard}
+                    onRegenerate={() => {
+                      const puzzle = generateConnectDotsPuzzle(connectDotsDifficulty);
+                      setConnectDotsBoard({
+                        difficulty: puzzle.publicBoard.difficulty,
+                        gridSize: puzzle.publicBoard.gridSize,
+                        pairCount: puzzle.pairCount,
+                        seed: puzzle.publicBoard.seed,
+                        pairs: puzzle.publicBoard.pairs,
+                        solution: puzzle.solution,
+                      });
+                      setTimerSeconds(puzzle.timeLimitSeconds);
+                      toast.success("New puzzle generated for this room.");
+                    }}
+                    timerLabel={formatTimerLong(
+                      timerSeconds ??
+                        CONNECT_DOTS_CONFIG[connectDotsDifficulty].timeLimitSeconds,
+                    )}
+                  />
+                )}
+              </div>
+            )}
+
+            {step === "review" && mode && modeCatalog && payload && (
+              <ReviewLaunchCard
+                name={name}
+                subject={subject}
+                mode={mode}
+                preview={modeCatalog.preview}
+                accentClass={modeCatalog.accentClass}
+                badgeClass={modeCatalog.badgeClass}
+                timeLimitSeconds={
+                  mode === "quiz"
+                    ? payload.timeLimitSeconds
+                    : payload.timeLimitSeconds ?? defaultTimerSeconds(mode)
+                }
+              />
+            )}
+          </div>
+
+          <div className="sticky bottom-16 z-10 rounded-b-2xl border-t border-[var(--gamibar-border)] bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5 md:bottom-0">
+            {configureHint && (
+              <p className="mb-2 text-center text-xs font-medium text-[var(--gamibar-brand)] sm:text-left">
+                {configureHint}
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                disabled={step === "details" || submitting}
+                onClick={goBack}
+              >
+                Back
+              </Button>
+
+              {step !== "review" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-xl bg-[#111111] px-5 hover:bg-black"
+                  disabled={!canContinue}
+                  onClick={goNext}
+                >
+                  Continue
+                  <ChevronRight className="ml-1 size-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-xl bg-[#111111] px-5 hover:bg-black"
+                  disabled={!configValid || submitting}
+                  onClick={() => void handleCreate()}
+                >
+                  {submitting ? (
+                    "Creating…"
+                  ) : (
+                    <>
+                      <Rocket className="mr-2 size-4" />
+                      Launch lobby
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </AuthorShell>
+  );
+}
+
+function QuizEditor({
+  questions,
+  activeQ,
+  setActiveQ,
+  setQuestions,
+  progress,
+  accent = "default",
+}: {
+  questions: QuizQuestionDraft[];
+  activeQ: number;
+  setActiveQ: (n: number) => void;
+  setQuestions: Dispatch<SetStateAction<QuizQuestionDraft[]>>;
+  progress: { done: number; total: number; complete: boolean };
+  accent?: "default" | "purple";
+}) {
+  const q = questions[activeQ]!;
+  const options: QuizOptionId[] = ["A", "B", "C", "D"];
+  const pct = Math.round((progress.done / progress.total) * 100);
+  const accentBadge =
+    accent === "purple"
+      ? "bg-[#EDE9FE] text-[#5B21B6]"
+      : "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]";
+  const accentBar =
+    accent === "purple"
+      ? "bg-gradient-to-r from-[#7C3AED] to-[#5B21B6]"
+      : "bg-gradient-to-r from-[var(--game-quiz)] to-[var(--game-quiz-deep)]";
+
+  const update = (patch: Partial<QuizQuestionDraft>) => {
+    setQuestions((prev) => prev.map((item, i) => (i === activeQ ? { ...item, ...patch } : item)));
+  };
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-[#111111]">
+            Question deck · {progress.done}/{progress.total}
+          </p>
+          <p className="text-xs text-[#737373]">Tap a number, fill the prompt and four choices, then mark the correct letter.</p>
+        </div>
+        <span className={cn("rounded-full px-3 py-1 text-xs font-bold", accentBadge)}>
+          {pct}% ready
+        </span>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--gamibar-page)]">
+        <div
+          className={cn("h-full rounded-full transition-all duration-300", accentBar)}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {questions.map((item, i) => {
+          const done = Boolean(
+            item.prompt.trim() &&
+              item.correctOption &&
+              item.options.A.trim() &&
+              item.options.B.trim() &&
+              item.options.C.trim() &&
+              item.options.D.trim(),
+          );
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveQ(i)}
+              className={cn(
+                "grid size-9 place-items-center rounded-xl text-xs font-bold transition-colors",
+                i === activeQ
+                  ? "bg-[#111111] text-white"
+                  : done
+                    ? "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]"
+                    : "bg-[var(--gamibar-page)] text-[#737373]",
+              )}
+            >
+              {done ? <Check className="size-3.5" /> : i + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
+        <Label className="text-xs uppercase tracking-wider text-[#737373]">Question {activeQ + 1}</Label>
+        <Input
+          value={q.prompt}
+          onChange={(e) => update({ prompt: e.target.value })}
+          placeholder="What should students answer?"
+          className="mt-2 h-11 rounded-xl text-base"
+        />
+
+        <div className="mt-4 grid gap-2.5">
+          <p className="text-xs font-medium text-[#525252]">
+            Tap the letter or row to mark the correct answer — it turns green.
+          </p>
+          {options.map((opt) => {
+            const isCorrect = q.correctOption === opt;
+            return (
+              <div
+                key={opt}
+                role="button"
+                tabIndex={0}
+                onClick={() => update({ correctOption: opt })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    update({ correctOption: opt });
+                  }
+                }}
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-xl border-2 p-2 transition-all",
+                  isCorrect
+                    ? "border-green-500 bg-green-50 shadow-[0_0_0_1px_rgba(34,197,94,0.2)]"
+                    : "border-transparent hover:border-[var(--gamibar-border)] hover:bg-[var(--gamibar-page)]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-10 shrink-0 place-items-center rounded-xl text-xs font-bold transition-all",
+                    isCorrect
+                      ? "bg-green-600 text-white ring-2 ring-green-200"
+                      : "border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[#525252]",
+                  )}
+                  aria-label={`Mark ${opt} as correct`}
+                >
+                  {isCorrect ? <Check className="size-4" /> : opt}
+                </span>
+                <Input
+                  value={q.options[opt]}
+                  onChange={(e) => update({ options: { ...q.options, [opt]: e.target.value } })}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  placeholder={`Answer choice ${opt}`}
+                  className={cn(
+                    "h-11 rounded-xl border-0 bg-transparent shadow-none focus-visible:ring-0",
+                    isCorrect && "font-medium text-green-900",
+                  )}
+                />
+                {isCorrect && (
+                  <span className="shrink-0 pr-1 text-[10px] font-bold uppercase tracking-wide text-green-600">
+                    Correct
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JigsawUploader({
+  jigsawUrl,
+  timerLabel,
+  onFile,
+  label = "Upload your puzzle image",
+  hint,
+}: {
+  jigsawUrl: string | null;
+  timerLabel: string;
+  onFile: (file: File | undefined) => void;
+  label?: string;
+  hint?: string;
+}) {
+  const pieceCount = hint
+    ? GAME_CONFIG.quiz_jigsaw.questionCount
+    : GAME_CONFIG.jigsaw.cols * GAME_CONFIG.jigsaw.rows;
+  return (
+    <div className="grid gap-4">
+      <label className="group relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center transition-colors hover:border-[var(--game-jigsaw)] sm:min-h-[200px]">
+        {jigsawUrl ? (
+          <>
+            <img src={jigsawUrl} alt="Puzzle source" className="absolute inset-0 size-full object-cover opacity-90" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.15)_1px,transparent_1px)] bg-[size:20%_20%]" />
+            <div className="relative rounded-2xl bg-black/50 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+              Tap to replace image
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="grid size-14 place-items-center rounded-2xl bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw)]">
+              <Upload className="size-6" />
+            </span>
+            <p className="mt-4 font-display text-lg font-bold text-[#111111]">{label}</p>
+            <p className="mt-1 text-sm text-[#525252]">JPG, PNG, or WEBP · max 8 MB</p>
+            <p className="mt-3 text-xs font-medium text-[#737373]">
+              {hint ?? `Auto-splits into ${pieceCount} pieces · ${timerLabel} timer`}
+            </p>
+          </>
+        )}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          onChange={(e) => void onFile(e.target.files?.[0])}
+        />
+      </label>
+    </div>
+  );
+}
+
+function ConnectDotsConfigurator({
+  difficulty,
+  onDifficultyChange,
+  board,
+  onRegenerate,
+  timerLabel,
+}: {
+  difficulty: ConnectDotsDifficulty;
+  onDifficultyChange: (d: ConnectDotsDifficulty) => void;
+  board: ConnectDotsBoardConfig;
+  onRegenerate: () => void;
+  timerLabel: string;
+}) {
+  const levels: { id: ConnectDotsDifficulty; label: string; hint: string }[] = [
+    {
+      id: "easy",
+      label: "Easy",
+      hint: `${CONNECT_DOTS_CONFIG.easy.gridSize}×${CONNECT_DOTS_CONFIG.easy.gridSize} · ${CONNECT_DOTS_CONFIG.easy.pairCount} pairs`,
+    },
+    {
+      id: "medium",
+      label: "Medium",
+      hint: `${CONNECT_DOTS_CONFIG.medium.gridSize}×${CONNECT_DOTS_CONFIG.medium.gridSize} · ${CONNECT_DOTS_CONFIG.medium.pairCount} pairs`,
+    },
+    {
+      id: "hard",
+      label: "Hard",
+      hint: `${CONNECT_DOTS_CONFIG.hard.gridSize}×${CONNECT_DOTS_CONFIG.hard.gridSize} · ${CONNECT_DOTS_CONFIG.hard.pairCount} pairs`,
+    },
+  ];
+
+  return (
+    <div className="grid gap-4">
+      <div>
+        <p className="text-sm font-semibold text-[var(--foreground)]">Configure Connect Dots</p>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          Every student receives this same generated board. Timer: {timerLabel}.
+        </p>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        {levels.map((level) => (
+          <button
+            key={level.id}
+            type="button"
+            onClick={() => onDifficultyChange(level.id)}
+            className={cn(
+              "rounded-2xl border px-4 py-3 text-left transition-colors",
+              difficulty === level.id
+                ? "border-[var(--game-connect-dots)] bg-[var(--game-connect-dots-soft)]"
+                : "border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] hover:bg-[var(--surface)]",
+            )}
+          >
+            <p className="font-display text-sm font-bold text-[var(--foreground)]">{level.label}</p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">{level.hint}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-3 sm:p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
+            Board preview
+          </p>
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl" onClick={onRegenerate}>
+            Regenerate
+          </Button>
+        </div>
+        <ConnectDots
+          board={{
+            gridSize: board.gridSize,
+            difficulty: board.difficulty,
+            pairs: board.pairs,
+            seed: board.seed,
+          }}
+          disabled
+          showControls={false}
+        />
+        <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
+          Preview only - students will draw paths during the live game.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ReviewLaunchCard({
+  name,
+  subject,
+  mode,
+  preview,
+  accentClass,
+  badgeClass,
+  timeLimitSeconds,
+}: {
+  name: string;
+  subject: string;
+  mode: GameMode;
+  preview: string;
+  accentClass: string;
+  badgeClass: string;
+  timeLimitSeconds: number | null;
+}) {
+  const catalog = getModeCatalog(mode);
+  const instruction = gameInstruction(mode, timeLimitSeconds);
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">What happens next</p>
+          <ul className="mt-3 space-y-2 text-sm text-[#525252]">
+            <li className="flex gap-2">
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />6-digit room code generated
+            </li>
+            <li className="flex gap-2">
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />QR code ready for students to scan
+            </li>
+            <li className="flex gap-2">
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
+              Unlimited students can join with the room code or QR
+            </li>
+            <li className="flex gap-2">
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />You control Start from the live lobby
+            </li>
+          </ul>
+        </div>
+        <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">Game rules</p>
+          <p className="mt-2 text-sm leading-relaxed text-[#525252]">{instruction}</p>
+          <p className="mt-3 inline-flex items-center rounded-full bg-[var(--gamibar-page)] px-3 py-1 text-[11px] font-semibold text-[#111111]">
+            Timer · {formatTimerLong(timeLimitSeconds)}
+          </p>
+          {catalog && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {catalog.specs.map((spec) => (
+                <span key={spec} className="rounded-full bg-[var(--gamibar-page)] px-2.5 py-0.5 text-[10px] font-semibold text-[#525252]">
+                  {spec}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-[var(--gamibar-border)]">
+        <div className="relative h-32 sm:h-36">
+          <img src={preview} alt="" className="size-full object-cover" />
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent",
+              accentClass,
+              "mix-blend-multiply opacity-70",
+            )}
+          />
+          <div className="absolute inset-0 flex flex-col justify-end p-4">
+            <span
+              className={cn(
+                "inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
+                badgeClass,
+              )}
+            >
+              {GAME_MODE_META[mode].title}
+            </span>
+            <h3 className="mt-1.5 font-display text-lg font-extrabold text-white sm:text-xl">{name}</h3>
+            <p className="mt-0.5 text-xs text-white/75 sm:text-sm">{subject || "General"}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
