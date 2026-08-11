@@ -36,7 +36,7 @@ export function QuestionCard({
               disabled={locked}
               onClick={() => onSelect(i)}
               className={cn(
-                "group flex items-center gap-3 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-left text-sm transition-all",
+                "group flex min-h-[3rem] touch-manipulation items-center gap-3 rounded-lg border border-border bg-secondary/40 px-4 py-3.5 text-left text-sm transition-all active:scale-[0.99] sm:min-h-0 sm:py-3",
                 !locked && "hover:border-divider hover:bg-secondary",
                 selected === i && !locked && "border-foreground/40 bg-secondary",
                 isCorrect && "border-success/60 bg-success/10",

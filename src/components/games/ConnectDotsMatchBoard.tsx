@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Check } from "lucide-react";
 
 import {
   canExtendRoutePath,
@@ -18,6 +19,7 @@ import {
   type ConnectDotsMatchMap,
 } from "@/lib/game/connect-dots-content";
 import type { ConnectDotsContentPair } from "@/lib/game/types";
+import { nextLiveMessage } from "@/lib/accessibility";
 import { cn } from "@/lib/utils";
 
 type Side = "question" | "answer";
@@ -43,10 +45,24 @@ type ConnectDotsMatchBoardProps = {
   /** Restore a finished or in-progress board (e.g. after reconnect). */
   initialMatches?: ConnectDotsMatchMap;
   initialRoutes?: Record<string, RouteCell[]>;
+  /** Called when the student draws an invalid or rejected connection path. */
+  onIncorrectAttempt?: () => void;
   className?: string;
 };
 
 const NEUTRAL_DOT = "#94A3B8";
+
+function useCoarsePointer() {
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarse(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return coarse;
+}
 
 function dotKey(endpoint: Endpoint): string {
   return `${endpoint.side}:${endpoint.pairId}`;
@@ -70,6 +86,26 @@ function pathToPolyline(
   return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 }
 
+function pathMarkerPoint(
+  cells: RouteCell[],
+  gridRect: GridRect,
+  rows: number,
+  cols: number,
+): DotPoint | null {
+  if (cells.length === 0) return null;
+  const cell = cells[Math.floor(cells.length / 2)]!;
+  return routeCellCenter(cell, gridRect, rows, cols);
+}
+
+function MatchedBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-[var(--game-connect-dots-deep)] bg-white px-1.5 py-0.5 text-[10px] font-bold text-[var(--game-connect-dots-deep)]">
+      <Check className="size-3" strokeWidth={3} aria-hidden />
+      <span>Matched</span>
+    </span>
+  );
+}
+
 export function ConnectDotsMatchBoard({
   pairs,
   shuffleSeed,
@@ -81,12 +117,15 @@ export function ConnectDotsMatchBoard({
   className,
   initialMatches,
   initialRoutes,
+  onIncorrectAttempt,
 }: ConnectDotsMatchBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const dotRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const completedRef = useRef(false);
   const drawingRef = useRef(false);
+  const coarsePointer = useCoarsePointer();
+  const hitThreshold = coarsePointer ? 36 : 28;
 
   const { rows, cols } = useMemo(() => routingGridSize(pairs.length), [pairs.length]);
 
@@ -104,6 +143,7 @@ export function ConnectDotsMatchBoard({
     null,
   );
   const [collisionHint, setCollisionHint] = useState(false);
+  const [liveMessage, setLiveMessage] = useState("");
 
   const pairById = useMemo(() => new Map(pairs.map((p) => [p.id, p])), [pairs]);
   const answerOrder = useMemo(
@@ -221,26 +261,31 @@ export function ConnectDotsMatchBoard({
   );
 
   const hitTestEndpoint = useCallback((clientX: number, clientY: number): Endpoint | null => {
-    const threshold = 28;
     for (const [key, el] of dotRefs.current) {
       const rect = el.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      if (Math.hypot(clientX - cx, clientY - cy) <= threshold) {
+      if (Math.hypot(clientX - cx, clientY - cy) <= hitThreshold) {
         const [side, pairId] = key.split(":") as [Side, string];
         return { side, pairId };
       }
     }
     return null;
-  }, []);
+  }, [hitThreshold]);
 
-  const flashRejectPath = useCallback((pairId: string, cells: RouteCell[]) => {
-    setRejectPath({ pairId, cells });
-    window.setTimeout(() => setRejectPath(null), 420);
-  }, []);
+  const flashRejectPath = useCallback(
+    (pairId: string, cells: RouteCell[]) => {
+      setRejectPath({ pairId, cells });
+      nextLiveMessage("That connection is not valid. Try a different route.", setLiveMessage);
+      onIncorrectAttempt?.();
+      window.setTimeout(() => setRejectPath(null), 420);
+    },
+    [onIncorrectAttempt],
+  );
 
   const flashCollision = useCallback(() => {
     setCollisionHint(true);
+    nextLiveMessage("That path is blocked. Route around existing connections.", setLiveMessage);
     window.setTimeout(() => setCollisionHint(false), 280);
   }, []);
 
@@ -291,13 +336,17 @@ export function ConnectDotsMatchBoard({
   );
 
   const beginFromEndpoint = useCallback(
-    (endpoint: Endpoint) => {
+    (endpoint: Endpoint, e?: React.PointerEvent) => {
       if (frozen || !gridRect) return;
       if (lockedPairIds.has(endpoint.pairId)) return;
 
       const startCell =
         endpoint.side === "question" ? entryCell(endpoint.pairId) : exitCell(endpoint.pairId);
       drawingRef.current = true;
+      if (e) {
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      }
       setDraft({ pairId: endpoint.pairId, from: endpoint.side, cells: [startCell] });
     },
     [entryCell, exitCell, frozen, gridRect, lockedPairIds],
@@ -410,6 +459,8 @@ export function ConnectDotsMatchBoard({
 
   const onGridPointerDown = (e: React.PointerEvent) => {
     if (frozen || !gridRect) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const cell = cellFromPointer(e.clientX, e.clientY);
     if (!cell) return;
 
@@ -421,13 +472,11 @@ export function ConnectDotsMatchBoard({
     for (const pair of pairs) {
       if (lockedPairIds.has(pair.id)) continue;
       if (routeCellsEqual(cell, entryCell(pair.id))) {
-        e.preventDefault();
-        beginFromEndpoint({ side: "question", pairId: pair.id });
+        beginFromEndpoint({ side: "question", pairId: pair.id }, e);
         return;
       }
       if (routeCellsEqual(cell, exitCell(pair.id))) {
-        e.preventDefault();
-        beginFromEndpoint({ side: "answer", pairId: pair.id });
+        beginFromEndpoint({ side: "answer", pairId: pair.id }, e);
         return;
       }
     }
@@ -445,29 +494,35 @@ export function ConnectDotsMatchBoard({
         ref={(el) => registerDot(endpoint, el)}
         disabled={frozen}
         aria-label={
-          endpoint.side === "question"
-            ? `Connection point for question ${pair.question}`
-            : `Connection point for answer ${pair.answer}`
+          isLocked
+            ? `Connected — ${endpoint.side === "question" ? pair.question : pair.answer}. Tap to undo.`
+            : endpoint.side === "question"
+              ? `Start connection from question: ${pair.question}`
+              : `Start connection from answer: ${pair.answer}`
         }
+        aria-pressed={isLocked}
         onClick={() => {
           if (isLocked && !completed) disconnectPair(endpoint.pairId);
         }}
         onPointerDown={(e) => {
           if (isLocked || frozen) return;
           e.preventDefault();
-          beginFromEndpoint(endpoint);
+          beginFromEndpoint(endpoint, e);
         }}
         className={cn(
-          "relative z-10 grid size-8 shrink-0 place-items-center rounded-full border-2 transition-transform",
+          "relative z-10 grid size-10 shrink-0 touch-manipulation place-items-center rounded-full border-2 transition-transform sm:size-8",
           align === "left" ? "-mr-1" : "-ml-1",
           isLocked
             ? "scale-110 border-white shadow-md"
             : "border-[var(--gamibar-border)] bg-white hover:scale-105",
           frozen && "cursor-default",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
         )}
         style={isLocked ? { backgroundColor: color } : undefined}
       >
-        {!isLocked && (
+        {isLocked ? (
+          <Check className="size-4 text-white drop-shadow-sm" strokeWidth={3} aria-hidden />
+        ) : (
           <span className="size-3 rounded-full" style={{ backgroundColor: NEUTRAL_DOT }} aria-hidden />
         )}
       </button>
@@ -493,12 +548,39 @@ export function ConnectDotsMatchBoard({
         d={d}
         fill="none"
         stroke={color}
-        strokeWidth={3.5}
+        strokeWidth={opts?.reject ? 3 : 3.5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeDasharray={opts?.dashed ? "6 4" : undefined}
+        strokeDasharray={opts?.reject ? "5 4" : opts?.dashed ? "6 4" : undefined}
         opacity={opts?.opacity ?? 0.92}
       />
+    );
+  };
+
+  const renderPathMarker = (
+    cells: RouteCell[],
+    kind: "success" | "reject",
+  ) => {
+    if (!gridRect || cells.length === 0) return null;
+    const point = pathMarkerPoint(cells, gridRect, rows, cols);
+    if (!point) return null;
+    const stroke = kind === "success" ? "var(--game-connect-dots-deep)" : "#DC2626";
+    const symbol = kind === "success" ? "✓" : "×";
+    return (
+      <g aria-hidden="true">
+        <circle cx={point.x} cy={point.y} r={9} fill="#FFFFFF" stroke={stroke} strokeWidth={2} />
+        <text
+          x={point.x}
+          y={point.y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={11}
+          fontWeight={700}
+          fill={stroke}
+        >
+          {symbol}
+        </text>
+      </g>
     );
   };
 
@@ -515,21 +597,44 @@ export function ConnectDotsMatchBoard({
 
   return (
     <div className={cn("w-full", className)}>
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {liveMessage}
+      </div>
+      <p id="connect-dots-board-instructions" className="sr-only">
+        Match each question to its answer by drawing a path through the center grid. A check mark
+        confirms a correct connection. Tap a connected dot to undo.
+      </p>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[var(--foreground)]">
+        <p className="text-sm font-semibold text-[var(--foreground)]" aria-live="polite">
           {matchedCount}/{pairs.length} pairs matched
         </p>
         {!disabled && !completed && (
-          <p className="text-xs text-[var(--muted-foreground)]">
+          <p className="hidden text-xs text-[var(--muted-foreground)] sm:block">
             Drag through the board · route around paths · tap a dot to undo
           </p>
         )}
       </div>
 
+      {!disabled && !completed && (
+        <p className="mb-2 text-xs text-[var(--muted-foreground)] sm:hidden">
+          Drag between dots · tap a connected dot to undo
+        </p>
+      )}
+
+      {(collisionHint || rejectPath) && (
+        <p className="mb-2 text-xs font-medium text-[#B91C1C]" role="status">
+          {rejectPath ? "Invalid connection — try another route." : "Path blocked — route around existing lines."}
+        </p>
+      )}
+
+      <div className="-mx-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
       <div
         ref={boardRef}
+        role="application"
+        aria-label="Connect dots matching board"
+        aria-describedby="connect-dots-board-instructions"
         className={cn(
-          "relative touch-none select-none rounded-2xl border bg-white p-2 sm:p-3",
+          "relative min-w-[min(100%,320px)] touch-none select-none rounded-2xl border bg-white p-2 sm:min-w-0 sm:p-3",
           collisionHint || rejectPath
             ? "border-[#FCA5A5] bg-[#FEF2F2]/40"
             : "border-[var(--gamibar-border)]",
@@ -537,9 +642,18 @@ export function ConnectDotsMatchBoard({
         style={{ touchAction: "none" }}
       >
         <svg className="pointer-events-none absolute inset-0 z-[5] h-full w-full overflow-visible">
-          {[...lockedRoutes.entries()].map(([pairId, cells]) => (
-            <g key={pairId}>{renderRoutePath(pairId, cells)}</g>
-          ))}
+          {[...lockedRoutes.entries()].map(([pairId, cells]) => {
+            const pair = pairById.get(pairId);
+            const label = pair
+              ? `Correct connection: ${pair.question} to ${pair.answer}`
+              : "Correct connection";
+            return (
+              <g key={pairId} role="img" aria-label={label}>
+                {renderRoutePath(pairId, cells)}
+                {renderPathMarker(cells, "success")}
+              </g>
+            );
+          })}
 
           {draft &&
             renderRoutePath(draft.pairId, draft.cells, {
@@ -548,11 +662,19 @@ export function ConnectDotsMatchBoard({
               strokeOverride: NEUTRAL_DOT,
             })}
 
-          {rejectPath && renderRoutePath(rejectPath.pairId, rejectPath.cells, { reject: true, opacity: 0.85 })}
+          {rejectPath && (
+            <g role="img" aria-label="Invalid connection attempt">
+              {renderRoutePath(rejectPath.pairId, rejectPath.cells, {
+                reject: true,
+                opacity: 0.85,
+              })}
+              {renderPathMarker(rejectPath.cells, "reject")}
+            </g>
+          )}
         </svg>
 
         <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1 sm:gap-2">
-          <div className="grid gap-2.5">
+          <div className="grid gap-2 sm:gap-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
               Questions
             </p>
@@ -562,13 +684,14 @@ export function ConnectDotsMatchBoard({
                 <div
                   key={pair.id}
                   className={cn(
-                    "flex min-h-[52px] items-center gap-1 rounded-xl border bg-[var(--gamibar-page)] p-2 sm:p-2.5",
+                    "flex min-h-[3.25rem] items-center gap-1.5 rounded-xl border bg-[var(--gamibar-page)] p-2 sm:min-h-[52px] sm:p-2.5",
                     isLocked
-                      ? "border-[var(--game-connect-dots)]/40 bg-[var(--game-connect-dots-soft)]/30"
+                      ? "border-[var(--game-connect-dots-deep)]/50 bg-[var(--game-connect-dots-soft)]/40 ring-1 ring-[var(--game-connect-dots-deep)]/20"
                       : "border-[var(--gamibar-border)]",
                   )}
                 >
-                  <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-[var(--foreground)]">
+                  {isLocked && <MatchedBadge />}
+                  <p className="min-w-0 flex-1 text-xs font-medium leading-snug text-[var(--foreground)] sm:text-sm">
                     {pair.question}
                   </p>
                   {renderDot({ side: "question", pairId: pair.id }, "right")}
@@ -580,7 +703,7 @@ export function ConnectDotsMatchBoard({
           <div
             ref={gridRef}
             className={cn(
-              "relative mx-0.5 w-[min(42vw,160px)] shrink-0 self-stretch rounded-xl border sm:w-[min(36vw,200px)]",
+              "relative mx-0.5 w-[min(46vw,176px)] shrink-0 self-stretch rounded-xl border sm:w-[min(36vw,200px)] md:w-[min(32vw,220px)]",
               collisionHint
                 ? "border-[#F87171]/60 bg-[#FEE2E2]/20"
                 : "border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/80",
@@ -633,7 +756,7 @@ export function ConnectDotsMatchBoard({
             </svg>
           </div>
 
-          <div className="grid gap-2.5">
+          <div className="grid gap-2 sm:gap-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
               Answers
             </p>
@@ -645,14 +768,15 @@ export function ConnectDotsMatchBoard({
                 <div
                   key={`answer-${pairId}`}
                   className={cn(
-                    "flex min-h-[52px] items-center gap-1 rounded-xl border bg-[var(--gamibar-page)] p-2 sm:p-2.5",
+                    "flex min-h-[3.25rem] items-center gap-1.5 rounded-xl border bg-[var(--gamibar-page)] p-2 sm:min-h-[52px] sm:p-2.5",
                     isLocked
-                      ? "border-[var(--game-connect-dots)]/40 bg-[var(--game-connect-dots-soft)]/30"
+                      ? "border-[var(--game-connect-dots-deep)]/50 bg-[var(--game-connect-dots-soft)]/40 ring-1 ring-[var(--game-connect-dots-deep)]/20"
                       : "border-[var(--gamibar-border)]",
                   )}
                 >
                   {renderDot({ side: "answer", pairId }, "left")}
-                  <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-[var(--foreground)]">
+                  {isLocked && <MatchedBadge />}
+                  <p className="min-w-0 flex-1 text-xs font-medium leading-snug text-[var(--foreground)] sm:text-sm">
                     {pair.answer}
                   </p>
                 </div>
@@ -660,6 +784,7 @@ export function ConnectDotsMatchBoard({
             })}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

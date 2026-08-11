@@ -7,8 +7,10 @@ import { Logo } from "@/components/layout/Logo";
 import { GameCodeInput } from "@/components/session/GameCodeInput";
 import { JoinQrScanner } from "@/components/session/JoinQrScanner";
 import { Button } from "@/components/ui/button";
+import { InlineErrorBanner } from "@/components/ui/async-state";
 import { getRoomSnapshotFn } from "@/lib/game/room.functions";
 import { normalizeRoomCode } from "@/lib/game/room-code";
+import { friendlyGameError } from "@/lib/accessibility";
 import { releaseAllCameraStreams } from "@/lib/media/release-camera";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +37,7 @@ function JoinCodePage() {
   const [mode, setMode] = useState<JoinMode>("code");
   const [code, setCode] = useState(preset ?? "");
   const [loading, setLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const autoJoinAttempted = useRef(false);
 
   useEffect(() => {
@@ -64,27 +67,24 @@ function JoinCodePage() {
     async (raw?: string) => {
       const clean = normalizeRoomCode(raw ?? code);
       if (clean.length < 6) {
-        toast.error("Enter the full 6-digit code.");
+        setJoinError("Enter the full 6-digit code.");
         return;
       }
       setLoading(true);
+      setJoinError(null);
       try {
         const snap = await getRoomSnapshotFn({ data: { code: clean } });
         if (!snap.ok) {
-          toast.error(snap.error);
+          setJoinError(friendlyGameError(snap.error, "That room code was not found. Check the code and try again."));
           return;
         }
         if (snap.room.status === "FINISHED" || snap.room.status === "CANCELLED") {
-          toast.error("This room is closed.");
-          return;
-        }
-        if (snap.room.status === "LIVE" || snap.room.status === "COUNTDOWN") {
-          toast.error("Game already started. Ask the author for a new room.");
+          setJoinError("This room is closed.");
           return;
         }
         navigate({ to: "/join/name", search: { code: clean } });
       } catch {
-        toast.error("Could not validate room. Try again.");
+        setJoinError("Could not validate room. Check your connection and try again.");
       } finally {
         setLoading(false);
       }
@@ -177,7 +177,7 @@ function JoinCodePage() {
             ) : (
               <JoinQrScanner
                 onCode={handleScannedCode}
-                onError={(message) => toast.error(message)}
+                onError={(message) => setJoinError(message)}
               />
             )
           ) : (
@@ -198,6 +198,16 @@ function JoinCodePage() {
             </div>
           )}
         </div>
+
+        {joinError ? (
+          <InlineErrorBanner
+            className="mt-4"
+            message={joinError}
+            onRetry={() => void handleJoin()}
+            retrying={loading}
+            onDismiss={() => setJoinError(null)}
+          />
+        ) : null}
 
         <button
           type="button"

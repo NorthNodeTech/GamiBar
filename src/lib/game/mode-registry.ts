@@ -148,7 +148,7 @@ const JIGSAW_MODE: LiveModeDefinition = {
         cols: grid.cols,
         rows: grid.rows,
       },
-      timeLimitSeconds: payload.timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
+      timeLimitSeconds: payload.timeLimitSeconds ?? null,
     };
   },
   toPublicPayload: (payload, opts) => {
@@ -181,15 +181,24 @@ const JIGSAW_MODE: LiveModeDefinition = {
           completed: Boolean(attempt?.completed),
           durationMs: attempt?.durationMs ?? null,
           progress: attempt?.progress ?? 0,
+          incorrectAttempts: attempt?.wrongCount ?? 0,
         };
       }),
     );
   },
   isStudentFinished: ({ attemptCompleted }) => attemptCompleted,
-  finalizeIncompleteAttempts: (stored) => {
+  finalizeIncompleteAttempts: (stored, finishedAt) => {
     if (stored.room.payload.mode !== "jigsaw") return;
     const count = stored.room.payload.questions.length;
     if (count > 0) finalizeQuizAttempts(stored, count, false);
+    for (const p of stored.participants.values()) {
+      const attempt = stored.attempts.get(p.id);
+      if (!attempt || attempt.completed) continue;
+      if (stored.room.startedAt && attempt.durationMs == null) {
+        attempt.durationMs = finishedAt - stored.room.startedAt;
+      }
+      if (p.status === "PLAYING") p.status = "ONLINE";
+    }
   },
 };
 
@@ -207,14 +216,12 @@ const CONNECT_DOTS_MODE: LiveModeDefinition = {
       return {
         mode: "connect_dots",
         connectDots: built.boardConfig,
-        timeLimitSeconds: payload.timeLimitSeconds ?? built.timeLimitSeconds,
+        timeLimitSeconds: payload.timeLimitSeconds ?? null,
       };
     }
     return {
       ...payload,
-      timeLimitSeconds:
-        payload.timeLimitSeconds ??
-        GAME_CONFIG.connect_dots.difficulties[payload.connectDots.difficulty].timeLimitSeconds,
+      timeLimitSeconds: payload.timeLimitSeconds ?? null,
     };
   },
   toPublicPayload: (payload, opts) => {
@@ -242,12 +249,22 @@ const CONNECT_DOTS_MODE: LiveModeDefinition = {
           durationMs: attempt?.durationMs ?? null,
           connectedPairs: attempt?.correctCount ?? 0,
           totalPairs,
+          incorrectAttempts: attempt?.wrongCount ?? 0,
         };
       }),
     );
   },
   isStudentFinished: ({ attemptCompleted }) => attemptCompleted,
-  finalizeIncompleteAttempts: () => {},
+  finalizeIncompleteAttempts: (stored, finishedAt) => {
+    for (const p of stored.participants.values()) {
+      const attempt = stored.attempts.get(p.id);
+      if (!attempt || attempt.completed) continue;
+      if (stored.room.startedAt && attempt.durationMs == null) {
+        attempt.durationMs = finishedAt - stored.room.startedAt;
+      }
+      if (p.status === "PLAYING") p.status = "ONLINE";
+    }
+  },
 };
 
 /** Extended mode — shares quiz ranking + jigsaw asset patterns. */

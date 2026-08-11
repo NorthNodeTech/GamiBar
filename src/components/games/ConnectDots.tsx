@@ -16,6 +16,7 @@ type ConnectDotsProps = {
   disabled?: boolean;
   /** Hide Undo/Restart (e.g. author preview). */
   showControls?: boolean;
+  initialPaths?: PathMap;
   onProgress?: (connectedPairs: number, total: number) => void;
   onPathsChange?: (paths: PathMap) => void;
   onComplete?: (paths: PathMap) => void;
@@ -60,13 +61,15 @@ export function ConnectDots({
   board,
   disabled = false,
   showControls = true,
+  initialPaths,
   onProgress,
   onPathsChange,
   onComplete,
   className,
 }: ConnectDotsProps) {
   const n = board.gridSize;
-  const [paths, setPaths] = useState<PathMap>({});
+  const [paths, setPaths] = useState<PathMap>(() => initialPaths ?? {});
+  const skipInitialEmit = useRef(Boolean(initialPaths && Object.keys(initialPaths).length > 0));
   const [draft, setDraft] = useState<Cell[]>([]);
   const [activePairId, setActivePairId] = useState<string | null>(null);
   const [history, setHistory] = useState<PathMap[]>([]);
@@ -90,6 +93,10 @@ export function ConnectDots({
   }, [connected, board.pairs.length, onProgress]);
 
   useEffect(() => {
+    if (skipInitialEmit.current) {
+      skipInitialEmit.current = false;
+      return;
+    }
     onPathsChange?.(paths);
   }, [paths, onPathsChange]);
 
@@ -226,7 +233,8 @@ export function ConnectDots({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
     const cell = cellFromPointer(e.clientX, e.clientY);
     if (cell) beginAt(cell);
   };
@@ -271,7 +279,8 @@ export function ConnectDots({
               type="button"
               onClick={undo}
               disabled={disabled || history.length === 0}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-3 text-xs font-semibold text-[var(--foreground)] disabled:opacity-40"
+              aria-label="Undo last connection"
+              className="inline-flex min-h-10 touch-manipulation items-center gap-1.5 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-3 text-xs font-semibold text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 disabled:opacity-40 sm:h-9"
             >
               <Undo2 className="size-3.5" />
               Undo
@@ -280,7 +289,8 @@ export function ConnectDots({
               type="button"
               onClick={restart}
               disabled={disabled}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-3 text-xs font-semibold text-[var(--foreground)] disabled:opacity-40"
+              aria-label="Clear all connections and restart"
+              className="inline-flex min-h-10 touch-manipulation items-center gap-1.5 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-3 text-xs font-semibold text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 disabled:opacity-40 sm:h-9"
             >
               <RotateCcw className="size-3.5" />
               Restart
@@ -293,7 +303,10 @@ export function ConnectDots({
         <svg
           ref={svgRef}
           viewBox={`0 0 100 100`}
-          className="aspect-square w-full rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]"
+          role="img"
+          aria-label={`Connect dots board. ${connected} of ${board.pairs.length} pairs connected.`}
+          className="aspect-square w-full rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
+          tabIndex={disabled ? -1 : 0}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={endStroke}
@@ -333,17 +346,35 @@ export function ConnectDots({
                 return `${i === 0 ? "M" : "L"} ${x} ${y}`;
               })
               .join(" ");
+            const mid = path[Math.floor(path.length / 2)]!;
+            const mx = mid.c * cellSize + cellSize / 2;
+            const my = mid.r * cellSize + cellSize / 2;
+            const endpointLabel = pair.question?.trim() || pair.answer?.trim() || `Pair ${pair.label}`;
             return (
-              <path
-                key={pairId}
-                d={d}
-                fill="none"
-                stroke={pair.color}
-                strokeWidth={cellSize * 0.42}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={0.9}
-              />
+              <g key={pairId} role="img" aria-label={`Connected: ${endpointLabel}. Verified with check mark.`}>
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={pair.color}
+                  strokeWidth={cellSize * 0.42}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={0.9}
+                />
+                <circle cx={mx} cy={my} r={cellSize * 0.22} fill="#FFFFFF" stroke="var(--game-connect-dots-deep)" strokeWidth={0.35} />
+                <text
+                  x={mx}
+                  y={my}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={cellSize * 0.28}
+                  fontWeight={700}
+                  fill="var(--game-connect-dots-deep)"
+                  aria-hidden="true"
+                >
+                  ✓
+                </text>
+              </g>
             );
           })}
 

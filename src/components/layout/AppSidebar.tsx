@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, LogOut, Plus, Sparkles } from "lucide-react";
+import { Home, History, LogOut, Plus, Sparkles } from "lucide-react";
 
 import { Logo } from "@/components/layout/Logo";
 import { useAuthSafe } from "@/lib/auth-store";
@@ -13,6 +13,12 @@ const authorNav = [
     label: "Create",
     icon: Plus,
     match: (p: string) => p.startsWith("/author/create"),
+  },
+  {
+    to: "/author/sessions",
+    label: "History",
+    icon: History,
+    match: (p: string) => p.startsWith("/author/sessions"),
   },
 ] as const;
 

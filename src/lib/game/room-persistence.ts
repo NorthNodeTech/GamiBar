@@ -29,12 +29,24 @@ export type Attempt = {
   participantId: string;
   progress: number;
   correctCount: number;
+  /** Wrong quiz answers (jigsaw) or failed connection attempts (connect dots). */
+  wrongCount: number;
   durationMs: number | null;
   completed: boolean;
   completedAt: number | null;
   score: number | null;
   payload: Record<string, unknown>;
 };
+
+function readWrongCount(payload: Record<string, unknown>): number {
+  const value = payload.wrongCount;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return 0;
+  return Math.floor(value);
+}
+
+function attemptPayloadWithWrongCount(attempt: Attempt): Record<string, unknown> {
+  return { ...attempt.payload, wrongCount: attempt.wrongCount };
+}
 
 export type StoredRoom = {
   room: Room;
@@ -59,14 +71,9 @@ function iso(msValue: number | null | undefined): string | null {
 
 function readTimeLimit(mode: Room["mode"], raw: Record<string, unknown>): number | null {
   const value = raw["timeLimitSeconds"];
-  if (mode === "quiz" || mode === "quiz_jigsaw") {
-    if (value === null) return null;
-    if (typeof value === "number") return clampTimer(mode, value);
-    return defaultTimerSeconds(mode);
-  }
-  const normalized = mode === "connect_dots" ? "connect_dots" : mode;
-  if (typeof value === "number") return clampTimer(normalized, value);
-  return clampTimer(normalized, defaultTimerSeconds(normalized));
+  if (value === null) return null;
+  if (typeof value === "number") return clampTimer(mode, value);
+  return defaultTimerSeconds(mode);
 }
 
 function parseConnectDotsConfig(raw: Record<string, unknown>): ConnectDotsBoardConfig {
@@ -138,16 +145,14 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
         cols: typeof jigsaw["cols"] === "number" ? jigsaw["cols"] : grid.cols,
         rows: typeof jigsaw["rows"] === "number" ? jigsaw["rows"] : grid.rows,
       },
-      timeLimitSeconds: timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
+      timeLimitSeconds,
     };
   }
   const connectDots = parseConnectDotsConfig(raw);
   return {
     mode: "connect_dots",
     connectDots,
-    timeLimitSeconds:
-      timeLimitSeconds ??
-      GAME_CONFIG.connect_dots.difficulties[connectDots.difficulty].timeLimitSeconds,
+    timeLimitSeconds,
   };
 }
 
@@ -285,6 +290,42 @@ async function hydrateJigsawPayload(roomId: string, payload: GamePayload): Promi
   };
 }
 
+/** Copy jigsaw image metadata + storage blob when duplicating a room. */
+export async function copyJigsawAssetBetweenRooms(fromRoomId: string, toRoomId: string): Promise<void> {
+  const { data: asset } = await supabase
+    .from("gamibar_jigsaw_assets")
+    .select("storage_path, mime_type, cols, rows, byte_size")
+    .eq("room_id", fromRoomId)
+    .maybeSingle();
+
+  if (!asset) return;
+
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from("gamibar-jigsaw")
+    .download(asset.storage_path);
+  if (downloadError || !blob) return;
+
+  const ext = asset.storage_path.split(".").pop() ?? "png";
+  const storagePath = `${toRoomId}/source.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("gamibar-jigsaw")
+    .upload(storagePath, blob, { upsert: true, contentType: asset.mime_type });
+  if (uploadError) return;
+
+  await supabase.from("gamibar_jigsaw_assets").upsert(
+    {
+      room_id: toRoomId,
+      storage_path: storagePath,
+      mime_type: asset.mime_type,
+      cols: asset.cols,
+      rows: asset.rows,
+      byte_size: asset.byte_size ?? blob.size,
+    },
+    { onConflict: "room_id" },
+  );
+}
+
 function buildStoredRoom(
   row: {
     id: string;
@@ -356,6 +397,7 @@ function buildStoredRoom(
       participantId: attempt.participant_id,
       progress: Number(attempt.progress),
       correctCount: attempt.correct_count,
+      wrongCount: readWrongCount((attempt.payload ?? {}) as Record<string, unknown>),
       durationMs: attempt.duration_ms,
       completed: attempt.completed,
       completedAt: ms(attempt.completed_at),
@@ -430,6 +472,7 @@ function deserializeLegacyState(state: unknown, authorToken = ""): StoredRoom | 
       participantId: attempt.participantId ?? participantId,
       progress: attempt.progress,
       correctCount: attempt.correctCount,
+      wrongCount: attempt.wrongCount ?? readWrongCount(attempt.payload ?? {}),
       durationMs: attempt.durationMs,
       completed: attempt.completed,
       completedAt: attempt.completedAt,
@@ -717,7 +760,7 @@ export async function persist(stored: StoredRoom) {
       duration_ms: attempt.durationMs,
       completed: attempt.completed,
       completed_at: iso(attempt.completedAt),
-      payload: attempt.payload,
+      payload: attemptPayloadWithWrongCount(attempt),
     });
     if (error) throw new Error(error.message || "Could not save attempt.");
   }
@@ -752,6 +795,7 @@ export function ensureAttempt(stored: StoredRoom, participantId: string): Attemp
       participantId,
       progress: 0,
       correctCount: 0,
+      wrongCount: 0,
       durationMs: null,
       completed: false,
       completedAt: null,

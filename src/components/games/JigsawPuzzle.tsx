@@ -40,15 +40,19 @@ export function JigsawPuzzle({
   rows,
   onProgress,
   disabled = false,
+  initialSlots,
 }: {
   imageUrl: string;
   cols: number;
   rows: number;
-  onProgress: (locked: number, completed: boolean) => void;
+  onProgress: (locked: number, completed: boolean, slots?: number[]) => void;
   disabled?: boolean;
+  initialSlots?: number[];
 }) {
   const total = cols * rows;
-  const [slots, setSlots] = useState<number[]>(() => shuffleIds(total));
+  const [slots, setSlots] = useState<number[]>(() =>
+    initialSlots && initialSlots.length === total ? initialSlots : shuffleIds(total),
+  );
   const [selected, setSelected] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -62,7 +66,7 @@ export function JigsawPuzzle({
     const count = lockedCount(slots);
     if (count === lastReport.current) return;
     lastReport.current = count;
-    onProgress(count, count >= total);
+    onProgress(count, count >= total, slots);
   }, [slots, onProgress, total]);
 
   const swapSlots = useCallback(

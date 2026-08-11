@@ -23,16 +23,16 @@ export const TIMER_PRESETS: Record<GameMode, TimerPreset[]> = {
     { id: "20m", label: "20 min", seconds: 1200 },
   ],
   jigsaw: [
+    { id: "open", label: "No limit", seconds: null },
     { id: "60", label: "1 min", seconds: 60 },
     { id: "90", label: "1:30", seconds: 90 },
-    { id: "99", label: "1:39", seconds: 99 },
     { id: "120", label: "2 min", seconds: 120 },
     { id: "180", label: "3 min", seconds: 180 },
   ],
   connect_dots: [
+    { id: "open", label: "No limit", seconds: null },
     { id: "45", label: "45 sec", seconds: 45 },
     { id: "60", label: "1 min", seconds: 60 },
-    { id: "75", label: "1:15", seconds: 75 },
     { id: "90", label: "1:30", seconds: 90 },
     { id: "120", label: "2 min", seconds: 120 },
   ],
@@ -46,11 +46,8 @@ export const TIMER_BOUNDS: Record<GameMode, { min: number; max: number; step: nu
 };
 
 export function defaultTimerSeconds(mode: GameMode): number | null {
-  if (mode === "quiz" || mode === "quiz_jigsaw") {
-    return mode === "quiz"
-      ? GAME_CONFIG.quiz.timeLimitSeconds
-      : GAME_CONFIG.quiz_jigsaw.timeLimitSeconds;
-  }
+  if (mode === "quiz") return GAME_CONFIG.quiz.timeLimitSeconds;
+  if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.timeLimitSeconds;
   if (mode === "jigsaw") return GAME_CONFIG.jigsaw.timeLimitSeconds;
   return GAME_CONFIG.connect_dots.timeLimitSeconds;
 }
@@ -74,18 +71,19 @@ export function formatTimerLong(total: number | null): string {
 }
 
 export function clampTimer(mode: GameMode, value: number | null): number | null {
-  if ((mode === "quiz" || mode === "quiz_jigsaw") && value == null) return null;
+  if (value == null) return null;
   const bounds = TIMER_BOUNDS[mode];
-  const fallback = defaultTimerSeconds(mode) ?? bounds.min;
-  const next = value ?? fallback;
-  return Math.min(bounds.max, Math.max(bounds.min, next));
+  return Math.min(bounds.max, Math.max(bounds.min, value));
+}
+
+export function isTimerValid(mode: GameMode, value: number | null): boolean {
+  if (value == null) return true;
+  const clamped = clampTimer(mode, value);
+  return clamped === value;
 }
 
 export function resolvePayloadTimeLimit(payload: GamePayload): number | null {
-  if (payload.mode === "quiz" || payload.mode === "quiz_jigsaw") {
-    return payload.timeLimitSeconds ?? null;
-  }
-  return payload.timeLimitSeconds ?? defaultTimerSeconds(payload.mode);
+  return payload.timeLimitSeconds ?? null;
 }
 
 export function gameInstruction(mode: GameMode, timeLimitSeconds: number | null): string {
@@ -101,7 +99,11 @@ export function gameInstruction(mode: GameMode, timeLimitSeconds: number | null)
       : `Unlock all ${count} puzzle pieces within ${formatTimerLong(timeLimitSeconds)}. Wrong answers retry.`;
   }
   if (mode === "jigsaw") {
-    return `Answer questions to unlock pieces. Missed questions return in retry rounds until every piece is earned, then rebuild the image before ${formatTimerLong(timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)} runs out.`;
+    return timeLimitSeconds == null
+      ? "Answer questions to unlock pieces. Missed questions return in retry rounds until every piece is earned, then rebuild the image."
+      : `Answer questions to unlock pieces. Missed questions return in retry rounds until every piece is earned, then rebuild the image before ${formatTimerLong(timeLimitSeconds)} runs out.`;
   }
-  return `Connect each question dot to its matching answer dot within ${formatTimerLong(timeLimitSeconds ?? GAME_CONFIG.connect_dots.timeLimitSeconds)}.`;
+  return timeLimitSeconds == null
+    ? "Connect each question dot to its matching answer dot. Complete all pairs to finish."
+    : `Connect each question dot to its matching answer dot within ${formatTimerLong(timeLimitSeconds)}.`;
 }

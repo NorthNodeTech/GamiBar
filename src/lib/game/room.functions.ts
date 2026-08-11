@@ -4,6 +4,8 @@ import {
   createRoom,
   ensureDemoRoom,
   getRoomSnapshot,
+  getAuthorRoomResults,
+  duplicateRoom,
   joinRoom,
   reconnectParticipant,
   startGame,
@@ -12,6 +14,7 @@ import {
   submitJigsawProgress,
   submitConnectDotsPaths,
   submitConnectDotsMatches,
+  recordConnectDotsIncorrectAttempt,
   submitQuizAnswer,
   submitQuizJigsawAnswer,
   submitJigsawMissionAnswer,
@@ -69,6 +72,22 @@ export async function getRoomSnapshotFn({
 }) {
   if (data.code) await ensureDemoRoom();
   return getRoomSnapshot(data);
+}
+
+export async function getAuthorRoomResultsFn({
+  data,
+}: {
+  data: { roomId: string; authorId: string };
+}) {
+  return getAuthorRoomResults(data);
+}
+
+export async function duplicateRoomFn({
+  data,
+}: {
+  data: { sourceRoomId: string; authorId: string; authorName: string };
+}) {
+  return duplicateRoom(data);
 }
 
 export async function startGameFn({
@@ -143,6 +162,7 @@ export async function submitJigsawProgressFn({
     lockedCount: number;
     totalPieces: number;
     completed: boolean;
+    layout?: number[];
   };
 }) {
   return submitJigsawProgress(data);
@@ -185,4 +205,15 @@ export async function submitConnectDotsPathsFn({
   };
 }) {
   return submitConnectDotsPaths(data);
+}
+
+export async function recordConnectDotsIncorrectAttemptFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+  };
+}) {
+  return recordConnectDotsIncorrectAttempt(data);
 }

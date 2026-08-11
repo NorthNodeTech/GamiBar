@@ -37,6 +37,15 @@ export function canStudentsJoin(status: RoomStatus): boolean {
   return status === "LOBBY" || status === "READY";
 }
 
+/** Students may re-enter with the same name while a round is active. */
+export function canStudentsRejoin(status: RoomStatus): boolean {
+  return status === "LIVE" || status === "COUNTDOWN";
+}
+
+export function canStudentEnterRoom(status: RoomStatus): boolean {
+  return canStudentsJoin(status) || canStudentsRejoin(status);
+}
+
 export function isTerminal(status: RoomStatus): boolean {
   return status === "FINISHED" || status === "CANCELLED";
 }

@@ -17,12 +17,23 @@ import {
   listCodes,
   persist,
   verifyAuthorToken,
+  copyJigsawAssetBetweenRooms,
   type StoredRoom,
 } from "@/lib/game/room-persistence";
 import { validateConnectDotsPaths, type PathMap } from "@/lib/connect-dots";
 import { generateRoomCode, isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
-import { assertTransition, canStudentsJoin, type RoomStatus } from "@/lib/game/state-machine";
+import { assertTransition, canStudentEnterRoom, canStudentsJoin, canStudentsRejoin, type RoomStatus } from "@/lib/game/state-machine";
 import { gameInstruction, resolvePayloadTimeLimit } from "@/lib/game/timer";
+import { questionCountFromConfig } from "@/lib/supabase/author-sessions";
+import { computeLiveParticipantProgress } from "@/lib/game/live-dashboard";
+import {
+  sanitizeConnectDotsMatches,
+} from "@/lib/game/connect-dots-content";
+import {
+  isRouteCellInGrid,
+  routingGridSize,
+  type RouteCell,
+} from "@/lib/game/connect-dots-path-geometry";
 import {
   initialJigsawMissionPayload,
   isJigsawMissionRetryRound,
@@ -88,8 +99,64 @@ function computeLeaderboard(stored: StoredRoom): LeaderboardRow[] {
   return computeModeLeaderboard(stored);
 }
 
+function isTimedOut(stored: StoredRoom): boolean {
+  return stored.room.endsAt != null && Date.now() >= stored.room.endsAt;
+}
+
+function rejectIfNotAcceptingInput(stored: StoredRoom): { ok: false; error: string } | null {
+  if (stored.room.status !== "LIVE") {
+    return { ok: false, error: "Game is not accepting answers." };
+  }
+  if (isTimedOut(stored)) {
+    return { ok: false, error: "Time is up." };
+  }
+  return null;
+}
+
 function ensureAttemptRecord(stored: StoredRoom, participantId: string) {
   return ensureAttempt(stored, participantId);
+}
+
+function incrementWrongCount(stored: StoredRoom, participantId: string, by = 1) {
+  const attempt = ensureAttemptRecord(stored, participantId);
+  attempt.wrongCount += by;
+}
+
+function displayNameKey(displayName: string): string {
+  return sanitizeDisplayName(displayName).toLowerCase();
+}
+
+function findParticipantByDisplayName(
+  stored: StoredRoom,
+  displayName: string,
+): Participant | undefined {
+  const key = displayNameKey(displayName);
+  if (!key) return undefined;
+  for (const participant of stored.participants.values()) {
+    if (displayNameKey(participant.displayName) === key) return participant;
+  }
+  return undefined;
+}
+
+async function reattachParticipantSession(
+  stored: StoredRoom,
+  participant: Participant,
+): Promise<{ participantId: string; reconnectToken: string }> {
+  participant.reconnectToken = createReconnectToken();
+  if (stored.room.status === "LIVE" || stored.room.status === "COUNTDOWN") {
+    if (participant.status !== "COMPLETED") {
+      participant.status = "PLAYING";
+    }
+  } else if (participant.status === "DISCONNECTED") {
+    participant.status = "ONLINE";
+  }
+  pushEvent(stored, {
+    type: "participant_status",
+    participantId: participant.id,
+    status: participant.status,
+  });
+  await persist(stored);
+  return { participantId: participant.id, reconnectToken: participant.reconnectToken };
 }
 
 /** Finalize a live game and compute standings (author stop or timer expiry). */
@@ -179,7 +246,35 @@ export async function joinRoom(input: { code: string; displayName: string }) {
   }
   const stored = await loadByCode(code);
   if (!stored) return { ok: false as const, error: "Room code not found." };
+  if (stored.room.status === "FINISHED" || stored.room.status === "CANCELLED") {
+    return { ok: false as const, error: "This room is closed." };
+  }
+
+  const displayName = sanitizeDisplayName(input.displayName);
+  if (!displayName) return { ok: false as const, error: "Enter a display name." };
+
+  const existing = findParticipantByDisplayName(stored, displayName);
+  if (existing) {
+    if (!canStudentEnterRoom(stored.room.status)) {
+      return { ok: false as const, error: "This room is closed." };
+    }
+    const session = await reattachParticipantSession(stored, existing);
+    return {
+      ok: true as const,
+      rejoined: true as const,
+      participantId: session.participantId,
+      reconnectToken: session.reconnectToken,
+      room: publicRoom(stored),
+    };
+  }
+
   if (!canStudentsJoin(stored.room.status)) {
+    if (canStudentsRejoin(stored.room.status)) {
+      return {
+        ok: false as const,
+        error: "Game already started. Rejoin with the same name you used before.",
+      };
+    }
     return { ok: false as const, error: "This room is closed or already in progress." };
   }
   if (isRoomFull(stored.participants.size, stored.room.maxParticipants)) {
@@ -188,9 +283,6 @@ export async function joinRoom(input: { code: string; displayName: string }) {
       error: `This room is full (${stored.room.maxParticipants.toLocaleString()} players max).`,
     };
   }
-
-  const displayName = sanitizeDisplayName(input.displayName);
-  if (!displayName) return { ok: false as const, error: "Enter a display name." };
 
   const participant: Participant = {
     id: createEntityId(),
@@ -216,6 +308,7 @@ export async function joinRoom(input: { code: string; displayName: string }) {
 
   return {
     ok: true as const,
+    rejoined: false as const,
     participantId: participant.id,
     reconnectToken: participant.reconnectToken,
     room: publicRoom(stored),
@@ -227,14 +320,11 @@ export async function reconnectParticipant(input: { reconnectToken: string }) {
   if (!stored) return { ok: false as const, error: "Session expired. Join the room again." };
 
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
-  if (participant) {
-    participant.status = stored.room.status === "LIVE" ? "PLAYING" : "ONLINE";
-    pushEvent(stored, {
-      type: "participant_status",
-      participantId: participant.id,
-      status: participant.status,
-    });
-    await persist(stored);
+  if (!participant) {
+    return { ok: false as const, error: "Session expired. Join the room again." };
+  }
+
+  if (stored.room.status === "FINISHED" || stored.room.status === "CANCELLED") {
     return {
       ok: true as const,
       participantId: participant.id,
@@ -242,7 +332,28 @@ export async function reconnectParticipant(input: { reconnectToken: string }) {
       room: publicRoom(stored),
     };
   }
-  return { ok: false as const, error: "Session expired. Join the room again." };
+
+  if (stored.room.status === "LIVE" || stored.room.status === "COUNTDOWN") {
+    if (participant.status !== "COMPLETED") {
+      participant.status = "PLAYING";
+    }
+  } else if (participant.status === "DISCONNECTED") {
+    participant.status = "ONLINE";
+  }
+
+  pushEvent(stored, {
+    type: "participant_status",
+    participantId: participant.id,
+    status: participant.status,
+  });
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    participantId: participant.id,
+    reconnectToken: participant.reconnectToken,
+    room: publicRoom(stored),
+  };
 }
 
 export async function getRoomSnapshot(input: {
@@ -287,10 +398,7 @@ export async function getRoomSnapshot(input: {
     !stored.room.showLeaderboardToStudents;
   const visibleLeaderboard = hideQuizLiveLeaderboard ? [] : leaderboard;
   const revealOwnAnswerCorrectness =
-    stored.room.mode === "jigsaw" ||
-    stored.room.mode === "quiz_jigsaw" ||
-    stored.room.status === "FINISHED" ||
-    stored.room.status === "CANCELLED";
+    stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
   const myAnswers =
     participantId && modePersistsQuizAnswers(stored.room.mode)
       ? [...(stored.quizAnswers.get(participantId)?.values() ?? [])].map((a) => ({
@@ -307,10 +415,72 @@ export async function getRoomSnapshot(input: {
     isAuthor,
     participantId,
     leaderboard: visibleLeaderboard,
+    liveProgress: isAuthor && stored.room.status === "LIVE"
+      ? computeLiveParticipantProgress(stored)
+      : undefined,
     myAnswers,
     myAttempt: participantId ? (stored.attempts.get(participantId) ?? null) : null,
     recentEvents: stored.events.slice(-40),
   };
+}
+
+/** Author-only results view — verifies ownership by author id (no browser token required). */
+export async function getAuthorRoomResults(input: { roomId: string; authorId: string }) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (stored.room.authorId !== input.authorId) {
+    return { ok: false as const, error: "You do not have access to this game." };
+  }
+
+  const leaderboard = computeLeaderboard(stored);
+  const completions = stored.events
+    .filter((e): e is Extract<RoomEvent, { type: "player_completed" }> => e.type === "player_completed")
+    .map((e) => ({
+      key: `${e.participantId}-${e.completedAt}`,
+      displayName: e.displayName,
+      durationMs: e.durationMs,
+    }))
+    .reverse();
+
+  return {
+    ok: true as const,
+    room: publicRoom(stored, { includeSecrets: true }),
+    leaderboard,
+    completions,
+    participantCount: stored.participants.size,
+    questionCount: questionCountFromConfig(stored.room.mode, stored.room.payload),
+  };
+}
+
+/** Clone an existing game into a new lobby room (new code + author token). */
+export async function duplicateRoom(input: {
+  sourceRoomId: string;
+  authorId: string;
+  authorName: string;
+}) {
+  const stored = await loadById(input.sourceRoomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (stored.room.authorId !== input.authorId) {
+    return { ok: false as const, error: "You can only duplicate your own games." };
+  }
+
+  const copyName = stored.room.name.trim().endsWith("(copy)")
+    ? stored.room.name.trim()
+    : `${stored.room.name.trim()} (copy)`;
+
+  const created = await createRoom({
+    name: copyName,
+    subject: stored.room.subject,
+    authorId: input.authorId,
+    authorName: input.authorName,
+    mode: stored.room.mode,
+    payload: stored.room.payload,
+  });
+
+  if (!created.ok) return created;
+
+  await copyJigsawAssetBetweenRooms(input.sourceRoomId, created.room.id);
+  return created;
 }
 
 export async function startGame(input: { roomId: string; authorToken: string }) {
@@ -411,9 +581,8 @@ export async function submitQuizAnswer(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not accepting answers." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "quiz" || stored.room.payload.mode !== "quiz") {
     return { ok: false as const, error: "This room is not a quiz." };
   }
@@ -498,9 +667,8 @@ export async function submitQuizJigsawAnswer(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not accepting answers." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "quiz_jigsaw" || stored.room.payload.mode !== "quiz_jigsaw") {
     return { ok: false as const, error: "This room is not a Puzzle Quest session." };
   }
@@ -575,6 +743,7 @@ export async function submitQuizJigsawAnswer(input: {
     participant.status = "COMPLETED";
     completed = true;
     rewardCode = stored.room.payload.rewardCode;
+    attempt.payload = { ...attempt.payload, rewardCode };
     pushEvent(stored, {
       type: "player_completed",
       participantId: participant.id,
@@ -608,9 +777,8 @@ export async function submitJigsawMissionAnswer(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not accepting answers." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
     return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
   }
@@ -664,6 +832,8 @@ export async function submitJigsawMissionAnswer(input: {
   let retryQuestionId = mission.retryQuestionId ?? null;
 
   if (!isCorrect) {
+    incrementWrongCount(stored, participant.id);
+
     if (!firstRoundComplete) {
       firstRoundIndex += 1;
       if (firstRoundIndex >= total) {
@@ -775,17 +945,14 @@ export async function submitJigsawProgress(input: {
   lockedCount: number;
   totalPieces: number;
   completed: boolean;
+  layout?: number[];
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not live." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "jigsaw") {
     return { ok: false as const, error: "This room is not a jigsaw." };
-  }
-  if (stored.room.endsAt && Date.now() > stored.room.endsAt) {
-    return { ok: false as const, error: "Time is up." };
   }
 
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
@@ -795,8 +962,6 @@ export async function submitJigsawProgress(input: {
   const quizGated =
     stored.room.mode === "jigsaw" && payload.mode === "jigsaw" && payload.questions.length > 0;
 
-  const total = Math.max(1, input.totalPieces);
-  const locked = Math.min(total, Math.max(0, input.lockedCount));
   const attempt = ensureAttemptRecord(stored, participant.id);
   if (attempt.completed) return { ok: true as const, completed: true };
 
@@ -807,8 +972,18 @@ export async function submitJigsawProgress(input: {
     };
   }
 
+  const total = Math.max(1, input.totalPieces);
+  const prevLocked =
+    typeof attempt.payload.lockedCount === "number" ? attempt.payload.lockedCount : 0;
+  const locked = Math.min(total, Math.max(prevLocked, Math.min(total, Math.max(0, input.lockedCount))));
+  attempt.payload = {
+    ...attempt.payload,
+    lockedCount: locked,
+    totalPieces: total,
+    phase: "assemble",
+    ...(input.layout && input.layout.length === total ? { slots: input.layout } : {}),
+  };
   attempt.progress = locked / total;
-  attempt.payload = { ...attempt.payload, lockedCount: locked, totalPieces: total, phase: "assemble" };
 
   if (input.completed && locked >= total) {
     const completedAt = Date.now();
@@ -847,14 +1022,10 @@ export async function submitJigsawMissionAssembly(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not live." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
     return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
-  }
-  if (stored.room.endsAt && Date.now() > stored.room.endsAt) {
-    return { ok: false as const, error: "Time is up." };
   }
 
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
@@ -877,8 +1048,13 @@ export async function submitJigsawMissionAssembly(input: {
   }
 
   const layout = input.layout.slice(0, gridTotal);
+  attempt.payload = {
+    ...mergeJigsawMissionPayload(attempt.payload, { phase: "assemble" }),
+    assemblyLayout: layout,
+  };
 
   if (layout.some((p) => p < 0)) {
+    await persist(stored);
     return {
       ok: true as const,
       solved: false,
@@ -887,6 +1063,7 @@ export async function submitJigsawMissionAssembly(input: {
   }
 
   if (!validateJigsawLayout(layout, gridTotal)) {
+    await persist(stored);
     return {
       ok: true as const,
       solved: false,
@@ -899,7 +1076,6 @@ export async function submitJigsawMissionAssembly(input: {
   attempt.completedAt = completedAt;
   attempt.progress = 1;
   attempt.durationMs = stored.room.startedAt ? completedAt - stored.room.startedAt : null;
-  attempt.payload = mergeJigsawMissionPayload(attempt.payload, { phase: "assemble" });
   participant.status = "COMPLETED";
 
   pushEvent(stored, {
@@ -928,14 +1104,10 @@ export async function submitConnectDotsPaths(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not live." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
     return { ok: false as const, error: "This room is not Connect Dots." };
-  }
-  if (stored.room.endsAt && Date.now() > stored.room.endsAt) {
-    return { ok: false as const, error: "Time is up." };
   }
 
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
@@ -965,6 +1137,10 @@ export async function submitConnectDotsPaths(input: {
   attempt.payload = { paths: input.paths };
 
   const fullyValid = validation.ok && connected === totalPairs;
+
+  if (!fullyValid && input.completed) {
+    incrementWrongCount(stored, participant.id);
+  }
 
   if (fullyValid) {
     const completedAt = Date.now();
@@ -1006,14 +1182,10 @@ export async function submitConnectDotsMatches(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (stored.room.status !== "LIVE") {
-    return { ok: false as const, error: "Game is not live." };
-  }
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
   if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
     return { ok: false as const, error: "This room is not Connect Dots." };
-  }
-  if (stored.room.endsAt && Date.now() > stored.room.endsAt) {
-    return { ok: false as const, error: "Time is up." };
   }
 
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
@@ -1025,17 +1197,32 @@ export async function submitConnectDotsMatches(input: {
   }
 
   const contentPairs = stored.room.payload.connectDots.contentPairs ?? [];
-  const validIds = new Set(contentPairs.map((p) => p.id));
   const totalPairs = contentPairs.length || stored.room.payload.connectDots.pairCount;
+  const sanitized = sanitizeConnectDotsMatches(input.matches, contentPairs);
+  const connected = Object.keys(sanitized).length;
 
-  const sanitized: Record<string, string> = {};
-  for (const [questionId, answerId] of Object.entries(input.matches)) {
-    if (questionId === answerId && validIds.has(questionId)) {
-      sanitized[questionId] = answerId;
+  if (connected === totalPairs && totalPairs > 0) {
+    const routes = input.routes ?? {};
+    const { rows, cols } = routingGridSize(totalPairs);
+    for (const pairId of Object.keys(sanitized)) {
+      const route = routes[pairId];
+      if (!Array.isArray(route) || route.length < 2) {
+        return {
+          ok: false as const,
+          error: "Complete every connection with a valid path before finishing.",
+        };
+      }
+      for (const cell of route as RouteCell[]) {
+        if (!isRouteCellInGrid(cell, rows, cols)) {
+          return {
+            ok: false as const,
+            error: "Complete every connection with a valid path before finishing.",
+          };
+        }
+      }
     }
   }
 
-  const connected = Object.keys(sanitized).length;
   attempt.correctCount = connected;
   attempt.progress = totalPairs ? connected / totalPairs : 0;
   attempt.payload = {
@@ -1075,6 +1262,33 @@ export async function submitConnectDotsMatches(input: {
     connectedPairs: connected,
     durationMs: attempt.durationMs ?? null,
   };
+}
+
+/** Report a failed connection attempt (content-pair board rejects a path client-side). */
+export async function recordConnectDotsIncorrectAttempt(input: {
+  roomId: string;
+  reconnectToken: string;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  const reject = rejectIfNotAcceptingInput(stored);
+  if (reject) return reject;
+  if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
+    return { ok: false as const, error: "This room is not Connect Dots." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const attempt = ensureAttemptRecord(stored, participant.id);
+  if (attempt.completed) {
+    return { ok: true as const, incorrectAttempts: attempt.wrongCount };
+  }
+
+  incrementWrongCount(stored, participant.id);
+  await persist(stored);
+
+  return { ok: true as const, incorrectAttempts: attempt.wrongCount };
 }
 
 /** Seed demo room for local testing (code 845721) if empty. */

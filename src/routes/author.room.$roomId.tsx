@@ -4,18 +4,26 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
-import { CompletionTimeline, LiveLeaderboard } from "@/components/author/LiveLeaderboard";
-import { QuizLeaderboard } from "@/components/author/QuizLeaderboard";
+import { CompletionTimeline } from "@/components/author/LiveLeaderboard";
+import { LiveGameDashboard } from "@/components/author/LiveGameDashboard";
+import { UnifiedLeaderboard } from "@/components/author/UnifiedLeaderboard";
 import { LobbyWall, ParticipantStrip } from "@/components/author/LobbyWall";
 import { RoomCodeDisplay } from "@/components/author/RoomCodeDisplay";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { RoomJoinShare } from "@/components/session/RoomJoinShare";
 import { Button } from "@/components/ui/button";
+import {
+  ConnectionBanner,
+  InlineErrorBanner,
+  PageErrorState,
+  PageLoader,
+} from "@/components/ui/async-state";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { GAME_MODE_META } from "@/lib/game/config";
 import type { Room } from "@/lib/game/types";
 import { loadAuthorRoom } from "@/lib/game/client-session";
+import { friendlyGameError } from "@/lib/accessibility";
 import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
 import { startGameFn, stopGameFn, setShowLeaderboardToStudentsFn } from "@/lib/game/room.functions";
 import { useRoomPolling } from "@/lib/game/useRoomPolling";
@@ -32,9 +40,13 @@ function AuthorRoomPage() {
   const { roomId } = Route.useParams();
   const author = useMemo(() => loadAuthorRoom(), [roomId]);
   const authorToken = author?.roomId === roomId ? author.authorToken : undefined;
-  const { snapshot, error } = useRoomPolling({ roomId, authorToken }, 1200);
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling(
+    { roomId, authorToken },
+    1200,
+  );
   const [busy, setBusy] = useState(false);
   const [leaderboardBusy, setLeaderboardBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!authorToken) {
     return (
@@ -54,15 +66,25 @@ function AuthorRoomPage() {
     );
   }
 
+  if (isInitialLoading) {
+    return (
+      <AuthorShell>
+        <PageLoader message="Loading room…" description="Fetching live game data." fullScreen={false} className="min-h-[40vh]" />
+      </AuthorShell>
+    );
+  }
+
   if (!snapshot) {
     return (
       <AuthorShell>
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto size-8 animate-spin rounded-full border-2 border-[var(--gamibar-border)] border-t-[var(--gamibar-brand)]" />
-            <p className="mt-4 text-sm text-[var(--muted-foreground)]">Loading room…</p>
-          </div>
-        </div>
+        <PageErrorState
+          title="Connection problem"
+          message={friendlyGameError(error, "Could not connect to this room. Check your network and try again.")}
+          onRetry={retry}
+          retrying={retrying}
+          fullScreen={false}
+          className="min-h-[40vh]"
+        />
       </AuthorShell>
     );
   }
@@ -70,9 +92,18 @@ function AuthorRoomPage() {
   if (!snapshot.ok) {
     return (
       <AuthorShell>
-        <div className="mx-auto max-w-lg py-16 text-center text-sm text-[var(--muted-foreground)]">
-          {error ?? snapshot.error}
-        </div>
+        <PageErrorState
+          title="Could not load room"
+          message={friendlyGameError(error ?? snapshot.error, "This room may have been deleted or closed.")}
+          onRetry={retry}
+          retrying={retrying}
+          fullScreen={false}
+          className="min-h-[40vh]"
+        >
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link to="/author/create">Create a new room</Link>
+          </Button>
+        </PageErrorState>
       </AuthorShell>
     );
   }
@@ -114,12 +145,18 @@ function AuthorRoomPage() {
     }
     if (!window.confirm(confirmMessage)) return;
     setBusy(true);
+    setActionError(null);
     try {
       const res = await startGameFn({ data: { roomId, authorToken } });
-      if (!res.ok) toast.error(res.error);
-      else toast.success("Game started");
+      if (!res.ok) {
+        const message = friendlyGameError(res.error, "Could not start the game. Try again.");
+        setActionError(message);
+        toast.error(message);
+      } else toast.success("Game started");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not start the game.");
+      const message = e instanceof Error ? e.message : "Could not start the game.";
+      setActionError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -128,12 +165,18 @@ function AuthorRoomPage() {
   const handleStop = async () => {
     if (!window.confirm("Stop the game and calculate the final leaderboard?")) return;
     setBusy(true);
+    setActionError(null);
     try {
       const res = await stopGameFn({ data: { roomId, authorToken } });
-      if (!res.ok) toast.error(res.error);
-      else toast.success("Game finished - leaderboard ready");
+      if (!res.ok) {
+        const message = friendlyGameError(res.error, "Could not end the game. Try again.");
+        setActionError(message);
+        toast.error(message);
+      } else toast.success("Game finished - leaderboard ready");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not stop the game.");
+      const message = e instanceof Error ? e.message : "Could not stop the game.";
+      setActionError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -141,14 +184,20 @@ function AuthorRoomPage() {
 
   const handleLeaderboardVisibility = async (enabled: boolean) => {
     setLeaderboardBusy(true);
+    setActionError(null);
     try {
       const res = await setShowLeaderboardToStudentsFn({
         data: { roomId, authorToken, enabled },
       });
-      if (!res.ok) toast.error(res.error);
-      else toast.success(enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students");
+      if (!res.ok) {
+        const message = friendlyGameError(res.error, "Could not update leaderboard visibility.");
+        setActionError(message);
+        toast.error(message);
+      } else toast.success(enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update leaderboard visibility.");
+      const message = e instanceof Error ? e.message : "Could not update leaderboard visibility.";
+      setActionError(message);
+      toast.error(message);
     } finally {
       setLeaderboardBusy(false);
     }
@@ -158,6 +207,7 @@ function AuthorRoomPage() {
     room.endsAt && room.status === "LIVE"
       ? Math.max(0, Math.ceil((room.endsAt - Date.now()) / 1000))
       : null;
+  const liveProgress = snapshot.liveProgress ?? [];
 
   const statusHint = inLobby
     ? "Share the QR or code below. Start when at least one student has joined."
@@ -167,7 +217,11 @@ function AuthorRoomPage() {
 
   return (
     <AuthorShell>
+      {isReconnecting ? <ConnectionBanner onRetry={retry} retrying={retrying} /> : null}
       <div className="mx-auto w-full max-w-7xl space-y-5 pb-8">
+        {actionError ? (
+          <InlineErrorBanner message={actionError} onDismiss={() => setActionError(null)} />
+        ) : null}
         <section className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-5 shadow-[var(--shadow-soft)] sm:px-7 sm:py-6">
           <div
             aria-hidden
@@ -210,9 +264,11 @@ function AuthorRoomPage() {
                 >
                   <Play className="mr-2 size-4 shrink-0" />
                   <span className="truncate">
-                    {canStart
-                      ? `Start game · ${room.participantCount} ready`
-                      : "Waiting for students"}
+                    {busy
+                      ? "Starting game…"
+                      : canStart
+                        ? `Start game · ${room.participantCount} ready`
+                        : "Waiting for students"}
                   </span>
                 </Button>
               )}
@@ -224,7 +280,7 @@ function AuthorRoomPage() {
                   onClick={() => void handleStop()}
                 >
                   <Square className="mr-2 size-4 shrink-0" />
-                  Stop game
+                  {busy ? "Ending game…" : "Stop game"}
                 </Button>
               )}
               <Button
@@ -244,7 +300,7 @@ function AuthorRoomPage() {
               <HeroMetric label="Completed" value={completed} accent="connect_dots" />
               <HeroMetric
                 label="Time left"
-                value={remaining != null ? `${remaining}s` : "-"}
+                value={remaining != null ? `${remaining}s` : room.status === "LIVE" ? "No limit" : "—"}
                 icon={Clock}
                 {...(remaining != null ? { accent: "brand" as const } : {})}
               />
@@ -263,6 +319,16 @@ function AuthorRoomPage() {
           </div>
         ) : (
           <>
+            {isLive && (
+              <LiveGameDashboard
+                mode={room.mode}
+                rows={liveProgress}
+                joined={room.participantCount}
+                playing={playing}
+                completed={completed}
+              />
+            )}
+
             {!isLive && (
               <div className="rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-5 shadow-[var(--shadow-soft)] sm:px-6">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
@@ -294,11 +360,11 @@ function AuthorRoomPage() {
                     />
                   </div>
                 )}
-                {room.mode === "quiz" ? (
-                  <QuizLeaderboard rows={leaderboard} finished={room.status === "FINISHED"} />
-                ) : (
-                  <LiveLeaderboard rows={leaderboard} finished={room.status === "FINISHED"} />
-                )}
+                <UnifiedLeaderboard
+                  mode={room.mode}
+                  rows={leaderboard}
+                  finished={room.status === "FINISHED"}
+                />
               </div>
               <CompletionTimeline items={completions} />
             </div>

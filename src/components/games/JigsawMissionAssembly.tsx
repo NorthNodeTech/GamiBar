@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { nextLiveMessage } from "@/lib/accessibility";
 import {
   allSlotsFilled,
   pieceSliceStyle,
@@ -13,7 +14,20 @@ const SNAP_RATIO = 0.42;
 type DragState = {
   pieceId: number;
   pointerId: number;
+  fromSlot: number | null;
 };
+
+function useCoarsePointer() {
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarse(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return coarse;
+}
 
 export function JigsawMissionAssembly({
   imageUrl,
@@ -22,6 +36,7 @@ export function JigsawMissionAssembly({
   onSubmit,
   submitting = false,
   submitMessage,
+  initialPlacements,
 }: {
   imageUrl: string;
   cols: number;
@@ -29,18 +44,27 @@ export function JigsawMissionAssembly({
   onSubmit: (layout: number[]) => void;
   submitting?: boolean;
   submitMessage?: string | null;
+  initialPlacements?: Array<number | null>;
 }) {
   const total = cols * rows;
   const boardRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const coarsePointer = useCoarsePointer();
+  const snapRatio = coarsePointer ? 0.52 : SNAP_RATIO;
 
-  const [placements, setPlacements] = useState<Array<number | null>>(() =>
-    Array.from({ length: total }, () => null),
-  );
+  const [placements, setPlacements] = useState<Array<number | null>>(() => {
+    if (initialPlacements && initialPlacements.length === total) {
+      return initialPlacements.map((piece) =>
+        typeof piece === "number" && piece >= 0 ? piece : null,
+      );
+    }
+    return Array.from({ length: total }, () => null);
+  });
   const [trayOrder] = useState(() => shufflePieceIds(total));
   const [drag, setDrag] = useState<DragState | null>(null);
   const [snapSlot, setSnapSlot] = useState<number | null>(null);
   const [dragPoint, setDragPoint] = useState<{ x: number; y: number } | null>(null);
+  const [liveMessage, setLiveMessage] = useState("");
 
   const trayPieces = useMemo(() => {
     const placed = new Set(placements.filter((p): p is number => p != null));
@@ -56,7 +80,7 @@ export function JigsawMissionAssembly({
         const rect = el.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        const threshold = Math.min(rect.width, rect.height) * SNAP_RATIO;
+        const threshold = Math.min(rect.width, rect.height) * snapRatio;
         const dist = Math.hypot(clientX - cx, clientY - cy);
         if (dist <= threshold && (!best || dist < best.dist)) {
           best = { index: i, dist };
@@ -64,7 +88,7 @@ export function JigsawMissionAssembly({
       }
       return best?.index ?? null;
     },
-    [total],
+    [total, snapRatio],
   );
 
   const placePiece = useCallback(
@@ -105,8 +129,10 @@ export function JigsawMissionAssembly({
       const slot = nearestSlot(clientX, clientY);
       if (slot != null) {
         placePiece(pieceId, slot);
+        nextLiveMessage(`Piece ${pieceId + 1} placed in slot ${slot + 1}.`, setLiveMessage);
       } else if (fromSlot != null) {
         removeFromSlot(fromSlot);
+        nextLiveMessage(`Piece ${pieceId + 1} returned to the tray.`, setLiveMessage);
       }
       setDrag(null);
       setSnapSlot(null);
@@ -115,13 +141,47 @@ export function JigsawMissionAssembly({
     [nearestSlot, placePiece, removeFromSlot],
   );
 
-  const startDrag = (pieceId: number, e: React.PointerEvent) => {
+  const startDrag = (pieceId: number, e: React.PointerEvent, fromSlot: number | null = null) => {
     if (submitting) return;
     e.preventDefault();
-    setDrag({ pieceId, pointerId: e.pointerId });
+    setDrag({ pieceId, pointerId: e.pointerId, fromSlot });
     setDragPoint({ x: e.clientX, y: e.clientY });
+    nextLiveMessage(
+      fromSlot != null
+        ? `Moving piece ${pieceId + 1} from slot ${fromSlot + 1}.`
+        : `Moving piece ${pieceId + 1} from the tray.`,
+      setLiveMessage,
+    );
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
+
+  useEffect(() => {
+    if (!drag) return;
+
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerId !== drag.pointerId) return;
+      onDragMove(e.clientX, e.clientY);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (e.pointerId !== drag.pointerId) return;
+      finishDrag(
+        drag.pieceId,
+        e.clientX,
+        e.clientY,
+        drag.fromSlot ?? undefined,
+      );
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [drag, finishDrag, onDragMove]);
 
   const handleSubmit = () => {
     if (!allSlotsFilled(placements)) {
@@ -148,7 +208,7 @@ export function JigsawMissionAssembly({
   const floatingPiece =
     drag != null && dragPoint ? (
       <div
-        className="pointer-events-none fixed z-50 aspect-square w-[min(22vw,88px)] -translate-x-1/2 -translate-y-1/2 opacity-95 shadow-xl sm:w-[min(18vw,96px)]"
+        className="pointer-events-none fixed z-50 aspect-square w-[min(24vw,96px)] -translate-x-1/2 -translate-y-1/2 opacity-95 shadow-xl sm:w-[min(18vw,96px)]"
         style={{ left: dragPoint.x, top: dragPoint.y }}
       >
         {renderPieceFace(drag.pieceId, "ring-2 ring-[var(--game-jigsaw)]")}
@@ -156,10 +216,15 @@ export function JigsawMissionAssembly({
     ) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="touch-none space-y-4 select-none" style={{ touchAction: "none" }}>
+      <p className="sr-only" role="status" aria-live="polite">
+        {liveMessage}
+      </p>
       <div
         ref={boardRef}
-        className="mx-auto grid w-full max-w-md gap-1 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-1.5 shadow-[var(--shadow-soft)]"
+        role="group"
+        aria-label="Puzzle board"
+        className="mx-auto grid w-full max-w-[min(100%,22rem)] gap-1 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-1.5 shadow-[var(--shadow-soft)] focus-within:ring-2 focus-within:ring-[var(--ring)] focus-within:ring-offset-2 sm:max-w-md sm:p-2"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
       >
         {Array.from({ length: total }, (_, slotIndex) => {
@@ -184,25 +249,10 @@ export function JigsawMissionAssembly({
               {pieceId != null && drag?.pieceId !== pieceId && (
                 <button
                   type="button"
-                  className="absolute inset-0 cursor-grab active:cursor-grabbing"
-                  aria-label="Puzzle piece"
-                  onPointerDown={(e) => startDrag(pieceId, e)}
-                  onPointerMove={(e) => {
-                    if (drag?.pointerId !== e.pointerId) return;
-                    onDragMove(e.clientX, e.clientY);
-                  }}
-                  onPointerUp={(e) => {
-                    if (drag?.pointerId !== e.pointerId) return;
-                    finishDrag(pieceId, e.clientX, e.clientY, slotIndex);
-                    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-                  }}
-                  onPointerCancel={(e) => {
-                    if (drag?.pointerId !== e.pointerId) return;
-                    removeFromSlot(slotIndex);
-                    setDrag(null);
-                    setSnapSlot(null);
-                    setDragPoint(null);
-                  }}
+                  className="absolute inset-0 cursor-grab touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 active:cursor-grabbing"
+                  aria-label={`Puzzle piece ${pieceId + 1} in slot ${slotIndex + 1}. Drag to move.`}
+                  aria-grabbed={drag?.pieceId === pieceId}
+                  onPointerDown={(e) => startDrag(pieceId, e, slotIndex)}
                 >
                   {renderPieceFace(pieceId)}
                 </button>
@@ -222,25 +272,12 @@ export function JigsawMissionAssembly({
               key={pieceId}
               type="button"
               className={cn(
-                "aspect-square w-[min(20vw,72px)] shrink-0 cursor-grab rounded-lg active:cursor-grabbing sm:w-16",
+                "aspect-square w-[min(22vw,76px)] shrink-0 cursor-grab touch-manipulation rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 active:cursor-grabbing sm:w-16",
                 drag?.pieceId === pieceId && "opacity-30",
               )}
-              aria-label="Puzzle piece"
+              aria-label={`Puzzle piece ${pieceId + 1} in tray. Drag onto the board.`}
+              aria-grabbed={drag?.pieceId === pieceId}
               onPointerDown={(e) => startDrag(pieceId, e)}
-              onPointerMove={(e) => {
-                if (drag?.pointerId !== e.pointerId) return;
-                onDragMove(e.clientX, e.clientY);
-              }}
-              onPointerUp={(e) => {
-                if (drag?.pointerId !== e.pointerId) return;
-                finishDrag(pieceId, e.clientX, e.clientY);
-                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-              }}
-              onPointerCancel={() => {
-                setDrag(null);
-                setSnapSlot(null);
-                setDragPoint(null);
-              }}
             >
               {renderPieceFace(pieceId)}
             </button>

@@ -244,7 +244,7 @@
   --gamibar-brand: #EF4444;
   --gamibar-brand-hover: #DC2626;
   --gamibar-brand-soft: #FEF2F2;
-  --gamibar-text-tertiary: #737373;
+  --gamibar-text-tertiary: #6B7280;
   --gamibar-page: #FAFAFA;
   --gamibar-surface: #FFFFFF;
   --gamibar-border: #E5E7EB;
@@ -313,7 +313,7 @@
   --gamibar-brand: #ef4444;
   --gamibar-brand-hover: #f87171;
   --gamibar-brand-soft: rgba(239, 68, 68, 0.14);
-  --gamibar-text-tertiary: #a3a3a3;
+  --gamibar-text-tertiary: #9CA3AF;
   --gamibar-page: #0a0a0a;
   --gamibar-surface: #1a1a1a;
   --gamibar-border: #333333;
@@ -352,6 +352,11 @@
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  :where(a, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
   h1,

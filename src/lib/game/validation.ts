@@ -5,7 +5,7 @@ import {
   isConnectDotsPairComplete,
 } from "@/lib/game/connect-dots-content";
 import type { GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
-import { clampTimer } from "@/lib/game/timer";
+import { isTimerValid } from "@/lib/game/timer";
 
 const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 
@@ -112,8 +112,8 @@ export function validateGamePayload(
     if (!payload.jigsaw.imageUrl) {
       return { ok: false, error: "Upload one puzzle image for students to reconstruct." };
     }
-    if (!clampTimer("jigsaw", payload.timeLimitSeconds)) {
-      return { ok: false, error: "Choose a jigsaw timer between 30 seconds and 5 minutes." };
+    if (!isTimerValid("jigsaw", payload.timeLimitSeconds)) {
+      return { ok: false, error: "Choose a jigsaw timer between 30 seconds and 5 minutes, or no limit." };
     }
     return { ok: true };
   }
@@ -155,8 +155,8 @@ export function validateGamePayload(
         return { ok: false, error: "Generate a Connect Dots puzzle before creating the room." };
       }
     }
-    if (!clampTimer("connect_dots", payload.timeLimitSeconds)) {
-      return { ok: false, error: "Choose a Connect Dots timer between 30 seconds and 3 minutes." };
+    if (!isTimerValid("connect_dots", payload.timeLimitSeconds)) {
+      return { ok: false, error: "Choose a Connect Dots timer between 30 seconds and 3 minutes, or no limit." };
     }
     return { ok: true };
   }

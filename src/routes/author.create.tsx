@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Rocket,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ import { GameTimerSettings } from "@/components/author/GameTimerSettings";
 import { ConnectDotsMatchBoard } from "@/components/games/ConnectDotsMatchBoard";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
+import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
@@ -36,7 +38,7 @@ import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-sol
 import { getModeCatalog } from "@/lib/game/mode-catalog";
 import { modeUsesQuestions } from "@/lib/game/mode-registry";
 import { createRoomFn } from "@/lib/game/room.functions";
-import { defaultTimerSeconds, formatTimerLong, gameInstruction } from "@/lib/game/timer";
+import { formatTimerLong, gameInstruction } from "@/lib/game/timer";
 import type { ConnectDotsBoardConfig, ConnectDotsContentPair, GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
 import {
   emptyQuizQuestions,
@@ -83,6 +85,9 @@ function CreateRoomWizard() {
   const [timerSeconds, setTimerSeconds] = useState<number | null>(null);
   const [activeQ, setActiveQ] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
   const connectDotsProgress = connectDotsPairsProgress(connectDotsPairs);
@@ -142,14 +147,14 @@ function CreateRoomWizard() {
           cols: grid.cols,
           rows: grid.rows,
         },
-        timeLimitSeconds: timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
+        timeLimitSeconds: timerSeconds,
       };
     }
     if (!connectDotsBoard) return null;
     return {
       mode: "connect_dots",
       connectDots: connectDotsBoard,
-      timeLimitSeconds: timerSeconds ?? defaultTimerSeconds("connect_dots"),
+      timeLimitSeconds: timerSeconds,
     };
   }, [mode, questions, connectDotsBoard, jigsawUrl, jigsawMime, timerSeconds, rewardCode]);
 
@@ -205,7 +210,7 @@ function CreateRoomWizard() {
 
   const handleModeSelect = (next: GameMode) => {
     setMode(next);
-    setTimerSeconds(defaultTimerSeconds(next));
+    setTimerSeconds(null);
     if (modeUsesQuestions(next)) {
       setQuestions(emptyQuizQuestions(next));
       setActiveQ(0);
@@ -219,18 +224,33 @@ function CreateRoomWizard() {
 
   const handleImage = async (file: File | undefined) => {
     if (!file) return;
+    setImageUploadError(null);
     const v = validateJigsawFile(file);
     if (!v.ok) {
+      setImageUploadError(v.error);
       toast.error(v.error);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setJigsawUrl(String(reader.result));
-      setJigsawMime(file.type);
+    setImageUploading(true);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setJigsawUrl(String(reader.result));
+          setJigsawMime(file.type);
+          resolve();
+        };
+        reader.onerror = () => reject(new Error("Could not read that image. Try a different file."));
+        reader.readAsDataURL(file);
+      });
       toast.success("Puzzle image locked in.");
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Upload failed.";
+      setImageUploadError(message);
+      toast.error(message);
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const addJigsawQuestion = () => {
@@ -298,6 +318,7 @@ function CreateRoomWizard() {
       return;
     }
     setSubmitting(true);
+    setCreateError(null);
     try {
       const result = await createRoomFn({
         data: {
@@ -310,6 +331,7 @@ function CreateRoomWizard() {
         },
       });
       if (!result.ok) {
+        setCreateError(result.error);
         toast.error(result.error);
         return;
       }
@@ -321,7 +343,9 @@ function CreateRoomWizard() {
       toast.success(`Room ${result.room.code} is ready.`);
       navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not create room.");
+      const message = e instanceof Error ? e.message : "Could not create room.";
+      setCreateError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -489,8 +513,11 @@ function CreateRoomWizard() {
                     />
                     <JigsawUploader
                       jigsawUrl={jigsawUrl}
-                      timerLabel={formatTimerLong(timerSeconds ?? GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600)}
+                      timerLabel={formatTimerLong(timerSeconds)}
                       onFile={handleImage}
+                      uploading={imageUploading}
+                      uploadError={imageUploadError}
+                      onDismissUploadError={() => setImageUploadError(null)}
                       label="Puzzle image"
                       hint="Students reveal this image piece by piece as they answer correctly."
                     />
@@ -556,11 +583,14 @@ function CreateRoomWizard() {
                     />
                     <JigsawUploader
                       jigsawUrl={jigsawUrl}
-                      timerLabel={formatTimerLong(timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)}
+                      timerLabel={formatTimerLong(timerSeconds)}
                       onFile={handleImage}
+                      uploading={imageUploading}
+                      uploadError={imageUploadError}
+                      onDismissUploadError={() => setImageUploadError(null)}
                       pieceCount={questions.length}
                       label="Final puzzle image"
-                      hint={`Students reconstruct this image · ${questions.length} pieces · ${formatTimerLong(timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)} timer`}
+                      hint={`Students reconstruct this image · ${questions.length} pieces · ${formatTimerLong(timerSeconds)} timer`}
                     />
                   </>
                 )}
@@ -582,7 +612,7 @@ function CreateRoomWizard() {
                       setConnectDotsSeed(`cd-${Date.now()}`);
                       toast.success("Answer order shuffled.");
                     }}
-                    timerLabel={formatTimerLong(timerSeconds ?? defaultTimerSeconds("connect_dots"))}
+                    timerLabel={formatTimerLong(timerSeconds)}
                   />
                   </>
                 )}
@@ -601,17 +631,22 @@ function CreateRoomWizard() {
                 preview={modeCatalog.preview}
                 accentClass={modeCatalog.accentClass}
                 badgeClass={modeCatalog.badgeClass}
-                timeLimitSeconds={
-                  mode === "quiz"
-                    ? payload.timeLimitSeconds
-                    : payload.timeLimitSeconds ?? defaultTimerSeconds(mode)
-                }
+                timeLimitSeconds={payload.timeLimitSeconds}
               />
               </div>
             )}
           </div>
 
           <div className="sticky bottom-16 z-10 rounded-b-2xl border-t border-[var(--gamibar-border)] bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5 md:bottom-0">
+            {createError ? (
+              <InlineErrorBanner
+                className="mb-3"
+                message={createError}
+                onRetry={() => void handleCreate()}
+                retrying={submitting}
+                onDismiss={() => setCreateError(null)}
+              />
+            ) : null}
             {configureHint && (
               <p className="mb-2 text-center text-xs font-medium text-[var(--gamibar-brand)] sm:text-left">
                 {configureHint}
@@ -826,6 +861,9 @@ function JigsawUploader({
   jigsawUrl,
   timerLabel,
   onFile,
+  uploading = false,
+  uploadError,
+  onDismissUploadError,
   label = "Upload your puzzle image",
   hint,
   pieceCount,
@@ -833,6 +871,9 @@ function JigsawUploader({
   jigsawUrl: string | null;
   timerLabel: string;
   onFile: (file: File | undefined) => void;
+  uploading?: boolean;
+  uploadError?: string | null;
+  onDismissUploadError?: () => void;
   label?: string;
   hint?: string;
   pieceCount?: number;
@@ -842,8 +883,19 @@ function JigsawUploader({
     (hint ? GAME_CONFIG.quiz_jigsaw.questionCount : GAME_CONFIG.jigsaw.defaultQuestionCount);
   return (
     <div className="grid gap-4">
-      <label className="group relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center transition-colors hover:border-[var(--game-jigsaw)] sm:min-h-[200px]">
-        {jigsawUrl ? (
+      <label
+        className={cn(
+          "group relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center transition-colors hover:border-[var(--game-jigsaw)] sm:min-h-[200px]",
+          uploading && "pointer-events-none opacity-80",
+        )}
+      >
+        {uploading ? (
+          <div className="relative z-10 flex flex-col items-center">
+            <Loader2 className="size-8 animate-spin text-[var(--game-jigsaw)]" aria-hidden="true" />
+            <p className="mt-4 text-sm font-semibold text-[#111111]">Uploading image…</p>
+            <p className="mt-1 text-xs text-[#737373]">Preparing your puzzle preview</p>
+          </div>
+        ) : jigsawUrl ? (
           <>
             <img src={jigsawUrl} alt="Puzzle source" className="absolute inset-0 size-full object-cover opacity-90" />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.15)_1px,transparent_1px)] bg-[size:20%_20%]" />
@@ -867,9 +919,13 @@ function JigsawUploader({
           type="file"
           accept="image/jpeg,image/png,image/webp"
           className="sr-only"
+          disabled={uploading}
           onChange={(e) => void onFile(e.target.files?.[0])}
         />
       </label>
+      {uploadError ? (
+        <InlineErrorBanner message={uploadError} onDismiss={onDismissUploadError} />
+      ) : null}
     </div>
   );
 }

@@ -37,6 +37,7 @@ import { Route as JoinLobbyRouteImport } from './routes/join.lobby'
 import { Route as JoinNameRouteImport } from './routes/join.name'
 import { Route as PlayRoomIdRouteImport } from './routes/play.$roomId'
 import { Route as AuthorRoomRoomIdRouteImport } from './routes/author.room.$roomId'
+import { Route as AuthorSessionsRoomIdRouteImport } from './routes/author.sessions.$roomId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -178,6 +179,11 @@ const AuthorRoomRoomIdRoute = AuthorRoomRoomIdRouteImport.update({
   path: '/room/$roomId',
   getParentRoute: () => AuthorRoute,
 } as any)
+const AuthorSessionsRoomIdRoute = AuthorSessionsRoomIdRouteImport.update({
+  id: '/$roomId',
+  path: '/$roomId',
+  getParentRoute: () => AuthorSessionsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -196,7 +202,7 @@ export interface FileRoutesByFullPath {
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
   '/author/reports': typeof AuthorReportsRoute
-  '/author/sessions': typeof AuthorSessionsRoute
+  '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
   '/games/connect-dots': typeof GamesConnectDotsRoute
   '/games/jigsaw': typeof GamesJigsawRoute
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/games/': typeof GamesIndexRoute
   '/join/': typeof JoinIndexRoute
   '/author/room/$roomId': typeof AuthorRoomRoomIdRoute
+  '/author/sessions/$roomId': typeof AuthorSessionsRoomIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -224,7 +231,7 @@ export interface FileRoutesByTo {
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
   '/author/reports': typeof AuthorReportsRoute
-  '/author/sessions': typeof AuthorSessionsRoute
+  '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
   '/games/connect-dots': typeof GamesConnectDotsRoute
   '/games/jigsaw': typeof GamesJigsawRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/games': typeof GamesIndexRoute
   '/join': typeof JoinIndexRoute
   '/author/room/$roomId': typeof AuthorRoomRoomIdRoute
+  '/author/sessions/$roomId': typeof AuthorSessionsRoomIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -255,7 +263,7 @@ export interface FileRoutesById {
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
   '/author/reports': typeof AuthorReportsRoute
-  '/author/sessions': typeof AuthorSessionsRoute
+  '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
   '/games/connect-dots': typeof GamesConnectDotsRoute
   '/games/jigsaw': typeof GamesJigsawRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/games/': typeof GamesIndexRoute
   '/join/': typeof JoinIndexRoute
   '/author/room/$roomId': typeof AuthorRoomRoomIdRoute
+  '/author/sessions/$roomId': typeof AuthorSessionsRoomIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -299,6 +308,7 @@ export interface FileRouteTypes {
     | '/games/'
     | '/join/'
     | '/author/room/$roomId'
+    | '/author/sessions/$roomId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/join'
     | '/author/room/$roomId'
+    | '/author/sessions/$roomId'
   id:
     | '__root__'
     | '/'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/games/'
     | '/join/'
     | '/author/room/$roomId'
+    | '/author/sessions/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -575,8 +587,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorRoomRoomIdRouteImport
       parentRoute: typeof AuthorRoute
     }
+    '/author/sessions/$roomId': {
+      id: '/author/sessions/$roomId'
+      path: '/$roomId'
+      fullPath: '/author/sessions/$roomId'
+      preLoaderRoute: typeof AuthorSessionsRoomIdRouteImport
+      parentRoute: typeof AuthorSessionsRoute
+    }
   }
 }
+
+interface AuthorSessionsRouteChildren {
+  AuthorSessionsRoomIdRoute: typeof AuthorSessionsRoomIdRoute
+}
+
+const AuthorSessionsRouteChildren: AuthorSessionsRouteChildren = {
+  AuthorSessionsRoomIdRoute: AuthorSessionsRoomIdRoute,
+}
+
+const AuthorSessionsRouteWithChildren = AuthorSessionsRoute._addFileChildren(
+  AuthorSessionsRouteChildren,
+)
 
 interface AuthorRouteChildren {
   AuthorAchievementsRoute: typeof AuthorAchievementsRoute
@@ -585,7 +616,7 @@ interface AuthorRouteChildren {
   AuthorQuestionsRoute: typeof AuthorQuestionsRoute
   AuthorRegisterRoute: typeof AuthorRegisterRoute
   AuthorReportsRoute: typeof AuthorReportsRoute
-  AuthorSessionsRoute: typeof AuthorSessionsRoute
+  AuthorSessionsRoute: typeof AuthorSessionsRouteWithChildren
   AuthorTemplatesRoute: typeof AuthorTemplatesRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
   AuthorRoomRoomIdRoute: typeof AuthorRoomRoomIdRoute
@@ -598,7 +629,7 @@ const AuthorRouteChildren: AuthorRouteChildren = {
   AuthorQuestionsRoute: AuthorQuestionsRoute,
   AuthorRegisterRoute: AuthorRegisterRoute,
   AuthorReportsRoute: AuthorReportsRoute,
-  AuthorSessionsRoute: AuthorSessionsRoute,
+  AuthorSessionsRoute: AuthorSessionsRouteWithChildren,
   AuthorTemplatesRoute: AuthorTemplatesRoute,
   AuthorIndexRoute: AuthorIndexRoute,
   AuthorRoomRoomIdRoute: AuthorRoomRoomIdRoute,

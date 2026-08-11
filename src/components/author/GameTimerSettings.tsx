@@ -202,9 +202,16 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
   const style = MODE_STYLE[mode];
   const presets = TIMER_PRESETS[mode];
   const bounds = TIMER_BOUNDS[mode];
-  const timed = value != null;
-  const openEnded = (mode === "quiz" || mode === "quiz_jigsaw") && !timed;
+  const openEnded = value == null;
   const displayValue = openEnded ? bounds.min : clampTimer(mode, value)!;
+  const suggestedSeconds =
+    mode === "quiz"
+      ? GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.questionCount
+      : mode === "quiz_jigsaw"
+        ? GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600
+        : mode === "jigsaw"
+          ? GAME_CONFIG.jigsaw.timeLimitSeconds
+          : GAME_CONFIG.connect_dots.timeLimitSeconds;
 
   return (
     <section
@@ -221,7 +228,7 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
         </p>
         <p className="mt-1 text-sm text-[#525252]">
           {openEnded
-            ? "Students finish all questions at their own pace."
+            ? "Students play until they finish — no countdown on screen."
             : `Students must finish before ${formatTimerLong(displayValue)}.`}
         </p>
       </div>
@@ -270,17 +277,13 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
           })}
         </div>
 
-        {openEnded && (
+        {openEnded && suggestedSeconds != null && (
           <button
             type="button"
-            onClick={() =>
-              onChange(
-                GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.questionCount,
-              )
-            }
+            onClick={() => onChange(clampTimer(mode, suggestedSeconds))}
             className="mt-4 w-full text-center text-xs font-semibold text-[#525252] underline-offset-2 hover:text-[#111111] hover:underline"
           >
-            Prefer a countdown? Tap to set a {formatTimerSeconds(200)} suggested limit.
+            Prefer a countdown? Tap to set a {formatTimerSeconds(suggestedSeconds)} suggested limit.
           </button>
         )}
       </div>

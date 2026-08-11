@@ -72,11 +72,11 @@ export type GamePayload =
       rewardCode: string;
       timeLimitSeconds: number | null;
     }
-  | { mode: "jigsaw"; questions: QuizQuestionDraft[]; jigsaw: JigsawConfig; timeLimitSeconds: number }
+  | { mode: "jigsaw"; questions: QuizQuestionDraft[]; jigsaw: JigsawConfig; timeLimitSeconds: number | null }
   | {
       mode: "connect_dots";
       connectDots: ConnectDotsBoardConfig;
-      timeLimitSeconds: number;
+      timeLimitSeconds: number | null;
     };
 
 export type Room = {
@@ -126,6 +126,17 @@ export type QuizAttempt = {
   durationMs: number | null;
 };
 
+/** Author-only live dashboard row (never sent to students). */
+export type LiveParticipantProgress = {
+  participantId: string;
+  displayName: string;
+  status: ParticipantStatus;
+  completed: boolean;
+  progressText: string;
+  progressPercent: number;
+  score?: number | null;
+};
+
 export type LeaderboardRow = {
   rank: number;
   participantId: string;
@@ -136,6 +147,10 @@ export type LeaderboardRow = {
   secondaryLabel: string | null;
   status: "completed" | "in_progress" | "incomplete";
   detail?: string;
+  /** Mode-specific performance label (score, incorrect count, pairs, etc.). */
+  performanceText?: string;
+  /** Wrong answers (jigsaw) or failed connections (connect dots). */
+  incorrectAttempts?: number;
   /** Quiz Challenge: points earned (correct × 100). */
   score?: number;
   /** Quiz Challenge: correct answers ÷ total questions (0–100). */

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, LogOut, Plus, Radio } from "lucide-react";
+import { Home, History, LogOut, Plus, Radio } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -12,10 +12,13 @@ import { cn } from "@/lib/utils";
 const mobileNav = [
   { to: "/author", label: "Home", icon: Home },
   { to: "/author/create", label: "Create", icon: Plus },
+  { to: "/author/sessions", label: "History", icon: History },
 ] as const;
 
 function pageTitle(pathname: string): string | null {
   if (pathname.startsWith("/author/room/")) return "Live control";
+  if (pathname.startsWith("/author/sessions/")) return "Game results";
+  if (pathname.startsWith("/author/sessions")) return "Game history";
   if (pathname.startsWith("/author/create")) return "Create session";
   if (pathname === "/author" || pathname === "/author/") return "Author portal";
   return null;

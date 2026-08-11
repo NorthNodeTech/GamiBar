@@ -45,21 +45,37 @@ export type ConnectDotsMatchMap = Record<string, string>;
 
 export function countCorrectConnectDotsMatches(
   matches: ConnectDotsMatchMap,
-  validPairIds: ReadonlySet<string>,
+  contentPairs: ConnectDotsContentPair[],
 ): number {
+  const validIds = validConnectDotsPairIds(contentPairs);
   let count = 0;
   for (const [questionId, answerId] of Object.entries(matches)) {
-    if (questionId === answerId && validPairIds.has(questionId)) count += 1;
+    if (questionId !== answerId || !validIds.has(questionId)) continue;
+    count += 1;
   }
   return count;
+}
+
+export function sanitizeConnectDotsMatches(
+  matches: ConnectDotsMatchMap,
+  contentPairs: ConnectDotsContentPair[],
+): ConnectDotsMatchMap {
+  const validIds = validConnectDotsPairIds(contentPairs);
+  const sanitized: ConnectDotsMatchMap = {};
+  for (const [questionId, answerId] of Object.entries(matches)) {
+    if (questionId === answerId && validIds.has(questionId)) {
+      sanitized[questionId] = answerId;
+    }
+  }
+  return sanitized;
 }
 
 export function isConnectDotsMatchesComplete(
   matches: ConnectDotsMatchMap,
   totalPairs: number,
-  validPairIds: ReadonlySet<string>,
+  contentPairs: ConnectDotsContentPair[],
 ): boolean {
-  return countCorrectConnectDotsMatches(matches, validPairIds) === totalPairs && totalPairs > 0;
+  return countCorrectConnectDotsMatches(matches, contentPairs) === totalPairs && totalPairs > 0;
 }
 
 export function validConnectDotsPairIds(pairs: ConnectDotsContentPair[]): ReadonlySet<string> {

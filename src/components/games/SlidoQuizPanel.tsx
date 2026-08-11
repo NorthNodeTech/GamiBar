@@ -49,11 +49,14 @@ export function SlidoQuizPanel({
 
   return (
     <div className="flex flex-col">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="rounded-full bg-[#EDE9FE] px-3 py-1 text-xs font-bold text-[#5B21B6]">
           Question {questionIndex + 1} of {totalQuestions}
         </span>
-        <div className="flex gap-1">
+        <div
+          className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:overflow-visible sm:px-0"
+          aria-hidden="true"
+        >
           {Array.from({ length: totalQuestions }, (_, i) => (
             <div
               key={i}
@@ -78,33 +81,46 @@ export function SlidoQuizPanel({
           exit={{ opacity: 0, y: -12 }}
           transition={{ duration: 0.25 }}
         >
-          <h2 className="font-display text-[clamp(1.125rem,3.5vw,1.5rem)] font-bold leading-snug text-[#111111]">
+          <h2
+            id={`quiz-question-${question.id}`}
+            className="font-display text-[clamp(1.125rem,3.5vw,1.5rem)] font-bold leading-snug text-[#111111]"
+          >
             {question.prompt}
           </h2>
         </motion.div>
       </AnimatePresence>
 
-      <div className="mt-6 grid gap-2.5">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            disabled={submitting || feedback !== null}
-            onClick={() => onSelect(opt)}
-            className={cn(
-              "flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-white transition-all sm:min-h-14",
-              OPTION_COLORS[opt],
-              selected === opt && "ring-4 ring-white/40 scale-[1.02]",
-              feedback !== null && selected !== opt && "opacity-50",
-            )}
-          >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-black/15 text-xs font-bold">
-              {OPTION_LABELS[opt]}
-            </span>
-            <span className="min-w-0 flex-1">{question.options[opt]}</span>
-          </button>
-        ))}
-      </div>
+      <fieldset className="mt-6 border-0 p-0">
+        <legend className="sr-only">
+          Answer choices for question {questionIndex + 1} of {totalQuestions}
+        </legend>
+        <div className="grid gap-3 sm:gap-2.5">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              disabled={submitting || feedback !== null}
+              onClick={() => onSelect(opt)}
+              aria-pressed={selected === opt}
+              aria-label={`Option ${opt}: ${question.options[opt]}`}
+              className={cn(
+                "flex min-h-[3.25rem] w-full touch-manipulation items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-semibold text-white transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 sm:min-h-14 sm:py-3",
+                OPTION_COLORS[opt],
+                selected === opt && "scale-[1.02] ring-4 ring-white/40",
+                feedback !== null && selected !== opt && "opacity-50",
+              )}
+            >
+              <span
+                className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/15 text-xs font-bold sm:size-8"
+                aria-hidden="true"
+              >
+                {OPTION_LABELS[opt]}
+              </span>
+              <span className="min-w-0 flex-1">{question.options[opt]}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
 
       <AnimatePresence>
         {feedback && (
@@ -112,6 +128,8 @@ export function SlidoQuizPanel({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
+            role="status"
+            aria-live="polite"
             className={cn(
               "mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold",
               feedback === "correct"
@@ -121,12 +139,12 @@ export function SlidoQuizPanel({
           >
             {feedback === "correct" ? (
               <>
-                <Check className="size-4" />
+                <Check className="size-4 shrink-0" aria-hidden="true" />
                 Correct! Puzzle piece unlocked.
               </>
             ) : (
               <>
-                <X className="size-4" />
+                <X className="size-4 shrink-0" aria-hidden="true" />
                 Not quite — try again to unlock this piece.
               </>
             )}
@@ -139,7 +157,8 @@ export function SlidoQuizPanel({
           type="button"
           disabled={!selected || submitting}
           onClick={onSubmit}
-          className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#111111] text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-40 sm:h-14"
+          aria-label={submitting ? "Checking answer" : "Submit answer"}
+          className="mt-6 flex h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-[#111111] text-sm font-bold text-white transition-colors hover:bg-black active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 disabled:opacity-40 sm:h-14"
         >
           {submitting ? "Checking…" : "Submit answer"}
         </button>
@@ -168,7 +187,7 @@ export function SlidoProgressHeader({
   }, [endsAt]);
 
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-4 py-3 sm:px-6">
+    <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-[#7C3AED]">Puzzle Quest</p>
         <p className="text-sm font-semibold text-[#111111]">

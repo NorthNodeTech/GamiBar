@@ -7,9 +7,11 @@ import { z } from "zod";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InlineErrorBanner, PageErrorState, PageLoader } from "@/components/ui/async-state";
 import { saveParticipantSession } from "@/lib/game/client-session";
 import { getRoomSnapshotFn, joinRoomFn } from "@/lib/game/room.functions";
 import { GAME_MODE_META } from "@/lib/game/config";
+import { friendlyGameError } from "@/lib/accessibility";
 import { isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
 
 const searchSchema = z.object({
@@ -31,7 +33,9 @@ function NicknamePage() {
   const [roomName, setRoomName] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [modeLabel, setModeLabel] = useState("");
+  const [roomStatus, setRoomStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [pageState, setPageState] = useState<"loading" | "ready" | "missing">("loading");
 
   useEffect(() => {
@@ -39,22 +43,26 @@ function NicknamePage() {
     (async () => {
       const clean = normalizeRoomCode(code);
       if (!isValidRoomCodeFormat(clean)) {
-        if (!code) return;
         if (!cancelled) setPageState("missing");
         return;
       }
 
       if (!cancelled) setPageState("loading");
-      const snap = await getRoomSnapshotFn({ data: { code: clean } });
-      if (cancelled) return;
-      if (!snap.ok) {
-        setPageState("missing");
-        return;
+      try {
+        const snap = await getRoomSnapshotFn({ data: { code: clean } });
+        if (cancelled) return;
+        if (!snap.ok) {
+          setPageState("missing");
+          return;
+        }
+        setRoomName(snap.room.name);
+        setAuthorName(snap.room.authorName);
+        setModeLabel(GAME_MODE_META[snap.room.mode].title);
+        setRoomStatus(snap.room.status);
+        setPageState("ready");
+      } catch {
+        if (!cancelled) setPageState("missing");
       }
-      setRoomName(snap.room.name);
-      setAuthorName(snap.room.authorName);
-      setModeLabel(GAME_MODE_META[snap.room.mode].title);
-      setPageState("ready");
     })();
     return () => {
       cancelled = true;
@@ -68,30 +76,38 @@ function NicknamePage() {
 
   if (pageState === "loading") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white px-5">
-        <p className="text-sm text-[#525252]">Looking up room…</p>
-      </div>
+      <PageLoader message="Looking up room…" description="Verifying the game code." />
     );
   }
 
   if (pageState === "missing") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white px-5">
-        <p className="text-sm text-[#525252]">Session not found. Enter a valid room code.</p>
-        <Button asChild className="mt-4 rounded-xl bg-[#111111] hover:bg-black">
+      <PageErrorState
+        title="Room not found"
+        message={
+          code
+            ? friendlyGameError(null, "That room code was not found or the game has ended.")
+            : "Enter a valid 6-digit room code to continue."
+        }
+        fullScreen
+      >
+        <Button asChild className="rounded-xl bg-[#111111] hover:bg-black">
           <Link to="/join">Try another code</Link>
         </Button>
-      </div>
+      </PageErrorState>
     );
   }
 
   const handleEnter = async () => {
     const clean = normalizeRoomCode(code);
     setLoading(true);
+    setJoinError(null);
     try {
       const result = await joinRoomFn({ data: { code: clean, displayName: name } });
       if (!result.ok) {
-        toast.error(result.error);
+        const message = friendlyGameError(result.error, "Could not join this room. Check the code and try again.");
+        setJoinError(message);
+        toast.error(message);
         return;
       }
       saveParticipantSession({
@@ -101,9 +117,15 @@ function NicknamePage() {
         reconnectToken: result.reconnectToken,
         displayName: name.trim(),
       });
+      if (result.room.status === "LIVE" || result.room.status === "COUNTDOWN") {
+        navigate({ to: "/play/$roomId", params: { roomId: result.room.id } });
+        return;
+      }
       navigate({ to: "/join/lobby", search: { code: result.room.code } });
     } catch {
-      toast.error("Could not join. Try again.");
+      const message = "Could not join. Check your connection and try again.";
+      setJoinError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -122,8 +144,15 @@ function NicknamePage() {
 
       <div className="mt-8 w-full max-w-md text-center">
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#111111]">
-          What&apos;s your name?
+          {roomStatus === "LIVE" || roomStatus === "COUNTDOWN"
+            ? "Rejoin your game"
+            : "What's your name?"}
         </h1>
+        {(roomStatus === "LIVE" || roomStatus === "COUNTDOWN") && (
+          <p className="mt-2 text-sm text-[#525252]">
+            Enter the same name you used before to restore your progress.
+          </p>
+        )}
 
         <div className="mx-auto mt-6 grid size-16 place-items-center rounded-full bg-[var(--gamibar-brand-soft)] font-display text-2xl font-bold text-[var(--gamibar-brand)]">
           {avatarLetter}
@@ -143,12 +172,21 @@ function NicknamePage() {
         <Button
           type="button"
           onClick={() => void handleEnter()}
-          disabled={loading}
+          disabled={loading || !name.trim()}
           className="mt-6 h-14 w-full rounded-2xl bg-[#111111] text-base font-bold hover:bg-black"
         >
-          {loading ? "Joining…" : "ENTER LOBBY"}
+          {loading ? "Joining…" : roomStatus === "LIVE" || roomStatus === "COUNTDOWN" ? "REJOIN GAME" : "ENTER LOBBY"}
           <ArrowRight className="ml-2 size-5" />
         </Button>
+        {joinError ? (
+          <InlineErrorBanner
+            className="mt-4 text-left"
+            message={joinError}
+            onRetry={() => void handleEnter()}
+            retrying={loading}
+            onDismiss={() => setJoinError(null)}
+          />
+        ) : null}
       </div>
     </div>
   );
