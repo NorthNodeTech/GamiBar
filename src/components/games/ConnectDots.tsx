@@ -33,8 +33,27 @@ function endpointPairId(board: ConnectDotsPublicBoard, cell: Cell): string | nul
   return null;
 }
 
+function truncateLabel(text: string, max = 14): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1)}…`;
+}
+
+function endpointLabel(pair: ConnectDotsPublicBoard["pairs"][number], idx: 0 | 1): string {
+  const text = idx === 0 ? pair.question : pair.answer;
+  if (text?.trim()) return truncateLabel(text);
+  return String(pair.label);
+}
+
 function pairById(board: ConnectDotsPublicBoard, id: string) {
   return board.pairs.find((p) => p.id === id);
+}
+
+function labelFontSize(text: string, cellSize: number): number {
+  const len = text.length;
+  if (len <= 8) return cellSize * 0.22;
+  if (len <= 12) return cellSize * 0.17;
+  return cellSize * 0.13;
 }
 
 export function ConnectDots({
@@ -353,20 +372,24 @@ export function ConnectDots({
               const cx = cell.c * cellSize + cellSize / 2;
               const cy = cell.r * cellSize + cellSize / 2;
               const r = cellSize * 0.28;
+              const label = endpointLabel(pair, idx as 0 | 1);
+              const fontSize = labelFontSize(label, cellSize);
+              const title = idx === 0 ? pair.question?.trim() : pair.answer?.trim();
               return (
                 <g key={`${pair.id}-${idx}`}>
+                  {title && <title>{title}</title>}
                   <circle cx={cx} cy={cy} r={r} fill={pair.color} />
                   <text
                     x={cx}
                     y={cy}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fontSize={cellSize * 0.22}
+                    fontSize={fontSize}
                     fontWeight={700}
                     fill="#fff"
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >
-                    {pair.label}
+                    {label}
                   </text>
                 </g>
               );

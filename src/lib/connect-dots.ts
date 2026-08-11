@@ -10,6 +10,8 @@ export type ConnectDotsPairPublic = {
   color: string;
   a: Cell;
   b: Cell;
+  question?: string;
+  answer?: string;
 };
 
 export type ConnectDotsPublicBoard = {
@@ -132,12 +134,13 @@ function growPath(
 export function generateConnectDotsPuzzle(
   difficulty: ConnectDotsDifficulty,
   seedInput?: string,
+  overrides?: { pairCount?: number; gridSize?: number },
 ): ConnectDotsPuzzle {
   const cfg = CONNECT_DOTS_CONFIG[difficulty];
   const seed = seedInput ?? `cd-${difficulty}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9)}`;
   const rand = mulberry32(hashSeed(seed));
-  const n = cfg.gridSize;
-  const pairCount = cfg.pairCount;
+  const n = overrides?.gridSize ?? cfg.gridSize;
+  const pairCount = overrides?.pairCount ?? cfg.pairCount;
 
   for (let attempt = 0; attempt < 80; attempt++) {
     const occupied = new Set<string>();

@@ -2,34 +2,42 @@ import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-ro
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Rocket,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
 
 import { AuthorWizardSteps } from "@/components/author/AuthorWizardSteps";
+import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
 import { GameModePicker } from "@/components/author/GameModePicker";
 import { GameTimerSettings } from "@/components/author/GameTimerSettings";
-import { ConnectDots } from "@/components/games/ConnectDots";
+import { ConnectDotsMatchBoard } from "@/components/games/ConnectDotsMatchBoard";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
-import {
-  CONNECT_DOTS_CONFIG,
-  generateConnectDotsPuzzle,
-  type ConnectDotsDifficulty,
-} from "@/lib/connect-dots";
 import { saveAuthorRoom } from "@/lib/game/client-session";
+import {
+  buildConnectDotsFromContentPairs,
+  connectDotsPairsProgress,
+  emptyConnectDotsPairs,
+  isConnectDotsPairComplete,
+  reorderConnectDotsPairs,
+} from "@/lib/game/connect-dots-content";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
+import { computeJigsawGrid } from "@/lib/game/jigsaw-grid";
+import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
 import { getModeCatalog } from "@/lib/game/mode-catalog";
+import { modeUsesQuestions } from "@/lib/game/mode-registry";
 import { createRoomFn } from "@/lib/game/room.functions";
 import { defaultTimerSeconds, formatTimerLong, gameInstruction } from "@/lib/game/timer";
-import type { ConnectDotsBoardConfig, GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
+import type { ConnectDotsBoardConfig, ConnectDotsContentPair, GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
 import {
   emptyQuizQuestions,
   quizCompletionCount,
@@ -66,9 +74,10 @@ function CreateRoomWizard() {
   const [mode, setMode] = useState<GameMode | null>(null);
   const [questions, setQuestions] = useState<QuizQuestionDraft[]>(() => emptyQuizQuestions("quiz"));
   const [rewardCode, setRewardCode] = useState("");
-  const [connectDotsBoard, setConnectDotsBoard] = useState<ConnectDotsBoardConfig | null>(null);
-  const [connectDotsDifficulty, setConnectDotsDifficulty] =
-    useState<ConnectDotsDifficulty>("medium");
+  const [connectDotsPairs, setConnectDotsPairs] = useState<ConnectDotsContentPair[]>(() =>
+    emptyConnectDotsPairs(),
+  );
+  const [connectDotsSeed, setConnectDotsSeed] = useState(() => `cd-${Date.now()}`);
   const [jigsawUrl, setJigsawUrl] = useState<string | null>(null);
   const [jigsawMime, setJigsawMime] = useState<string | null>(null);
   const [timerSeconds, setTimerSeconds] = useState<number | null>(null);
@@ -76,21 +85,32 @@ function CreateRoomWizard() {
   const [submitting, setSubmitting] = useState(false);
 
   const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
+  const connectDotsProgress = connectDotsPairsProgress(connectDotsPairs);
   const modeCatalog = getModeCatalog(mode);
 
-  useEffect(() => {
-    if (mode !== "connect_dots") return;
-    const puzzle = generateConnectDotsPuzzle(connectDotsDifficulty);
-    setConnectDotsBoard({
-      difficulty: puzzle.publicBoard.difficulty,
-      gridSize: puzzle.publicBoard.gridSize,
-      pairCount: puzzle.pairCount,
-      seed: puzzle.publicBoard.seed,
-      pairs: puzzle.publicBoard.pairs,
-      solution: puzzle.solution,
-    });
-    setTimerSeconds(puzzle.timeLimitSeconds);
-  }, [mode, connectDotsDifficulty]);
+  const connectDotsLayout = useMemo(() => {
+    if (connectDotsPairs.length === 0) return null;
+    const stubs = connectDotsPairs.map((p) => ({ ...p, question: " ", answer: " " }));
+    return buildConnectDotsFromContentPairs(stubs, connectDotsSeed).boardConfig;
+  }, [connectDotsPairs.length, connectDotsSeed, connectDotsPairs.map((p) => p.id).join(",")]);
+
+  const connectDotsBoard = useMemo((): ConnectDotsBoardConfig | null => {
+    if (!connectDotsLayout) return null;
+    return {
+      ...connectDotsLayout,
+      pairs: connectDotsLayout.pairs.map((p, i) => ({
+        ...p,
+        question: connectDotsPairs[i]?.question ?? "",
+        answer: connectDotsPairs[i]?.answer ?? "",
+      })),
+      contentPairs: connectDotsPairs,
+    };
+  }, [connectDotsLayout, connectDotsPairs]);
+
+  const connectDotsSolvability = useMemo(() => {
+    if (mode !== "connect_dots" || connectDotsProgress.total === 0) return null;
+    return assessConnectDotsContentSolvability(connectDotsPairs, connectDotsSeed);
+  }, [mode, connectDotsPairs, connectDotsSeed, connectDotsProgress.total]);
 
   const payload: GamePayload | null = useMemo(() => {
     if (!mode) return null;
@@ -112,13 +132,15 @@ function CreateRoomWizard() {
       };
     }
     if (mode === "jigsaw") {
+      const grid = computeJigsawGrid(questions.length);
       return {
         mode: "jigsaw",
+        questions,
         jigsaw: {
           imageUrl: jigsawUrl,
           imageMime: jigsawMime,
-          cols: GAME_CONFIG.jigsaw.cols,
-          rows: GAME_CONFIG.jigsaw.rows,
+          cols: grid.cols,
+          rows: grid.rows,
         },
         timeLimitSeconds: timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
       };
@@ -127,9 +149,7 @@ function CreateRoomWizard() {
     return {
       mode: "connect_dots",
       connectDots: connectDotsBoard,
-      timeLimitSeconds:
-        timerSeconds ??
-        CONNECT_DOTS_CONFIG[connectDotsBoard.difficulty].timeLimitSeconds,
+      timeLimitSeconds: timerSeconds ?? defaultTimerSeconds("connect_dots"),
     };
   }, [mode, questions, connectDotsBoard, jigsawUrl, jigsawMime, timerSeconds, rewardCode]);
 
@@ -186,8 +206,13 @@ function CreateRoomWizard() {
   const handleModeSelect = (next: GameMode) => {
     setMode(next);
     setTimerSeconds(defaultTimerSeconds(next));
-    if (next === "quiz" || next === "quiz_jigsaw") {
+    if (modeUsesQuestions(next)) {
       setQuestions(emptyQuizQuestions(next));
+      setActiveQ(0);
+    }
+    if (next === "connect_dots") {
+      setConnectDotsPairs(emptyConnectDotsPairs());
+      setConnectDotsSeed(`cd-${Date.now()}`);
       setActiveQ(0);
     }
   };
@@ -207,6 +232,63 @@ function CreateRoomWizard() {
     };
     reader.readAsDataURL(file);
   };
+
+  const addJigsawQuestion = () => {
+    if (questions.length >= GAME_CONFIG.jigsaw.maxQuestions) {
+      toast.error(`Maximum ${GAME_CONFIG.jigsaw.maxQuestions} questions.`);
+      return;
+    }
+    setQuestions((prev) => [
+      ...prev,
+      {
+        id: `q-${prev.length + 1}`,
+        prompt: "",
+        options: { A: "", B: "", C: "", D: "" },
+        correctOption: null,
+      },
+    ]);
+    setActiveQ(questions.length);
+  };
+
+  const removeJigsawQuestion = () => {
+    if (questions.length <= GAME_CONFIG.jigsaw.minQuestions) {
+      toast.error("Keep at least one question.");
+      return;
+    }
+    setQuestions((prev) => prev.slice(0, -1));
+    setActiveQ((i) => Math.min(i, questions.length - 2));
+  };
+
+  const addConnectDotsPair = () => {
+    if (connectDotsPairs.length >= GAME_CONFIG.connect_dots.maxPairs) {
+      toast.error(`Maximum ${GAME_CONFIG.connect_dots.maxPairs} pairs.`);
+      return;
+    }
+    setConnectDotsPairs((prev) => [
+      ...prev,
+      { id: `pair-${prev.length + 1}`, question: "", answer: "" },
+    ]);
+    setActiveQ(connectDotsPairs.length);
+  };
+
+  const removeConnectDotsPair = () => {
+    if (connectDotsPairs.length <= GAME_CONFIG.connect_dots.minPairs) {
+      toast.error(`Keep at least ${GAME_CONFIG.connect_dots.minPairs} pairs.`);
+      return;
+    }
+    setConnectDotsPairs((prev) => prev.slice(0, -1));
+    setActiveQ((i) => Math.min(i, connectDotsPairs.length - 2));
+  };
+
+  const moveConnectDotsPair = (fromIndex: number, toIndex: number) => {
+    setConnectDotsPairs((prev) => reorderConnectDotsPairs(prev, fromIndex, toIndex));
+    setActiveQ(toIndex);
+  };
+
+  const jigsawGrid = useMemo(
+    () => computeJigsawGrid(questions.length),
+    [questions.length],
+  );
 
   const handleCreate = async () => {
     if (!mode || !payload || !user || !isAuthorAuthenticated(user)) return;
@@ -295,9 +377,10 @@ function CreateRoomWizard() {
                   `Add ${GAME_CONFIG.quiz.questionCount} multiple-choice questions for your class.`}
                 {mode === "quiz_jigsaw" &&
                   `Add ${GAME_CONFIG.quiz_jigsaw.questionCount} questions, upload a puzzle image, and set a reward code.`}
-                {mode === "jigsaw" && "Upload one image - we split it into puzzle pieces automatically."}
+                {mode === "jigsaw" &&
+                  "Add questions, upload the final puzzle image, and mark one correct answer per question."}
                 {mode === "connect_dots" &&
-                  "Choose a difficulty - we generate one solvable puzzle for the whole class."}
+                  "Add matching question/answer pairs. Each pair becomes two dots students connect on the grid."}
               </p>
             )}
             <AuthorWizardSteps current={step} compact className="mt-3 sm:mt-4" />
@@ -429,42 +512,89 @@ function CreateRoomWizard() {
                 )}
 
                 {mode === "jigsaw" && (
-                  <JigsawUploader
-                    jigsawUrl={jigsawUrl}
-                    timerLabel={formatTimerLong(timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)}
-                    onFile={handleImage}
-                  />
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#111111]">
+                          {questions.length} question{questions.length === 1 ? "" : "s"} ={" "}
+                          {questions.length} puzzle piece{questions.length === 1 ? "" : "s"}
+                        </p>
+                        <p className="text-xs text-[#737373]">
+                          Grid auto-splits into {jigsawGrid.cols}×{jigsawGrid.rows} · wrong answers retry at the end
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={questions.length <= GAME_CONFIG.jigsaw.minQuestions}
+                          onClick={removeJigsawQuestion}
+                        >
+                          Remove
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={questions.length >= GAME_CONFIG.jigsaw.maxQuestions}
+                          onClick={addJigsawQuestion}
+                        >
+                          Add question
+                        </Button>
+                      </div>
+                    </div>
+                    <QuizEditor
+                      questions={questions}
+                      activeQ={activeQ}
+                      setActiveQ={setActiveQ}
+                      setQuestions={setQuestions}
+                      progress={quizProgress}
+                      accent="jigsaw"
+                    />
+                    <JigsawUploader
+                      jigsawUrl={jigsawUrl}
+                      timerLabel={formatTimerLong(timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)}
+                      onFile={handleImage}
+                      pieceCount={questions.length}
+                      label="Final puzzle image"
+                      hint={`Students reconstruct this image · ${questions.length} pieces · ${formatTimerLong(timerSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)} timer`}
+                    />
+                  </>
                 )}
 
                 {mode === "connect_dots" && connectDotsBoard && (
-                  <ConnectDotsConfigurator
-                    difficulty={connectDotsDifficulty}
-                    onDifficultyChange={setConnectDotsDifficulty}
+                  <>
+                    <ConnectDotsLayoutWarning assessment={connectDotsSolvability} />
+                    <ConnectDotsPairEditor
+                    pairs={connectDotsPairs}
+                    activePair={activeQ}
+                    setActivePair={setActiveQ}
+                    setPairs={setConnectDotsPairs}
+                    progress={connectDotsProgress}
                     board={connectDotsBoard}
-                    onRegenerate={() => {
-                      const puzzle = generateConnectDotsPuzzle(connectDotsDifficulty);
-                      setConnectDotsBoard({
-                        difficulty: puzzle.publicBoard.difficulty,
-                        gridSize: puzzle.publicBoard.gridSize,
-                        pairCount: puzzle.pairCount,
-                        seed: puzzle.publicBoard.seed,
-                        pairs: puzzle.publicBoard.pairs,
-                        solution: puzzle.solution,
-                      });
-                      setTimerSeconds(puzzle.timeLimitSeconds);
-                      toast.success("New puzzle generated for this room.");
+                    onAddPair={addConnectDotsPair}
+                    onRemovePair={removeConnectDotsPair}
+                    onMovePair={moveConnectDotsPair}
+                    onShuffleLayout={() => {
+                      setConnectDotsSeed(`cd-${Date.now()}`);
+                      toast.success("Answer order shuffled.");
                     }}
-                    timerLabel={formatTimerLong(
-                      timerSeconds ??
-                        CONNECT_DOTS_CONFIG[connectDotsDifficulty].timeLimitSeconds,
-                    )}
+                    timerLabel={formatTimerLong(timerSeconds ?? defaultTimerSeconds("connect_dots"))}
                   />
+                  </>
                 )}
               </div>
             )}
 
             {step === "review" && mode && modeCatalog && payload && (
-              <ReviewLaunchCard
+              <div className="grid gap-4">
+                {mode === "connect_dots" && (
+                  <ConnectDotsLayoutWarning assessment={connectDotsSolvability} />
+                )}
+                <ReviewLaunchCard
                 name={name}
                 subject={subject}
                 mode={mode}
@@ -477,6 +607,7 @@ function CreateRoomWizard() {
                     : payload.timeLimitSeconds ?? defaultTimerSeconds(mode)
                 }
               />
+              </div>
             )}
           </div>
 
@@ -548,7 +679,7 @@ function QuizEditor({
   setActiveQ: (n: number) => void;
   setQuestions: Dispatch<SetStateAction<QuizQuestionDraft[]>>;
   progress: { done: number; total: number; complete: boolean };
-  accent?: "default" | "purple";
+  accent?: "default" | "purple" | "jigsaw";
 }) {
   const q = questions[activeQ]!;
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
@@ -556,11 +687,15 @@ function QuizEditor({
   const accentBadge =
     accent === "purple"
       ? "bg-[#EDE9FE] text-[#5B21B6]"
-      : "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]";
+      : accent === "jigsaw"
+        ? "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw-deep)]"
+        : "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]";
   const accentBar =
     accent === "purple"
       ? "bg-gradient-to-r from-[#7C3AED] to-[#5B21B6]"
-      : "bg-gradient-to-r from-[var(--game-quiz)] to-[var(--game-quiz-deep)]";
+      : accent === "jigsaw"
+        ? "bg-gradient-to-r from-[var(--game-jigsaw)] to-[var(--game-jigsaw-deep)]"
+        : "bg-gradient-to-r from-[var(--game-quiz)] to-[var(--game-quiz-deep)]";
 
   const update = (patch: Partial<QuizQuestionDraft>) => {
     setQuestions((prev) => prev.map((item, i) => (i === activeQ ? { ...item, ...patch } : item)));
@@ -693,16 +828,18 @@ function JigsawUploader({
   onFile,
   label = "Upload your puzzle image",
   hint,
+  pieceCount,
 }: {
   jigsawUrl: string | null;
   timerLabel: string;
   onFile: (file: File | undefined) => void;
   label?: string;
   hint?: string;
+  pieceCount?: number;
 }) {
-  const pieceCount = hint
-    ? GAME_CONFIG.quiz_jigsaw.questionCount
-    : GAME_CONFIG.jigsaw.cols * GAME_CONFIG.jigsaw.rows;
+  const pieces =
+    pieceCount ??
+    (hint ? GAME_CONFIG.quiz_jigsaw.questionCount : GAME_CONFIG.jigsaw.defaultQuestionCount);
   return (
     <div className="grid gap-4">
       <label className="group relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center transition-colors hover:border-[var(--game-jigsaw)] sm:min-h-[200px]">
@@ -722,7 +859,7 @@ function JigsawUploader({
             <p className="mt-4 font-display text-lg font-bold text-[#111111]">{label}</p>
             <p className="mt-1 text-sm text-[#525252]">JPG, PNG, or WEBP · max 8 MB</p>
             <p className="mt-3 text-xs font-medium text-[#737373]">
-              {hint ?? `Auto-splits into ${pieceCount} pieces · ${timerLabel} timer`}
+              {hint ?? `Auto-splits into ${pieces} pieces · ${timerLabel} timer`}
             </p>
           </>
         )}
@@ -737,86 +874,179 @@ function JigsawUploader({
   );
 }
 
-function ConnectDotsConfigurator({
-  difficulty,
-  onDifficultyChange,
+function ConnectDotsPairEditor({
+  pairs,
+  activePair,
+  setActivePair,
+  setPairs,
+  progress,
   board,
-  onRegenerate,
+  onAddPair,
+  onRemovePair,
+  onMovePair,
+  onShuffleLayout,
   timerLabel,
 }: {
-  difficulty: ConnectDotsDifficulty;
-  onDifficultyChange: (d: ConnectDotsDifficulty) => void;
+  pairs: ConnectDotsContentPair[];
+  activePair: number;
+  setActivePair: (n: number) => void;
+  setPairs: Dispatch<SetStateAction<ConnectDotsContentPair[]>>;
+  progress: { done: number; total: number; complete: boolean };
   board: ConnectDotsBoardConfig;
-  onRegenerate: () => void;
+  onAddPair: () => void;
+  onRemovePair: () => void;
+  onMovePair: (from: number, to: number) => void;
+  onShuffleLayout: () => void;
   timerLabel: string;
 }) {
-  const levels: { id: ConnectDotsDifficulty; label: string; hint: string }[] = [
-    {
-      id: "easy",
-      label: "Easy",
-      hint: `${CONNECT_DOTS_CONFIG.easy.gridSize}×${CONNECT_DOTS_CONFIG.easy.gridSize} · ${CONNECT_DOTS_CONFIG.easy.pairCount} pairs`,
-    },
-    {
-      id: "medium",
-      label: "Medium",
-      hint: `${CONNECT_DOTS_CONFIG.medium.gridSize}×${CONNECT_DOTS_CONFIG.medium.gridSize} · ${CONNECT_DOTS_CONFIG.medium.pairCount} pairs`,
-    },
-    {
-      id: "hard",
-      label: "Hard",
-      hint: `${CONNECT_DOTS_CONFIG.hard.gridSize}×${CONNECT_DOTS_CONFIG.hard.gridSize} · ${CONNECT_DOTS_CONFIG.hard.pairCount} pairs`,
-    },
-  ];
+  const pair = pairs[activePair]!;
+  const pct = Math.round((progress.done / progress.total) * 100);
+
+  const update = (patch: Partial<ConnectDotsContentPair>) => {
+    setPairs((prev) => prev.map((item, i) => (i === activePair ? { ...item, ...patch } : item)));
+  };
 
   return (
     <div className="grid gap-4">
-      <div>
-        <p className="text-sm font-semibold text-[var(--foreground)]">Configure Connect Dots</p>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          Every student receives this same generated board. Timer: {timerLabel}.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-[#111111]">
+            {pairs.length} pair{pairs.length === 1 ? "" : "s"}
+          </p>
+          <p className="text-xs text-[#737373]">
+            Questions on the left, shuffled answers on the right. Timer: {timerLabel}.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl"
+            disabled={pairs.length <= GAME_CONFIG.connect_dots.minPairs}
+            onClick={onRemovePair}
+          >
+            Remove
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl"
+            disabled={pairs.length >= GAME_CONFIG.connect_dots.maxPairs}
+            onClick={onAddPair}
+          >
+            Add pair
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        {levels.map((level) => (
-          <button
-            key={level.id}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-[#111111]">
+            Matching pairs · {progress.done}/{progress.total}
+          </p>
+          <p className="text-xs text-[#737373]">
+            Tap a number, fill the question and answer, then use arrows to reorder.
+          </p>
+        </div>
+        <span className="rounded-full bg-[var(--game-connect-dots-soft)] px-3 py-1 text-xs font-bold text-[var(--game-connect-dots-deep)]">
+          {pct}% ready
+        </span>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--gamibar-page)]">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-[var(--game-connect-dots)] to-[var(--game-connect-dots-deep)] transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {pairs.map((item, i) => {
+          const done = isConnectDotsPairComplete(item);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActivePair(i)}
+              className={cn(
+                "grid size-9 place-items-center rounded-xl text-xs font-bold transition-colors",
+                i === activePair
+                  ? "bg-[#111111] text-white"
+                  : done
+                    ? "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]"
+                    : "bg-[var(--gamibar-page)] text-[#737373]",
+              )}
+            >
+              {done ? <Check className="size-3.5" /> : i + 1}
+            </button>
+          );
+        })}
+        <div className="ml-auto flex gap-1">
+          <Button
             type="button"
-            onClick={() => onDifficultyChange(level.id)}
-            className={cn(
-              "rounded-2xl border px-4 py-3 text-left transition-colors",
-              difficulty === level.id
-                ? "border-[var(--game-connect-dots)] bg-[var(--game-connect-dots-soft)]"
-                : "border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] hover:bg-[var(--surface)]",
-            )}
+            variant="outline"
+            size="icon"
+            className="size-9 rounded-xl"
+            disabled={activePair <= 0}
+            onClick={() => onMovePair(activePair, activePair - 1)}
+            aria-label="Move pair up"
           >
-            <p className="font-display text-sm font-bold text-[var(--foreground)]">{level.label}</p>
-            <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">{level.hint}</p>
-          </button>
-        ))}
+            <ChevronUp className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-9 rounded-xl"
+            disabled={activePair >= pairs.length - 1}
+            onClick={() => onMovePair(activePair, activePair + 1)}
+            aria-label="Move pair down"
+          >
+            <ChevronDown className="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
+        <Label className="text-xs uppercase tracking-wider text-[#737373]">Pair {activePair + 1}</Label>
+        <div className="mt-3 grid gap-3">
+          <div className="grid gap-2">
+            <Label htmlFor="connect-dots-question">Question</Label>
+            <Input
+              id="connect-dots-question"
+              value={pair.question}
+              onChange={(e) => update({ question: e.target.value })}
+              placeholder='e.g. "Capital of France"'
+              className="h-11 rounded-xl text-base"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="connect-dots-answer">Answer</Label>
+            <Input
+              id="connect-dots-answer"
+              value={pair.answer}
+              onChange={(e) => update({ answer: e.target.value })}
+              placeholder='e.g. "Paris"'
+              className="h-11 rounded-xl text-base"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-3 sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
-            Board preview
+            Student preview
           </p>
-          <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl" onClick={onRegenerate}>
-            Regenerate
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl" onClick={onShuffleLayout}>
+            Shuffle answers
           </Button>
         </div>
-        <ConnectDots
-          board={{
-            gridSize: board.gridSize,
-            difficulty: board.difficulty,
-            pairs: board.pairs,
-            seed: board.seed,
-          }}
-          disabled
-          showControls={false}
-        />
+        <ConnectDotsMatchBoard pairs={pairs} shuffleSeed={board.seed} disabled />
         <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
-          Preview only - students will draw paths during the live game.
+          Preview only — students draw paths between matching dots during the live game.
         </p>
       </div>
     </div>

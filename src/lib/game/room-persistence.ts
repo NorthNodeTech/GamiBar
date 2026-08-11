@@ -1,4 +1,9 @@
 import { GAME_CONFIG } from "@/lib/game/config";
+import { computeJigsawGrid } from "@/lib/game/jigsaw-grid";
+import {
+  modeNeedsJigsawUpload,
+  modePersistsQuizAnswers,
+} from "@/lib/game/mode-registry";
 import type {
   ConnectDotsBoardConfig,
   GamePayload,
@@ -75,6 +80,9 @@ function parseConnectDotsConfig(raw: Record<string, unknown>): ConnectDotsBoardC
     pairCount: typeof cd["pairCount"] === "number" ? cd["pairCount"] : defaults.pairCount,
     seed: typeof cd["seed"] === "string" ? cd["seed"] : "",
     pairs: Array.isArray(cd["pairs"]) ? (cd["pairs"] as ConnectDotsBoardConfig["pairs"]) : [],
+    contentPairs: Array.isArray(cd["contentPairs"])
+      ? (cd["contentPairs"] as ConnectDotsBoardConfig["contentPairs"])
+      : [],
   };
   if (cd["solution"] && typeof cd["solution"] === "object") {
     board.solution = cd["solution"] as NonNullable<ConnectDotsBoardConfig["solution"]>;
@@ -113,14 +121,22 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
     };
   }
   if (normalizedMode === "jigsaw") {
+    const questions = Array.isArray(raw["questions"])
+      ? (raw["questions"] as QuizQuestionDraft[])
+      : [];
     const jigsaw = (raw["jigsaw"] ?? {}) as Record<string, unknown>;
+    const grid =
+      questions.length > 0
+        ? computeJigsawGrid(questions.length)
+        : { cols: GAME_CONFIG.jigsaw.cols, rows: GAME_CONFIG.jigsaw.rows };
     return {
       mode: "jigsaw",
+      questions,
       jigsaw: {
         imageUrl: typeof jigsaw["imageUrl"] === "string" ? jigsaw["imageUrl"] : null,
         imageMime: typeof jigsaw["imageMime"] === "string" ? jigsaw["imageMime"] : null,
-        cols: GAME_CONFIG.jigsaw.cols,
-        rows: GAME_CONFIG.jigsaw.rows,
+        cols: typeof jigsaw["cols"] === "number" ? jigsaw["cols"] : grid.cols,
+        rows: typeof jigsaw["rows"] === "number" ? jigsaw["rows"] : grid.rows,
       },
       timeLimitSeconds: timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
     };
@@ -135,25 +151,41 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
   };
 }
 
-function configFromPayload(payload: GamePayload): Record<string, unknown> {
+function configFromPayload(
+  payload: GamePayload,
+  settings?: Pick<Room, "showLeaderboardToStudents">,
+): Record<string, unknown> {
+  let base: Record<string, unknown>;
   if (payload.mode === "quiz") {
-    return { questions: payload.questions, timeLimitSeconds: payload.timeLimitSeconds };
-  }
-  if (payload.mode === "quiz_jigsaw") {
-    return {
+    base = { questions: payload.questions, timeLimitSeconds: payload.timeLimitSeconds };
+  } else if (payload.mode === "quiz_jigsaw") {
+    base = {
       questions: payload.questions,
       jigsaw: payload.jigsaw,
       rewardCode: payload.rewardCode,
       timeLimitSeconds: payload.timeLimitSeconds,
     };
+  } else if (payload.mode === "jigsaw") {
+    base = {
+      questions: payload.questions,
+      jigsaw: payload.jigsaw,
+      timeLimitSeconds: payload.timeLimitSeconds,
+    };
+  } else {
+    base = {
+      connectDots: payload.connectDots,
+      timeLimitSeconds: payload.timeLimitSeconds,
+    };
   }
-  if (payload.mode === "jigsaw") {
-    return { jigsaw: payload.jigsaw, timeLimitSeconds: payload.timeLimitSeconds };
+  if (settings?.showLeaderboardToStudents) {
+    base.showLeaderboardToStudents = true;
   }
-  return {
-    connectDots: payload.connectDots,
-    timeLimitSeconds: payload.timeLimitSeconds,
-  };
+  return base;
+}
+
+function readShowLeaderboardToStudents(config: unknown): boolean {
+  const raw = (config ?? {}) as Record<string, unknown>;
+  return raw.showLeaderboardToStudents === true;
 }
 
 async function jigsawPublicUrl(storagePath: string): Promise<string> {
@@ -181,9 +213,13 @@ async function uploadJigsawAsset(roomId: string, payload: GamePayload): Promise<
   }
 
   const cols =
-    payload.mode === "quiz_jigsaw" ? GAME_CONFIG.quiz_jigsaw.cols : GAME_CONFIG.jigsaw.cols;
+    payload.mode === "quiz_jigsaw"
+      ? GAME_CONFIG.quiz_jigsaw.cols
+      : payload.jigsaw.cols;
   const rows =
-    payload.mode === "quiz_jigsaw" ? GAME_CONFIG.quiz_jigsaw.rows : GAME_CONFIG.jigsaw.rows;
+    payload.mode === "quiz_jigsaw"
+      ? GAME_CONFIG.quiz_jigsaw.rows
+      : payload.jigsaw.rows;
 
   const { error: assetError } = await supabase.from("gamibar_jigsaw_assets").upsert(
     {
@@ -209,11 +245,12 @@ async function uploadJigsawAsset(roomId: string, payload: GamePayload): Promise<
   }
   return {
     mode: "jigsaw",
+    questions: payload.questions,
     jigsaw: {
       ...payload.jigsaw,
       imageUrl,
-      cols: GAME_CONFIG.jigsaw.cols,
-      rows: GAME_CONFIG.jigsaw.rows,
+      cols,
+      rows,
     },
     timeLimitSeconds: payload.timeLimitSeconds,
   };
@@ -242,6 +279,7 @@ async function hydrateJigsawPayload(roomId: string, payload: GamePayload): Promi
   }
   return {
     mode: "jigsaw",
+    questions: payload.questions,
     jigsaw,
     timeLimitSeconds: payload.timeLimitSeconds,
   };
@@ -294,6 +332,7 @@ function buildStoredRoom(
   }>,
   payload: GamePayload,
   authorToken = "",
+  showLeaderboardToStudents = false,
 ): StoredRoom {
   const quizAnswers = new Map<string, Map<string, QuizAnswer>>();
   for (const answer of answers) {
@@ -354,6 +393,7 @@ function buildStoredRoom(
       startedAt: ms(row.started_at),
       endsAt: ms(row.ends_at),
       finishedAt: ms(row.finished_at),
+      showLeaderboardToStudents,
     },
     participants: participantMap,
     quizAnswers,
@@ -407,7 +447,10 @@ function deserializeLegacyState(state: unknown, authorToken = ""): StoredRoom | 
 
   const token = authorToken || raw.authorToken || "";
   return {
-    room: raw.room,
+    room: {
+      ...raw.room,
+      showLeaderboardToStudents: raw.room.showLeaderboardToStudents ?? false,
+    },
     participants,
     quizAnswers,
     attempts,
@@ -517,6 +560,7 @@ async function loadRoomBundle(roomId: string, authorToken = ""): Promise<StoredR
     attemptsRes.data ?? [],
     payload,
     authorToken,
+    readShowLeaderboardToStudents(row.config),
   );
 }
 
@@ -624,7 +668,7 @@ export async function persist(stored: StoredRoom) {
     author_token_hash: authorTokenHash,
     status: room.status,
     mode: room.mode,
-    config: configFromPayload(payload),
+    config: configFromPayload(payload, { showLeaderboardToStudents: room.showLeaderboardToStudents }),
     max_participants: room.maxParticipants,
     started_at: iso(room.startedAt),
     ends_at: iso(room.endsAt),
@@ -635,13 +679,13 @@ export async function persist(stored: StoredRoom) {
   const { error: roomError } = await supabase.from("gamibar_rooms").upsert(roomRow);
   if (roomError) throw new Error(roomError.message || "Could not save room.");
 
-  if (room.mode === "jigsaw") {
+  if (modeNeedsJigsawUpload(room.mode)) {
     payload = await uploadJigsawAsset(room.id, payload);
     room.payload = payload;
 
     const { error: configError } = await supabase
       .from("gamibar_rooms")
-      .update({ config: configFromPayload(payload) })
+      .update({ config: configFromPayload(payload, { showLeaderboardToStudents: room.showLeaderboardToStudents }) })
       .eq("id", room.id);
     if (configError) throw new Error(configError.message || "Could not save jigsaw config.");
   }
@@ -678,7 +722,7 @@ export async function persist(stored: StoredRoom) {
     if (error) throw new Error(error.message || "Could not save attempt.");
   }
 
-  if (room.mode === "quiz") {
+  if (modePersistsQuizAnswers(room.mode)) {
     for (const [participantId, answers] of stored.quizAnswers) {
       for (const answer of answers.values()) {
         const { error } = await supabase.from("gamibar_quiz_answers").upsert(

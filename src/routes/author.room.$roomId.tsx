@@ -3,16 +3,21 @@ import { Clock, Play, Sparkles, Square, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
 import { CompletionTimeline, LiveLeaderboard } from "@/components/author/LiveLeaderboard";
+import { QuizLeaderboard } from "@/components/author/QuizLeaderboard";
 import { LobbyWall, ParticipantStrip } from "@/components/author/LobbyWall";
 import { RoomCodeDisplay } from "@/components/author/RoomCodeDisplay";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { RoomJoinShare } from "@/components/session/RoomJoinShare";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { GAME_MODE_META } from "@/lib/game/config";
 import type { Room } from "@/lib/game/types";
 import { loadAuthorRoom } from "@/lib/game/client-session";
-import { startGameFn, stopGameFn } from "@/lib/game/room.functions";
+import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
+import { startGameFn, stopGameFn, setShowLeaderboardToStudentsFn } from "@/lib/game/room.functions";
 import { useRoomPolling } from "@/lib/game/useRoomPolling";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +34,7 @@ function AuthorRoomPage() {
   const authorToken = author?.roomId === roomId ? author.authorToken : undefined;
   const { snapshot, error } = useRoomPolling({ roomId, authorToken }, 1200);
   const [busy, setBusy] = useState(false);
+  const [leaderboardBusy, setLeaderboardBusy] = useState(false);
 
   if (!authorToken) {
     return (
@@ -94,8 +100,19 @@ function AuthorRoomPage() {
   const isLive = room.status === "LIVE" || room.status === "COUNTDOWN";
   const canStart = (room.status === "LOBBY" || room.status === "READY") && room.participantCount >= 1;
 
+  const connectDotsSolvability = useMemo(() => {
+    if (room.mode !== "connect_dots" || room.payload.mode !== "connect_dots") return null;
+    const pairs = room.payload.connectDots.contentPairs;
+    if (pairs.length === 0) return null;
+    return assessConnectDotsContentSolvability(pairs, room.payload.connectDots.seed);
+  }, [room]);
+
   const handleStart = async () => {
-    if (!window.confirm("Start the game for all students in the lobby?")) return;
+    let confirmMessage = "Start the game for all students in the lobby?";
+    if (connectDotsSolvability?.warning) {
+      confirmMessage = `${connectDotsSolvability.warning}\n\nYou can still start, but students may not be able to finish. Start anyway?`;
+    }
+    if (!window.confirm(confirmMessage)) return;
     setBusy(true);
     try {
       const res = await startGameFn({ data: { roomId, authorToken } });
@@ -119,6 +136,21 @@ function AuthorRoomPage() {
       toast.error(e instanceof Error ? e.message : "Could not stop the game.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleLeaderboardVisibility = async (enabled: boolean) => {
+    setLeaderboardBusy(true);
+    try {
+      const res = await setShowLeaderboardToStudentsFn({
+        data: { roomId, authorToken, enabled },
+      });
+      if (!res.ok) toast.error(res.error);
+      else toast.success(enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update leaderboard visibility.");
+    } finally {
+      setLeaderboardBusy(false);
     }
   };
 
@@ -154,6 +186,9 @@ function AuthorRoomPage() {
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
                 {statusHint}
               </p>
+              {inLobby && connectDotsSolvability?.warning && (
+                <ConnectDotsLayoutWarning assessment={connectDotsSolvability} className="mt-4" />
+              )}
               {!inLobby && (
                 <div className="mt-4">
                   <ParticipantStrip participants={room.participants} />
@@ -240,7 +275,31 @@ function AuthorRoomPage() {
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <LiveLeaderboard rows={leaderboard} finished={room.status === "FINISHED"} />
+              <div className="space-y-4">
+                {room.mode === "quiz" && isLive && (
+                  <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-4 shadow-[var(--shadow-soft)] sm:px-6">
+                    <div className="min-w-0">
+                      <Label htmlFor="show-leaderboard" className="text-sm font-semibold text-[var(--foreground)]">
+                        Show leaderboard to students
+                      </Label>
+                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                        Off by default. Students only see final results when the game ends.
+                      </p>
+                    </div>
+                    <Switch
+                      id="show-leaderboard"
+                      checked={room.showLeaderboardToStudents}
+                      disabled={leaderboardBusy}
+                      onCheckedChange={(checked) => void handleLeaderboardVisibility(checked)}
+                    />
+                  </div>
+                )}
+                {room.mode === "quiz" ? (
+                  <QuizLeaderboard rows={leaderboard} finished={room.status === "FINISHED"} />
+                ) : (
+                  <LiveLeaderboard rows={leaderboard} finished={room.status === "FINISHED"} />
+                )}
+              </div>
               <CompletionTimeline items={completions} />
             </div>
 
@@ -265,8 +324,9 @@ function RoomMetaChips({ room }: { room: Room }) {
   const chips: string[] = [GAME_MODE_META[room.mode].title];
 
   if (room.mode === "connect_dots" && room.payload.mode === "connect_dots") {
-    const { difficulty, gridSize } = room.payload.connectDots;
-    chips.push(`${difficulty[0]!.toUpperCase()}${difficulty.slice(1)}`);
+    const { gridSize, contentPairs, pairCount } = room.payload.connectDots;
+    const pairs = contentPairs.length > 0 ? contentPairs.length : pairCount;
+    chips.push(`${pairs} pair${pairs === 1 ? "" : "s"}`);
     chips.push(`${gridSize}×${gridSize}`);
   }
 

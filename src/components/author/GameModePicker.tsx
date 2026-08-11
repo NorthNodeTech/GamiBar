@@ -2,7 +2,7 @@ import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { GAME_MODE_CATALOG } from "@/lib/game/mode-catalog";
+import { GAME_MODE_CATALOG, getCoreModeCatalog } from "@/lib/game/mode-catalog";
 import type { GameMode } from "@/lib/game/config";
 import { GAME_MODE_META } from "@/lib/game/config";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ export function GameModePicker({
   value: GameMode | null;
   onChange: (mode: GameMode) => void;
 }) {
-  const catalog = GAME_MODE_CATALOG;
+  const catalog = getCoreModeCatalog();
   const count = catalog.length;
   const valueIndex = value ? catalog.findIndex((item) => item.mode === value) : -1;
   const [active, setActive] = useState(valueIndex >= 0 ? valueIndex : 0);

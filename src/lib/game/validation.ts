@@ -1,5 +1,9 @@
 import { CONNECT_DOTS_CONFIG, type ConnectDotsDifficulty } from "@/lib/connect-dots";
 import { GAME_CONFIG, type GameMode } from "@/lib/game/config";
+import {
+  connectDotsPairsProgress,
+  isConnectDotsPairComplete,
+} from "@/lib/game/connect-dots-content";
 import type { GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
 import { clampTimer } from "@/lib/game/timer";
 
@@ -7,6 +11,7 @@ const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 
 export function questionCountForMode(mode: GameMode): number {
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.questionCount;
+  if (mode === "jigsaw") return GAME_CONFIG.jigsaw.defaultQuestionCount;
   return GAME_CONFIG.quiz.questionCount;
 }
 
@@ -35,10 +40,12 @@ export function quizCompletionCount(
   total: number;
   complete: boolean;
 } {
-  const total = questionCountForMode(mode);
+  const total = mode === "jigsaw" ? questions.length : questionCountForMode(mode);
   const done = questions.slice(0, total).filter(isQuizQuestionComplete).length;
-  return { done, total, complete: done === total };
+  return { done, total, complete: done === total && total >= (mode === "jigsaw" ? GAME_CONFIG.jigsaw.minQuestions : 1) };
 }
+
+export { connectDotsPairsProgress, isConnectDotsPairComplete };
 
 export function isConnectDotsDifficulty(value: string): value is ConnectDotsDifficulty {
   return value === "easy" || value === "medium" || value === "hard";
@@ -86,8 +93,24 @@ export function validateGamePayload(
     return { ok: true };
   }
   if (mode === "jigsaw" && payload.mode === "jigsaw") {
+    if (payload.questions.length < GAME_CONFIG.jigsaw.minQuestions) {
+      return { ok: false, error: "Add at least one question." };
+    }
+    if (payload.questions.length > GAME_CONFIG.jigsaw.maxQuestions) {
+      return {
+        ok: false,
+        error: `Use at most ${GAME_CONFIG.jigsaw.maxQuestions} questions.`,
+      };
+    }
+    const { complete, done, total } = quizCompletionCount(payload.questions, "jigsaw");
+    if (!complete) {
+      return {
+        ok: false,
+        error: `Complete every question with one correct answer (${done}/${total}).`,
+      };
+    }
     if (!payload.jigsaw.imageUrl) {
-      return { ok: false, error: "Upload one image for the jigsaw puzzle." };
+      return { ok: false, error: "Upload one puzzle image for students to reconstruct." };
     }
     if (!clampTimer("jigsaw", payload.timeLimitSeconds)) {
       return { ok: false, error: "Choose a jigsaw timer between 30 seconds and 5 minutes." };
@@ -95,17 +118,42 @@ export function validateGamePayload(
     return { ok: true };
   }
   if (mode === "connect_dots" && payload.mode === "connect_dots") {
-    const d = payload.connectDots.difficulty;
-    if (!isConnectDotsDifficulty(d)) {
-      return { ok: false, error: "Choose Easy, Medium, or Hard for Connect Dots." };
-    }
-    const expected = CONNECT_DOTS_CONFIG[d];
-    if (
-      !payload.connectDots.seed ||
-      payload.connectDots.pairs.length !== expected.pairCount ||
-      payload.connectDots.gridSize !== expected.gridSize
-    ) {
-      return { ok: false, error: "Generate a Connect Dots puzzle before creating the room." };
+    const contentPairs = payload.connectDots.contentPairs ?? [];
+    if (contentPairs.length > 0) {
+      const minPairs = GAME_CONFIG.connect_dots.minPairs;
+      const maxPairs = GAME_CONFIG.connect_dots.maxPairs;
+      if (contentPairs.length < minPairs) {
+        return { ok: false, error: `Add at least ${minPairs} matching pairs.` };
+      }
+      if (contentPairs.length > maxPairs) {
+        return { ok: false, error: `Use at most ${maxPairs} pairs.` };
+      }
+      const { complete, done, total } = connectDotsPairsProgress(contentPairs);
+      if (!complete) {
+        return {
+          ok: false,
+          error: `Complete every pair with a question and answer (${done}/${total}).`,
+        };
+      }
+      if (
+        !payload.connectDots.seed ||
+        payload.connectDots.pairs.length !== contentPairs.length
+      ) {
+        return { ok: false, error: "Generate the Connect Dots board before creating the room." };
+      }
+    } else {
+      const d = payload.connectDots.difficulty;
+      if (!isConnectDotsDifficulty(d)) {
+        return { ok: false, error: "Choose Easy, Medium, or Hard for Connect Dots." };
+      }
+      const expected = CONNECT_DOTS_CONFIG[d];
+      if (
+        !payload.connectDots.seed ||
+        payload.connectDots.pairs.length !== expected.pairCount ||
+        payload.connectDots.gridSize !== expected.gridSize
+      ) {
+        return { ok: false, error: "Generate a Connect Dots puzzle before creating the room." };
+      }
     }
     if (!clampTimer("connect_dots", payload.timeLimitSeconds)) {
       return { ok: false, error: "Choose a Connect Dots timer between 30 seconds and 3 minutes." };

@@ -8,10 +8,14 @@ import {
   reconnectParticipant,
   startGame,
   stopGame,
+  setShowLeaderboardToStudents,
   submitJigsawProgress,
   submitConnectDotsPaths,
+  submitConnectDotsMatches,
   submitQuizAnswer,
   submitQuizJigsawAnswer,
+  submitJigsawMissionAnswer,
+  submitJigsawMissionAssembly,
 } from "@/lib/game/room-engine";
 
 /** Client-side room API for static SPA (Supabase-backed). Same `{ data }` call shape as before. */
@@ -83,6 +87,14 @@ export async function stopGameFn({
   return stopGame(data);
 }
 
+export async function setShowLeaderboardToStudentsFn({
+  data,
+}: {
+  data: { roomId: string; authorToken: string; enabled: boolean };
+}) {
+  return setShowLeaderboardToStudents(data);
+}
+
 export async function submitQuizAnswerFn({
   data,
 }: {
@@ -109,6 +121,19 @@ export async function submitQuizJigsawAnswerFn({
   return submitQuizJigsawAnswer(data);
 }
 
+export async function submitJigsawMissionAnswerFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    questionId: string;
+    selectedOption: QuizOptionId;
+  };
+}) {
+  return submitJigsawMissionAnswer(data);
+}
+
 export async function submitJigsawProgressFn({
   data,
 }: {
@@ -121,6 +146,32 @@ export async function submitJigsawProgressFn({
   };
 }) {
   return submitJigsawProgress(data);
+}
+
+export async function submitJigsawMissionAssemblyFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    layout: number[];
+    totalPieces: number;
+  };
+}) {
+  return submitJigsawMissionAssembly(data);
+}
+
+export async function submitConnectDotsMatchesFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    matches: Record<string, string>;
+    routes?: Record<string, Array<{ r: number; c: number }>>;
+  };
+}) {
+  return submitConnectDotsMatches(data);
 }
 
 export async function submitConnectDotsPathsFn({

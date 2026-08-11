@@ -4,7 +4,7 @@ import { Blocks, CircleDot, Puzzle, Timer, Users, Zap } from "lucide-react";
 import gameConnectDotsPreview from "@/assets/game-connect-dots-preview.png";
 import gameJigsawPreview from "@/assets/game-jigsaw-preview.webp";
 import gameQuizPreview from "@/assets/game-quiz-preview.webp";
-import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
+import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
 
 export type GameModeCatalogItem = {
@@ -51,10 +51,10 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     mode: "jigsaw",
     preview: gameJigsawPreview,
     icon: Blocks,
-    tagline: "Rebuild the image piece by piece under time pressure",
+    tagline: "Answer questions to unlock pieces, then rebuild the image",
     specs: [
-      `${GAME_CONFIG.jigsaw.cols * GAME_CONFIG.jigsaw.rows} auto-cut pieces`,
-      `${GAME_CONFIG.jigsaw.timeLimitSeconds}s timer`,
+      "1–16 questions = puzzle pieces",
+      "Retry wrong answers until correct",
       "Upload any classroom image",
     ],
     accentClass: "from-[var(--game-jigsaw)] to-[var(--game-jigsaw-deep)]",
@@ -65,11 +65,11 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     mode: "connect_dots",
     preview: gameConnectDotsPreview,
     icon: CircleDot,
-    tagline: "Connect matching dots and complete every path as fast as possible",
+    tagline: "Connect each question to its matching answer on the grid",
     specs: [
-      `${CONNECT_DOTS_CONFIG.medium.gridSize}×${CONNECT_DOTS_CONFIG.medium.gridSize} grid`,
-      `${CONNECT_DOTS_CONFIG.medium.pairCount} colour pairs`,
-      "Same puzzle for every student",
+      "2–10 question/answer pairs",
+      "Teacher writes every match",
+      "Same board for every student",
     ],
     accentClass: "from-[var(--game-connect-dots)] to-[var(--game-connect-dots-deep)]",
     glowClass: "shadow-[0_20px_60px_rgba(16,185,129,0.25)]",
@@ -80,6 +80,13 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
 export function getModeCatalog(mode: GameMode | null) {
   if (!mode) return null;
   return GAME_MODE_CATALOG.find((item) => item.mode === mode) ?? null;
+}
+
+/** Catalog entries for the three core live games (Quiz, Jigsaw, Connect Dots). */
+export function getCoreModeCatalog() {
+  return GAME_MODE_CATALOG.filter((item): item is GameModeCatalogItem & { mode: CoreLiveGameMode } =>
+    (CORE_LIVE_GAME_MODES as readonly string[]).includes(item.mode),
+  );
 }
 
 export function getModeTitle(mode: GameMode | null) {

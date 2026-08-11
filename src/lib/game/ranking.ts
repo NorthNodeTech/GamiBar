@@ -3,6 +3,7 @@ import type { LeaderboardRow } from "@/lib/game/types";
 export type QuizRankInput = {
   participantId: string;
   displayName: string;
+  score: number;
   correctCount: number;
   durationMs: number | null;
   completed: boolean;
@@ -29,30 +30,39 @@ export type ConnectDotsRankInput = {
 };
 
 /**
- * Quiz: accuracy/score first, then faster completion as tie-breaker.
- * Unfinished players rank below finishers by answered progress.
+ * Quiz Challenge: highest score first, then faster completion as tie-breaker.
  */
 export function rankQuiz(inputs: QuizRankInput[]): LeaderboardRow[] {
   const sorted = [...inputs].sort((a, b) => {
-    if (a.completed !== b.completed) return a.completed ? -1 : 1;
-    if (a.correctCount !== b.correctCount) return b.correctCount - a.correctCount;
+    if (a.score !== b.score) return b.score - a.score;
     const ad = a.durationMs ?? Number.POSITIVE_INFINITY;
     const bd = b.durationMs ?? Number.POSITIVE_INFINITY;
     if (ad !== bd) return ad - bd;
     return a.displayName.localeCompare(b.displayName);
   });
 
-  return sorted.map((row, i) => ({
-    rank: i + 1,
-    participantId: row.participantId,
-    displayName: row.displayName,
-    primaryMetric: row.correctCount,
-    primaryLabel: "correct",
-    secondaryMetric: row.durationMs,
-    secondaryLabel: row.durationMs != null ? "ms" : null,
-    status: row.completed ? "completed" : row.answeredCount > 0 ? "in_progress" : "incomplete",
-    detail: `${row.correctCount}/${row.totalQuestions}`,
-  }));
+  return sorted.map((row, i) => {
+    const accuracyPercent =
+      row.totalQuestions > 0 ? Math.round((row.correctCount / row.totalQuestions) * 100) : null;
+    return {
+      rank: i + 1,
+      participantId: row.participantId,
+      displayName: row.displayName,
+      primaryMetric: row.score,
+      primaryLabel: "score",
+      secondaryMetric: row.durationMs,
+      secondaryLabel: row.durationMs != null ? "ms" : null,
+      status: row.completed ? "completed" : row.answeredCount > 0 ? "in_progress" : "incomplete",
+      detail: formatAccuracy(accuracyPercent),
+      score: row.score,
+      accuracyPercent,
+    };
+  });
+}
+
+export function formatAccuracy(percent: number | null | undefined): string {
+  if (percent == null || !Number.isFinite(percent)) return "—";
+  return `${percent}%`;
 }
 
 /** Jigsaw: completed first (fastest wins), then higher progress. */

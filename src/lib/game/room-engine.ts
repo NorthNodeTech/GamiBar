@@ -1,4 +1,11 @@
-import { GAME_CONFIG, GAME_MODE_META, isRoomFull, type GameMode } from "@/lib/game/config";
+import { GAME_CONFIG, isRoomFull, type GameMode } from "@/lib/game/config";
+import {
+  computeModeLeaderboard,
+  finalizeModeIncompleteAttempts,
+  modePersistsQuizAnswers,
+  normalizeCreatePayload,
+  toPublicGamePayload,
+} from "@/lib/game/mode-registry";
 import { createId, createReconnectToken } from "@/lib/game/id";
 import { createEntityId, hashToken } from "@/lib/game/room-crypto";
 import {
@@ -13,10 +20,20 @@ import {
   type StoredRoom,
 } from "@/lib/game/room-persistence";
 import { validateConnectDotsPaths, type PathMap } from "@/lib/connect-dots";
-import { rankConnectDots, rankJigsaw, rankQuiz } from "@/lib/game/ranking";
 import { generateRoomCode, isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
 import { assertTransition, canStudentsJoin, type RoomStatus } from "@/lib/game/state-machine";
 import { gameInstruction, resolvePayloadTimeLimit } from "@/lib/game/timer";
+import {
+  initialJigsawMissionPayload,
+  isJigsawMissionRetryRound,
+  mergeJigsawMissionPayload,
+  nextRetryQuestionId,
+  readJigsawMissionPayload,
+  resolveJigsawMissionQuestionId,
+  retryPoolQuestionIds,
+} from "@/lib/game/jigsaw-mission-flow";
+import { validateJigsawLayout } from "@/lib/game/jigsaw-assembly";
+import type { RouteCell } from "@/lib/game/connect-dots-path-geometry";
 import type {
   GamePayload,
   LeaderboardRow,
@@ -29,7 +46,6 @@ import type {
 import {
   sanitizeDisplayName,
   sanitizeRoomText,
-  toPublicQuizQuestions,
   validateGamePayload,
 } from "@/lib/game/validation";
 
@@ -40,51 +56,7 @@ function pushEvent(stored: StoredRoom, event: RoomEvent) {
 
 function publicRoom(stored: StoredRoom, opts?: { includeSecrets?: boolean }) {
   const { room, participants } = stored;
-  const payload = opts?.includeSecrets
-    ? room.mode === "jigsaw" && room.payload.mode === "jigsaw"
-      ? {
-          mode: "jigsaw" as const,
-          jigsaw: {
-            ...room.payload.jigsaw,
-            cols: GAME_CONFIG.jigsaw.cols,
-            rows: GAME_CONFIG.jigsaw.rows,
-          },
-        }
-      : room.mode === "quiz_jigsaw" && room.payload.mode === "quiz_jigsaw"
-        ? room.payload
-        : room.payload
-    : room.mode === "quiz" && room.payload.mode === "quiz"
-      ? {
-          mode: "quiz" as const,
-          questions: toPublicQuizQuestions(room.payload.questions),
-        }
-      : room.mode === "quiz_jigsaw" && room.payload.mode === "quiz_jigsaw"
-        ? {
-            mode: "quiz_jigsaw" as const,
-            questions: toPublicQuizQuestions(room.payload.questions),
-            jigsaw: {
-              imageUrl: room.payload.jigsaw.imageUrl,
-              imageMime: room.payload.jigsaw.imageMime,
-              cols: room.payload.jigsaw.cols,
-              rows: room.payload.jigsaw.rows,
-            },
-          }
-        : room.mode === "connect_dots" && room.payload.mode === "connect_dots"
-        ? {
-            mode: "connect_dots" as const,
-            connectDots: publicConnectDotsBoard(room.payload.connectDots),
-            timeLimitSeconds: room.payload.timeLimitSeconds,
-          }
-        : room.mode === "jigsaw" && room.payload.mode === "jigsaw"
-          ? {
-              mode: "jigsaw" as const,
-              jigsaw: {
-                ...room.payload.jigsaw,
-                cols: GAME_CONFIG.jigsaw.cols,
-                rows: GAME_CONFIG.jigsaw.rows,
-              },
-            }
-        : room.payload;
+  const payload = toPublicGamePayload(room.mode, room.payload, opts);
 
   return {
     id: room.id,
@@ -99,6 +71,7 @@ function publicRoom(stored: StoredRoom, opts?: { includeSecrets?: boolean }) {
     startedAt: room.startedAt,
     endsAt: room.endsAt,
     finishedAt: room.finishedAt,
+    showLeaderboardToStudents: room.showLeaderboardToStudents,
     participantCount: participants.size,
     participants: [...participants.values()].map((p) => ({
       id: p.id,
@@ -111,21 +84,8 @@ function publicRoom(stored: StoredRoom, opts?: { includeSecrets?: boolean }) {
   };
 }
 
-/** Students get endpoints only - never the full solution paths. */
-function publicConnectDotsBoard(config: Extract<GamePayload, { mode: "connect_dots" }>["connectDots"]) {
-  return {
-    difficulty: config.difficulty,
-    gridSize: config.gridSize,
-    pairCount: config.pairCount,
-    seed: config.seed,
-    pairs: config.pairs.map((p) => ({
-      id: p.id,
-      label: p.label,
-      color: p.color,
-      a: p.a,
-      b: p.b,
-    })),
-  };
+function computeLeaderboard(stored: StoredRoom): LeaderboardRow[] {
+  return computeModeLeaderboard(stored);
 }
 
 function ensureAttemptRecord(stored: StoredRoom, participantId: string) {
@@ -143,119 +103,13 @@ async function finalizeGame(stored: StoredRoom) {
   stored.room.finishedAt = finishedAt;
   stored.room.endsAt = finishedAt;
 
-  if (stored.room.mode === "quiz" && stored.room.payload.mode === "quiz") {
-    for (const p of stored.participants.values()) {
-      const answers = stored.quizAnswers.get(p.id);
-      const attempt = ensureAttemptRecord(stored, p.id);
-      if (!attempt.completed && answers) {
-        let correct = 0;
-        for (const a of answers.values()) if (a.isCorrect) correct += 1;
-        attempt.correctCount = correct;
-        attempt.score = correct * 100;
-        attempt.progress = answers.size / GAME_CONFIG.quiz.questionCount;
-        if (stored.room.startedAt) {
-          attempt.durationMs = finishedAt - stored.room.startedAt;
-        }
-      }
-      p.status = attempt.completed ? "COMPLETED" : "ONLINE";
-    }
-  }
-
-  if (stored.room.mode === "quiz_jigsaw" && stored.room.payload.mode === "quiz_jigsaw") {
-    for (const p of stored.participants.values()) {
-      const answers = stored.quizAnswers.get(p.id);
-      const attempt = ensureAttemptRecord(stored, p.id);
-      if (!attempt.completed && answers) {
-        let correct = 0;
-        for (const a of answers.values()) if (a.isCorrect) correct += 1;
-        attempt.correctCount = correct;
-        attempt.score = correct * 100;
-        attempt.progress = correct / GAME_CONFIG.quiz_jigsaw.questionCount;
-        if (stored.room.startedAt) {
-          attempt.durationMs = finishedAt - stored.room.startedAt;
-        }
-      }
-      p.status = attempt.completed ? "COMPLETED" : "ONLINE";
-    }
-  }
+  finalizeModeIncompleteAttempts(stored, finishedAt);
 
   const rows = computeLeaderboard(stored);
   pushEvent(stored, { type: "game_stopped", finishedAt });
   pushEvent(stored, { type: "game_finished", finishedAt, rows });
   await persist(stored);
   return rows;
-}
-
-function computeLeaderboard(stored: StoredRoom): LeaderboardRow[] {
-  const { room, participants, attempts, quizAnswers } = stored;
-  if (room.mode === "quiz") {
-    const total = GAME_CONFIG.quiz.questionCount;
-    return rankQuiz(
-      [...participants.values()].map((p) => {
-        const answers = quizAnswers.get(p.id);
-        const attempt = attempts.get(p.id);
-        return {
-          participantId: p.id,
-          displayName: p.displayName,
-          correctCount: attempt?.correctCount ?? 0,
-          durationMs: attempt?.durationMs ?? null,
-          completed: Boolean(attempt?.completed),
-          answeredCount: answers?.size ?? 0,
-          totalQuestions: total,
-        };
-      }),
-    );
-  }
-  if (room.mode === "quiz_jigsaw") {
-    const total = GAME_CONFIG.quiz_jigsaw.questionCount;
-    return rankQuiz(
-      [...participants.values()].map((p) => {
-        const answers = quizAnswers.get(p.id);
-        const attempt = attempts.get(p.id);
-        const correctCount = attempt?.correctCount ?? 0;
-        return {
-          participantId: p.id,
-          displayName: p.displayName,
-          correctCount,
-          durationMs: attempt?.durationMs ?? null,
-          completed: Boolean(attempt?.completed),
-          answeredCount: correctCount,
-          totalQuestions: total,
-        };
-      }),
-    );
-  }
-  if (room.mode === "jigsaw") {
-    return rankJigsaw(
-      [...participants.values()].map((p) => {
-        const attempt = attempts.get(p.id);
-        return {
-          participantId: p.id,
-          displayName: p.displayName,
-          completed: Boolean(attempt?.completed),
-          durationMs: attempt?.durationMs ?? null,
-          progress: attempt?.progress ?? 0,
-        };
-      }),
-    );
-  }
-  const totalPairs =
-    room.mode === "connect_dots" && room.payload.mode === "connect_dots"
-      ? room.payload.connectDots.pairCount
-      : GAME_CONFIG.connect_dots.difficulties.medium.pairCount;
-  return rankConnectDots(
-    [...participants.values()].map((p) => {
-      const attempt = attempts.get(p.id);
-      return {
-        participantId: p.id,
-        displayName: p.displayName,
-        completed: Boolean(attempt?.completed),
-        durationMs: attempt?.durationMs ?? null,
-        connectedPairs: attempt?.correctCount ?? 0,
-        totalPairs,
-      };
-    }),
-  );
 }
 
 export async function createRoom(input: {
@@ -273,43 +127,7 @@ export async function createRoom(input: {
   const validated = validateGamePayload(input.mode, input.payload);
   if (!validated.ok) return validated;
 
-  const payload =
-    input.mode === "jigsaw" && input.payload.mode === "jigsaw"
-      ? {
-          ...input.payload,
-          jigsaw: {
-            ...input.payload.jigsaw,
-            cols: GAME_CONFIG.jigsaw.cols,
-            rows: GAME_CONFIG.jigsaw.rows,
-          },
-          timeLimitSeconds:
-            input.payload.timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds,
-        }
-      : input.mode === "quiz_jigsaw" && input.payload.mode === "quiz_jigsaw"
-        ? {
-            ...input.payload,
-            jigsaw: {
-              ...input.payload.jigsaw,
-              cols: GAME_CONFIG.quiz_jigsaw.cols,
-              rows: GAME_CONFIG.quiz_jigsaw.rows,
-            },
-            rewardCode: input.payload.rewardCode.trim(),
-            timeLimitSeconds: input.payload.timeLimitSeconds ?? null,
-          }
-        : input.mode === "quiz" && input.payload.mode === "quiz"
-        ? {
-            ...input.payload,
-            timeLimitSeconds: input.payload.timeLimitSeconds ?? null,
-          }
-        : input.mode === "connect_dots" && input.payload.mode === "connect_dots"
-          ? {
-              ...input.payload,
-              timeLimitSeconds:
-                input.payload.timeLimitSeconds ??
-                GAME_CONFIG.connect_dots.difficulties[input.payload.connectDots.difficulty]
-                  .timeLimitSeconds,
-            }
-          : input.payload;
+  const payload = normalizeCreatePayload(input.mode, input.payload);
 
   const existing = await listCodes();
   const code = generateRoomCode(existing);
@@ -332,6 +150,7 @@ export async function createRoom(input: {
     startedAt: null,
     endsAt: null,
     finishedAt: null,
+    showLeaderboardToStudents: false,
   };
 
   const stored: StoredRoom = {
@@ -458,16 +277,27 @@ export async function getRoomSnapshot(input: {
   }
 
   const leaderboard = computeLeaderboard(stored);
+  const gameFinished =
+    stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
+  const hideQuizLiveLeaderboard =
+    !isAuthor &&
+    !gameFinished &&
+    stored.room.mode === "quiz" &&
+    stored.room.status === "LIVE" &&
+    !stored.room.showLeaderboardToStudents;
+  const visibleLeaderboard = hideQuizLiveLeaderboard ? [] : leaderboard;
+  const revealOwnAnswerCorrectness =
+    stored.room.mode === "jigsaw" ||
+    stored.room.mode === "quiz_jigsaw" ||
+    stored.room.status === "FINISHED" ||
+    stored.room.status === "CANCELLED";
   const myAnswers =
-    participantId && (stored.room.mode === "quiz" || stored.room.mode === "quiz_jigsaw")
+    participantId && modePersistsQuizAnswers(stored.room.mode)
       ? [...(stored.quizAnswers.get(participantId)?.values() ?? [])].map((a) => ({
           questionId: a.questionId,
           selectedOption: a.selectedOption,
           submittedAt: a.submittedAt,
-          isCorrect:
-            stored.room.status === "FINISHED" || stored.room.status === "CANCELLED"
-              ? a.isCorrect
-              : undefined,
+          isCorrect: revealOwnAnswerCorrectness ? a.isCorrect : undefined,
         }))
       : [];
 
@@ -476,7 +306,7 @@ export async function getRoomSnapshot(input: {
     room: publicRoom(stored, { includeSecrets: isAuthor }),
     isAuthor,
     participantId,
-    leaderboard,
+    leaderboard: visibleLeaderboard,
     myAnswers,
     myAttempt: participantId ? (stored.attempts.get(participantId) ?? null) : null,
     recentEvents: stored.events.slice(-40),
@@ -538,6 +368,33 @@ export async function stopGame(input: { roomId: string; authorToken: string }) {
   }
 
   await finalizeGame(stored);
+
+  return {
+    ok: true as const,
+    room: publicRoom(stored),
+    leaderboard: computeLeaderboard(stored),
+  };
+}
+
+export async function setShowLeaderboardToStudents(input: {
+  roomId: string;
+  authorToken: string;
+  enabled: boolean;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (!(await verifyAuthorToken(stored, input.authorToken))) {
+    return { ok: false as const, error: "Only the author can change this setting." };
+  }
+  if (stored.room.mode !== "quiz") {
+    return { ok: false as const, error: "Live leaderboard visibility applies to Quiz Challenge only." };
+  }
+  if (stored.room.status !== "LIVE") {
+    return { ok: false as const, error: "Enable this while the quiz is live." };
+  }
+
+  stored.room.showLeaderboardToStudents = input.enabled;
+  await persist(stored);
 
   return {
     ok: true as const,
@@ -742,6 +599,176 @@ export async function submitQuizJigsawAnswer(input: {
   };
 }
 
+/** Jigsaw Mission: first round through all questions, then retry rounds for missed ones. */
+export async function submitJigsawMissionAnswer(input: {
+  roomId: string;
+  reconnectToken: string;
+  questionId: string;
+  selectedOption: QuizOptionId;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (stored.room.status !== "LIVE") {
+    return { ok: false as const, error: "Game is not accepting answers." };
+  }
+  if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
+    return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
+  }
+
+  const questions = stored.room.payload.questions;
+  if (questions.length < 1) {
+    return { ok: false as const, error: "This jigsaw has no quiz questions configured." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const attempt = ensureAttemptRecord(stored, participant.id);
+  if (attempt.completed) {
+    return { ok: false as const, error: "You already completed this puzzle." };
+  }
+
+  const question = questions.find((q) => q.id === input.questionId);
+  if (!question) return { ok: false as const, error: "Invalid question." };
+
+  let map = stored.quizAnswers.get(participant.id);
+  if (!map) {
+    map = new Map();
+    stored.quizAnswers.set(participant.id, map);
+  }
+
+  const total = questions.length;
+  let mission = readJigsawMissionPayload(attempt.payload);
+  if (mission.phase === undefined) {
+    mission = initialJigsawMissionPayload();
+  }
+
+  const correctIds = new Set(
+    [...map.values()].filter((a) => a.isCorrect).map((a) => a.questionId),
+  );
+
+  const expectedQuestionId = resolveJigsawMissionQuestionId(questions, correctIds, mission);
+  if (!expectedQuestionId || expectedQuestionId !== input.questionId) {
+    return { ok: false as const, error: "Answer the current question first." };
+  }
+
+  const selected = input.selectedOption;
+  if (!["A", "B", "C", "D"].includes(selected)) {
+    return { ok: false as const, error: "Invalid option." };
+  }
+
+  const isCorrect = question.correctOption === selected;
+  const inRetryRound = isJigsawMissionRetryRound(mission);
+  let firstRoundComplete = mission.firstRoundComplete === true;
+  let firstRoundIndex = mission.firstRoundIndex ?? 0;
+  let retryQuestionId = mission.retryQuestionId ?? null;
+
+  if (!isCorrect) {
+    if (!firstRoundComplete) {
+      firstRoundIndex += 1;
+      if (firstRoundIndex >= total) {
+        firstRoundComplete = true;
+        const pool = retryPoolQuestionIds(questions, correctIds);
+        retryQuestionId = pool[0] ?? null;
+      }
+    } else {
+      const pool = retryPoolQuestionIds(questions, correctIds);
+      retryQuestionId = nextRetryQuestionId(pool, input.questionId);
+    }
+
+    attempt.payload = mergeJigsawMissionPayload(attempt.payload, {
+      phase: "quiz",
+      firstRoundIndex,
+      firstRoundComplete,
+      retryQuestionId,
+    });
+    await persist(stored);
+
+    return {
+      ok: true as const,
+      correct: false,
+      piecesUnlocked: correctIds.size,
+      total,
+      allPiecesUnlocked: false,
+      isRetryRound: firstRoundComplete,
+      retryRemaining: retryPoolQuestionIds(questions, correctIds).length,
+      firstRoundComplete,
+      completed: false,
+    };
+  }
+
+  if (correctIds.has(input.questionId)) {
+    return { ok: false as const, error: "You already unlocked this puzzle piece." };
+  }
+
+  map.set(input.questionId, {
+    questionId: input.questionId,
+    selectedOption: selected,
+    isCorrect: true,
+    submittedAt: Date.now(),
+  });
+
+  const piecesUnlocked = correctIds.size + 1;
+  attempt.correctCount = piecesUnlocked;
+  attempt.progress = piecesUnlocked / total;
+
+  if (!firstRoundComplete) {
+    firstRoundIndex += 1;
+    if (firstRoundIndex >= total) {
+      firstRoundComplete = true;
+    }
+  }
+
+  const poolAfter = retryPoolQuestionIds(questions, new Set([...correctIds, input.questionId]));
+  retryQuestionId = firstRoundComplete ? (poolAfter[0] ?? null) : null;
+
+  const allPiecesUnlocked = piecesUnlocked >= total;
+
+  pushEvent(stored, {
+    type: "player_progress",
+    participantId: participant.id,
+    displayName: participant.displayName,
+    progress: attempt.progress,
+    detail: `${piecesUnlocked}/${total} pieces`,
+  });
+
+  if (allPiecesUnlocked) {
+    attempt.payload = mergeJigsawMissionPayload(attempt.payload, {
+      phase: "assemble",
+      firstRoundIndex,
+      firstRoundComplete: true,
+      retryQuestionId: null,
+    });
+  } else {
+    attempt.payload = mergeJigsawMissionPayload(attempt.payload, {
+      phase: "quiz",
+      firstRoundIndex,
+      firstRoundComplete,
+      retryQuestionId,
+    });
+  }
+
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    correct: true,
+    piecesUnlocked,
+    total,
+    allPiecesUnlocked,
+    isRetryRound: inRetryRound || (firstRoundComplete && !allPiecesUnlocked),
+    retryRemaining: poolAfter.length,
+    firstRoundComplete,
+    completed: false,
+    nextQuestionId: resolveJigsawMissionQuestionId(questions, new Set([...correctIds, input.questionId]), {
+      phase: allPiecesUnlocked ? "assemble" : "quiz",
+      firstRoundIndex,
+      firstRoundComplete,
+      retryQuestionId,
+    }),
+  };
+}
+
 export async function submitJigsawProgress(input: {
   roomId: string;
   reconnectToken: string;
@@ -764,13 +791,24 @@ export async function submitJigsawProgress(input: {
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
   if (!participant) return { ok: false as const, error: "Participant not found." };
 
+  const payload = stored.room.payload;
+  const quizGated =
+    stored.room.mode === "jigsaw" && payload.mode === "jigsaw" && payload.questions.length > 0;
+
   const total = Math.max(1, input.totalPieces);
   const locked = Math.min(total, Math.max(0, input.lockedCount));
   const attempt = ensureAttemptRecord(stored, participant.id);
   if (attempt.completed) return { ok: true as const, completed: true };
 
+  if (quizGated && (attempt.correctCount ?? 0) < payload.questions.length) {
+    return {
+      ok: false as const,
+      error: "Answer all questions correctly to unlock every puzzle piece first.",
+    };
+  }
+
   attempt.progress = locked / total;
-  attempt.payload = { lockedCount: locked, totalPieces: total };
+  attempt.payload = { ...attempt.payload, lockedCount: locked, totalPieces: total, phase: "assemble" };
 
   if (input.completed && locked >= total) {
     const completedAt = Date.now();
@@ -798,6 +836,88 @@ export async function submitJigsawProgress(input: {
 
   await persist(stored);
   return { ok: true as const, completed: attempt.completed, progress: attempt.progress };
+}
+
+/** Jigsaw Mission assembly: validate layout on submit (no auto-reveal while playing). */
+export async function submitJigsawMissionAssembly(input: {
+  roomId: string;
+  reconnectToken: string;
+  layout: number[];
+  totalPieces: number;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (stored.room.status !== "LIVE") {
+    return { ok: false as const, error: "Game is not live." };
+  }
+  if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
+    return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
+  }
+  if (stored.room.endsAt && Date.now() > stored.room.endsAt) {
+    return { ok: false as const, error: "Time is up." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const { questions } = stored.room.payload;
+  const questionTotal = questions.length;
+  const gridTotal = Math.max(1, input.totalPieces);
+  const attempt = ensureAttemptRecord(stored, participant.id);
+
+  if (attempt.completed) {
+    return { ok: true as const, solved: true, completed: true };
+  }
+
+  if (questionTotal > 0 && (attempt.correctCount ?? 0) < questionTotal) {
+    return {
+      ok: false as const,
+      error: "Answer all questions correctly to unlock every puzzle piece first.",
+    };
+  }
+
+  const layout = input.layout.slice(0, gridTotal);
+
+  if (layout.some((p) => p < 0)) {
+    return {
+      ok: true as const,
+      solved: false,
+      message: "Place every puzzle piece on the board before submitting.",
+    };
+  }
+
+  if (!validateJigsawLayout(layout, gridTotal)) {
+    return {
+      ok: true as const,
+      solved: false,
+      message: "Not quite — the image is not complete yet. Keep rearranging the pieces.",
+    };
+  }
+
+  const completedAt = Date.now();
+  attempt.completed = true;
+  attempt.completedAt = completedAt;
+  attempt.progress = 1;
+  attempt.durationMs = stored.room.startedAt ? completedAt - stored.room.startedAt : null;
+  attempt.payload = mergeJigsawMissionPayload(attempt.payload, { phase: "assemble" });
+  participant.status = "COMPLETED";
+
+  pushEvent(stored, {
+    type: "player_completed",
+    participantId: participant.id,
+    displayName: participant.displayName,
+    completedAt,
+    durationMs: attempt.durationMs ?? 0,
+  });
+
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    solved: true,
+    completed: true,
+    durationMs: attempt.durationMs,
+  };
 }
 
 export async function submitConnectDotsPaths(input: {
@@ -875,6 +995,85 @@ export async function submitConnectDotsPaths(input: {
     completed: attempt.completed,
     connectedPairs: connected,
     error: fullyValid ? undefined : validation.ok ? undefined : validation.error,
+  };
+}
+
+export async function submitConnectDotsMatches(input: {
+  roomId: string;
+  reconnectToken: string;
+  matches: Record<string, string>;
+  routes?: Record<string, RouteCell[]>;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (stored.room.status !== "LIVE") {
+    return { ok: false as const, error: "Game is not live." };
+  }
+  if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
+    return { ok: false as const, error: "This room is not Connect Dots." };
+  }
+  if (stored.room.endsAt && Date.now() > stored.room.endsAt) {
+    return { ok: false as const, error: "Time is up." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const attempt = ensureAttemptRecord(stored, participant.id);
+  if (attempt.completed) {
+    return { ok: true as const, completed: true, connectedPairs: attempt.correctCount };
+  }
+
+  const contentPairs = stored.room.payload.connectDots.contentPairs ?? [];
+  const validIds = new Set(contentPairs.map((p) => p.id));
+  const totalPairs = contentPairs.length || stored.room.payload.connectDots.pairCount;
+
+  const sanitized: Record<string, string> = {};
+  for (const [questionId, answerId] of Object.entries(input.matches)) {
+    if (questionId === answerId && validIds.has(questionId)) {
+      sanitized[questionId] = answerId;
+    }
+  }
+
+  const connected = Object.keys(sanitized).length;
+  attempt.correctCount = connected;
+  attempt.progress = totalPairs ? connected / totalPairs : 0;
+  attempt.payload = {
+    matches: sanitized,
+    ...(input.routes ? { routes: input.routes } : {}),
+  };
+
+  const fullyComplete = connected === totalPairs && totalPairs > 0;
+
+  if (fullyComplete) {
+    const completedAt = Date.now();
+    attempt.completed = true;
+    attempt.completedAt = completedAt;
+    attempt.durationMs = stored.room.startedAt ? completedAt - stored.room.startedAt : null;
+    participant.status = "COMPLETED";
+    pushEvent(stored, {
+      type: "player_completed",
+      participantId: participant.id,
+      displayName: participant.displayName,
+      completedAt,
+      durationMs: attempt.durationMs ?? 0,
+    });
+  } else {
+    pushEvent(stored, {
+      type: "player_progress",
+      participantId: participant.id,
+      displayName: participant.displayName,
+      progress: attempt.progress,
+      detail: `${connected}/${totalPairs}`,
+    });
+  }
+
+  await persist(stored);
+  return {
+    ok: true as const,
+    completed: attempt.completed,
+    connectedPairs: connected,
+    durationMs: attempt.durationMs ?? null,
   };
 }
 

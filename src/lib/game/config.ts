@@ -24,10 +24,13 @@ export const GAME_CONFIG = {
     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"] as const,
   },
   jigsaw: {
+    minQuestions: 1,
+    maxQuestions: 16,
+    defaultQuestionCount: 9,
     timeLimitSeconds: 99,
+    /** Legacy default grid when no questions stored (older rooms). */
     cols: 3,
     rows: 3,
-    /** 3×3 classroom puzzle (= 9 pieces). */
     difficulty: "medium" as "easy" | "medium" | "hard",
     maxUploadBytes: 8 * 1024 * 1024,
     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"] as const,
@@ -35,6 +38,9 @@ export const GAME_CONFIG = {
     maxDimension: 4096,
   },
   connect_dots: {
+    minPairs: 2,
+    maxPairs: 10,
+    defaultPairCount: 4,
     difficulties: CONNECT_DOTS_CONFIG,
     defaultDifficulty: "medium" as ConnectDotsDifficulty,
     timeLimitSeconds: CONNECT_DOTS_CONFIG.medium.timeLimitSeconds,
@@ -88,11 +94,11 @@ export const GAME_MODE_META: Record<
   jigsaw: {
     title: "Jigsaw Mission",
     shortInstruction:
-      "Drag and rotate the pieces to rebuild the image before 99 seconds runs out.",
+      "Answer questions to unlock puzzle pieces, then rebuild the image and submit before time runs out.",
   },
   connect_dots: {
     title: "Connect Dots",
     shortInstruction:
-      "Connect every matching pair of dots. Complete the board as fast as possible.",
+      "Connect each question dot to its matching answer dot by drawing paths on the grid.",
   },
 };

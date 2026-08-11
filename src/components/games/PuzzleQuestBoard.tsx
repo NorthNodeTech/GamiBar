@@ -1,39 +1,42 @@
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 import { PUZZLE_QUEST_GRID } from "@/lib/game/config";
 import { buildPieces } from "@/lib/jigsaw";
 
-const COLS = PUZZLE_QUEST_GRID.cols;
-const ROWS = PUZZLE_QUEST_GRID.rows;
 const SIZE = 120;
-const W = COLS * SIZE;
-const H = ROWS * SIZE;
 const PAD = 36;
-
-const pieces = buildPieces(COLS, ROWS, SIZE);
-
-export const PUZZLE_QUEST_PIECES = pieces.length;
 
 export function PuzzleQuestBoard({
   revealed,
   imageSrc,
+  cols = PUZZLE_QUEST_GRID.cols,
+  rows = PUZZLE_QUEST_GRID.rows,
 }: {
   revealed: number;
   imageSrc: string | null;
+  cols?: number;
+  rows?: number;
 }) {
-  const complete = revealed >= PUZZLE_QUEST_PIECES;
-  const placeholder = "data:image/svg+xml," + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect fill="#f3f4f6" width="100%" height="100%"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-size="14">Puzzle image</text></svg>`,
-  );
+  const W = cols * SIZE;
+  const H = rows * SIZE;
+  const pieceCount = cols * rows;
+  const pieces = useMemo(() => buildPieces(cols, rows, SIZE), [cols, rows]);
+  const complete = revealed >= pieceCount;
+  const placeholder =
+    "data:image/svg+xml," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect fill="#f3f4f6" width="100%" height="100%"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-size="14">Puzzle image</text></svg>`,
+    );
 
   return (
     <div className="relative">
       <motion.svg
         viewBox={`${-PAD} ${-PAD} ${W + PAD * 2} ${H + PAD * 2}`}
-        className="w-full max-w-md mx-auto"
+        className="mx-auto w-full max-w-md"
         animate={
           complete
-            ? { filter: "drop-shadow(0 0 24px rgba(124,58,237,0.35))" }
+            ? { filter: "drop-shadow(0 0 24px rgba(59,130,246,0.35))" }
             : { filter: "drop-shadow(0 0 0 rgba(0,0,0,0))" }
         }
         transition={{ duration: 1 }}
@@ -65,7 +68,7 @@ export function PuzzleQuestBoard({
         ))}
 
         {pieces.slice(0, revealed).map((p, i) => {
-          const fromX = p.col < COLS / 2 ? -200 : 200;
+          const fromX = p.col < cols / 2 ? -200 : 200;
           const fromY = p.row === 0 ? -140 : 140;
           return (
             <motion.g
@@ -90,12 +93,7 @@ export function PuzzleQuestBoard({
                 originY: `${(p.row + 0.5) * SIZE}px`,
               }}
             >
-              <path
-                d={p.d}
-                fill="url(#pq-img)"
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth="1"
-              />
+              <path d={p.d} fill="url(#pq-img)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
             </motion.g>
           );
         })}
@@ -103,3 +101,5 @@ export function PuzzleQuestBoard({
     </div>
   );
 }
+
+export const PUZZLE_QUEST_PIECES = PUZZLE_QUEST_GRID.cols * PUZZLE_QUEST_GRID.rows;

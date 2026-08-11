@@ -38,6 +38,17 @@ export type ConnectDotsPair = {
   color: string;
   a: ConnectDotsEndpoint;
   b: ConnectDotsEndpoint;
+  /** Teacher content shown on endpoint A. */
+  question?: string;
+  /** Teacher content shown on endpoint B. */
+  answer?: string;
+};
+
+/** Teacher-authored matching pair for Connect Dots. */
+export type ConnectDotsContentPair = {
+  id: string;
+  question: string;
+  answer: string;
 };
 
 export type ConnectDotsBoardConfig = {
@@ -46,6 +57,7 @@ export type ConnectDotsBoardConfig = {
   pairCount: number;
   seed: string;
   pairs: ConnectDotsPair[];
+  contentPairs: ConnectDotsContentPair[];
   /** Author/trusted only - never sent to students in public snapshots. */
   solution?: Record<string, ConnectDotsEndpoint[]>;
 };
@@ -60,7 +72,7 @@ export type GamePayload =
       rewardCode: string;
       timeLimitSeconds: number | null;
     }
-  | { mode: "jigsaw"; jigsaw: JigsawConfig; timeLimitSeconds: number }
+  | { mode: "jigsaw"; questions: QuizQuestionDraft[]; jigsaw: JigsawConfig; timeLimitSeconds: number }
   | {
       mode: "connect_dots";
       connectDots: ConnectDotsBoardConfig;
@@ -82,6 +94,8 @@ export type Room = {
   startedAt: number | null;
   endsAt: number | null;
   finishedAt: number | null;
+  /** When true during LIVE quiz, students see the live leaderboard. Default false. */
+  showLeaderboardToStudents: boolean;
 };
 
 export type Participant = {
@@ -122,6 +136,10 @@ export type LeaderboardRow = {
   secondaryLabel: string | null;
   status: "completed" | "in_progress" | "incomplete";
   detail?: string;
+  /** Quiz Challenge: points earned (correct × 100). */
+  score?: number;
+  /** Quiz Challenge: correct answers ÷ total questions (0–100). */
+  accuracyPercent?: number | null;
 };
 
 /** Realtime event envelope (channel payloads stay small). */

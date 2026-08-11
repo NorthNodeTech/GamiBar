@@ -101,7 +101,7 @@ export function gameInstruction(mode: GameMode, timeLimitSeconds: number | null)
       : `Unlock all ${count} puzzle pieces within ${formatTimerLong(timeLimitSeconds)}. Wrong answers retry.`;
   }
   if (mode === "jigsaw") {
-    return `Rebuild the image before ${formatTimerLong(timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)} runs out.`;
+    return `Answer questions to unlock pieces. Missed questions return in retry rounds until every piece is earned, then rebuild the image before ${formatTimerLong(timeLimitSeconds ?? GAME_CONFIG.jigsaw.timeLimitSeconds)} runs out.`;
   }
-  return `Connect every matching pair of dots within ${formatTimerLong(timeLimitSeconds ?? GAME_CONFIG.connect_dots.timeLimitSeconds)}.`;
+  return `Connect each question dot to its matching answer dot within ${formatTimerLong(timeLimitSeconds ?? GAME_CONFIG.connect_dots.timeLimitSeconds)}.`;
 }
