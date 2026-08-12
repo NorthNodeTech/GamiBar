@@ -85,7 +85,7 @@ export async function signInWithPassword(email: string, password: string, expect
       error:
         expectedRole === "author"
           ? "This account is not an author account."
-          : "This account is an author account. Use the author portal to sign in.",
+          : "This account is an author account. Sign in with GamiBAR.",
     };
   }
 

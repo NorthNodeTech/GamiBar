@@ -23,6 +23,7 @@ import { Route as AuthorIndexRouteImport } from './routes/author.index'
 import { Route as AuthorAchievementsRouteImport } from './routes/author.achievements'
 import { Route as AuthorCreateRouteImport } from './routes/author.create'
 import { Route as AuthorLoginRouteImport } from './routes/author.login'
+import { Route as AuthorParticipatedRouteImport } from './routes/author.participated'
 import { Route as AuthorQuestionsRouteImport } from './routes/author.questions'
 import { Route as AuthorRegisterRouteImport } from './routes/author.register'
 import { Route as AuthorReportsRouteImport } from './routes/author.reports'
@@ -107,6 +108,11 @@ const AuthorCreateRoute = AuthorCreateRouteImport.update({
 const AuthorLoginRoute = AuthorLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => AuthorRoute,
+} as any)
+const AuthorParticipatedRoute = AuthorParticipatedRouteImport.update({
+  id: '/participated',
+  path: '/participated',
   getParentRoute: () => AuthorRoute,
 } as any)
 const AuthorQuestionsRoute = AuthorQuestionsRouteImport.update({
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/author/achievements': typeof AuthorAchievementsRoute
   '/author/create': typeof AuthorCreateRoute
   '/author/login': typeof AuthorLoginRoute
+  '/author/participated': typeof AuthorParticipatedRoute
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
   '/author/reports': typeof AuthorReportsRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/author/achievements': typeof AuthorAchievementsRoute
   '/author/create': typeof AuthorCreateRoute
   '/author/login': typeof AuthorLoginRoute
+  '/author/participated': typeof AuthorParticipatedRoute
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
   '/author/reports': typeof AuthorReportsRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/author/achievements': typeof AuthorAchievementsRoute
   '/author/create': typeof AuthorCreateRoute
   '/author/login': typeof AuthorLoginRoute
+  '/author/participated': typeof AuthorParticipatedRoute
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
   '/author/reports': typeof AuthorReportsRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/author/achievements'
     | '/author/create'
     | '/author/login'
+    | '/author/participated'
     | '/author/questions'
     | '/author/register'
     | '/author/reports'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/author/achievements'
     | '/author/create'
     | '/author/login'
+    | '/author/participated'
     | '/author/questions'
     | '/author/register'
     | '/author/reports'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '/author/achievements'
     | '/author/create'
     | '/author/login'
+    | '/author/participated'
     | '/author/questions'
     | '/author/register'
     | '/author/reports'
@@ -489,6 +501,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorLoginRouteImport
       parentRoute: typeof AuthorRoute
     }
+    '/author/participated': {
+      id: '/author/participated'
+      path: '/participated'
+      fullPath: '/author/participated'
+      preLoaderRoute: typeof AuthorParticipatedRouteImport
+      parentRoute: typeof AuthorRoute
+    }
     '/author/questions': {
       id: '/author/questions'
       path: '/questions'
@@ -613,6 +632,7 @@ interface AuthorRouteChildren {
   AuthorAchievementsRoute: typeof AuthorAchievementsRoute
   AuthorCreateRoute: typeof AuthorCreateRoute
   AuthorLoginRoute: typeof AuthorLoginRoute
+  AuthorParticipatedRoute: typeof AuthorParticipatedRoute
   AuthorQuestionsRoute: typeof AuthorQuestionsRoute
   AuthorRegisterRoute: typeof AuthorRegisterRoute
   AuthorReportsRoute: typeof AuthorReportsRoute
@@ -626,6 +646,7 @@ const AuthorRouteChildren: AuthorRouteChildren = {
   AuthorAchievementsRoute: AuthorAchievementsRoute,
   AuthorCreateRoute: AuthorCreateRoute,
   AuthorLoginRoute: AuthorLoginRoute,
+  AuthorParticipatedRoute: AuthorParticipatedRoute,
   AuthorQuestionsRoute: AuthorQuestionsRoute,
   AuthorRegisterRoute: AuthorRegisterRoute,
   AuthorReportsRoute: AuthorReportsRoute,

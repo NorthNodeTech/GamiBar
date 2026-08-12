@@ -1,26 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, History, LogOut, Plus, Sparkles } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import { Logo } from "@/components/layout/Logo";
+import { authorNavItems } from "@/lib/author-nav";
 import { useAuthSafe } from "@/lib/auth-store";
 import { clearAuthorRoom } from "@/lib/game/client-session";
 import { cn } from "@/lib/utils";
-
-const authorNav = [
-  { to: "/author", label: "Home", icon: Home, match: (p: string) => p === "/author" || p === "/author/" },
-  {
-    to: "/author/create",
-    label: "Create",
-    icon: Plus,
-    match: (p: string) => p.startsWith("/author/create"),
-  },
-  {
-    to: "/author/sessions",
-    label: "History",
-    icon: History,
-    match: (p: string) => p.startsWith("/author/sessions"),
-  },
-] as const;
 
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -43,18 +28,15 @@ export function AppSidebar() {
             <span className="block font-display text-lg font-bold tracking-tight text-[#111111]">
               Gami<span className="text-[var(--gamibar-brand)]">BAR</span>
             </span>
-            <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#737373]">
-              <Sparkles className="size-3 text-[var(--gamibar-brand)]" />
-              Author portal
-            </span>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {authorNav.map((item) => {
+        {authorNavItems.map((item) => {
           const Icon = item.icon;
-          const active = item.match(pathname) || (item.to === "/author/create" && onLiveRoom);
+          const active =
+            item.match(pathname) || (item.to === "/author/create" && onLiveRoom);
           return (
             <Link
               key={item.to}

@@ -54,6 +54,6 @@ export const ROLE_DEFAULTS: Record<UserRole, { email: string; password: string; 
   author: {
     email: "author@gmail.com",
     password: "123456",
-    portal: "Author Portal - quiz management & allocation",
+    portal: "GamiBAR — quiz management & live games",
   },
 };

@@ -4,8 +4,9 @@ import {
   ArrowRight,
   Copy,
   Eye,
-  History,
+  Gamepad2,
   Loader2,
+  Play,
   Plus,
   Trash2,
   Users,
@@ -39,8 +40,8 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/sessions")({
-  head: () => ({ meta: [{ title: "Game History - GamiBAR" }] }),
-  component: GameHistoryPage,
+  head: () => ({ meta: [{ title: "My Games - GamiBAR" }] }),
+  component: MyGamesPage,
 });
 
 const statusLabel: Record<string, string> = {
@@ -62,7 +63,7 @@ function formatCreatedDate(value: string): string {
   }).format(date);
 }
 
-function GameHistoryPage() {
+function MyGamesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const savedRoom = loadAuthorRoom();
@@ -114,7 +115,6 @@ function GameHistoryPage() {
   });
 
   const sessions = sessionsQuery.data ?? [];
-  const totalPlayers = sessions.reduce((sum, session) => sum + session.playerCount, 0);
   const busyId = duplicateMutation.isPending
     ? duplicateMutation.variables?.id
     : deleteMutation.isPending
@@ -126,26 +126,15 @@ function GameHistoryPage() {
       <div className="mx-auto max-w-4xl px-2 py-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-extrabold text-[#111111]">Game history</h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#525252]">
-              Review past games, reopen results, duplicate a setup, or remove old sessions.
-            </p>
+            <h1 className="font-display text-3xl font-extrabold text-[#111111]">My Games</h1>
+            <p className="mt-2 text-sm text-[#525252]">Games you created and hosted.</p>
           </div>
           <Button asChild className="rounded-xl bg-[#111111] hover:bg-black">
             <Link to="/author/create">
               <Plus className="mr-2 size-4" />
-              New game
+              Create Game
             </Link>
           </Button>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <StatCard label="Games hosted" value={String(sessions.length)} />
-          <StatCard label="Total participants" value={String(totalPlayers)} />
-          <StatCard
-            label="Live now"
-            value={String(sessions.filter((s) => s.status === "LIVE" || s.status === "LOBBY").length)}
-          />
         </div>
 
         {savedRoom && (
@@ -171,27 +160,27 @@ function GameHistoryPage() {
           {sessionsQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#737373]">
               <Loader2 className="size-4 animate-spin" />
-              Loading game history…
+              Loading games…
             </div>
           ) : sessionsQuery.isError ? (
             <InlineErrorBanner
               className="py-8 text-center"
-              message="Could not load game history. Check your connection and try again."
+              message="Could not load your games. Check your connection and try again."
               onRetry={() => void sessionsQuery.refetch()}
               retrying={sessionsQuery.isFetching}
             />
           ) : sessions.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-white px-6 py-12 text-center">
-              <History className="mx-auto size-8 text-[#737373]" />
+              <Gamepad2 className="mx-auto size-8 text-[#737373]" />
               <p className="mt-4 text-sm text-[#525252]">No games yet.</p>
               <Button asChild className="mt-4 rounded-xl bg-[#111111] hover:bg-black">
-                <Link to="/author/create">Create your first game</Link>
+                <Link to="/author/create">Create Game</Link>
               </Button>
             </div>
           ) : (
             <ul className="space-y-4">
               {sessions.map((session) => (
-                <GameHistoryCard
+                <MyGameCard
                   key={session.id}
                   session={session}
                   busy={busyId === session.id}
@@ -265,7 +254,7 @@ function GameHistoryPage() {
   );
 }
 
-function GameHistoryCard({
+function MyGameCard({
   session,
   busy,
   canOpenLive,
@@ -281,11 +270,12 @@ function GameHistoryCard({
   onDelete: () => void;
 }) {
   const isFinished = session.status === "FINISHED" || session.status === "CANCELLED";
-  const isLive =
+  const isStartable =
     session.status === "LIVE" ||
     session.status === "LOBBY" ||
     session.status === "COUNTDOWN" ||
-    session.status === "READY";
+    session.status === "READY" ||
+    session.status === "DRAFT";
 
   return (
     <li className="overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]">
@@ -335,6 +325,14 @@ function GameHistoryCard({
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/30 px-4 py-3 sm:px-5">
+        {canOpenLive && isStartable ? (
+          <Button asChild size="sm" className="rounded-xl bg-[#111111] hover:bg-black">
+            <Link to="/author/room/$roomId" params={{ roomId: session.id }}>
+              <Play className="mr-1.5 size-3.5 fill-current" />
+              Start game
+            </Link>
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"
@@ -344,16 +342,8 @@ function GameHistoryCard({
           onClick={onViewResults}
         >
           <Eye className="mr-1.5 size-3.5" />
-          {isFinished ? "Reopen results" : "View results"}
+          {isFinished ? "View results" : "View game"}
         </Button>
-        {canOpenLive && isLive && (
-          <Button asChild variant="outline" size="sm" className="rounded-xl">
-            <Link to="/author/room/$roomId" params={{ roomId: session.id }}>
-              Live control
-              <ArrowRight className="ml-1.5 size-3.5" />
-            </Link>
-          </Button>
-        )}
         <Button
           type="button"
           variant="outline"
@@ -405,11 +395,3 @@ function MetaItem({
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white px-4 py-3 shadow-[var(--shadow-soft)]">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[#737373]">{label}</p>
-      <p className="mt-1 font-display text-2xl font-bold text-[#111111]">{value}</p>
-    </div>
-  );
-}

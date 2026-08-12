@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 
 const steps = [
-  { key: "details", label: "Details", short: "Info" },
   { key: "mode", label: "Game", short: "Game" },
+  { key: "details", label: "Details", short: "Info" },
   { key: "configure", label: "Content", short: "Content" },
   { key: "review", label: "Launch", short: "Go" },
 ] as const;

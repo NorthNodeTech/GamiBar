@@ -63,7 +63,7 @@ function SessionResultsPage() {
           className="inline-flex items-center gap-1.5 text-sm font-medium text-[#525252] transition-colors hover:text-[#111111]"
         >
           <ArrowLeft className="size-4" />
-          Back to game history
+          Back to My Games
         </Link>
 
         {resultsQuery.isLoading ? (

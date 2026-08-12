@@ -79,7 +79,7 @@ export function AuthShell({
         <div className="relative max-w-md">
           <p className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
             <Sparkles className="size-3.5 text-[var(--gamibar-brand)]" />
-            Author portal
+            GamiBAR
           </p>
           <h2 className="mt-5 font-display text-3xl font-black leading-[1.08] tracking-tight text-white xl:text-4xl">
             Host games your

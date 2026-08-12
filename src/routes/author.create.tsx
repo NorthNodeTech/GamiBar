@@ -10,8 +10,9 @@ import {
   Upload,
   Loader2,
 } from "lucide-react";
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { AuthorWizardSteps } from "@/components/author/AuthorWizardSteps";
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
@@ -35,7 +36,7 @@ import {
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
 import { computeJigsawGrid } from "@/lib/game/jigsaw-grid";
 import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
-import { getModeCatalog } from "@/lib/game/mode-catalog";
+import { getModeCatalog, type GameModeCatalogItem } from "@/lib/game/mode-catalog";
 import { modeUsesQuestions } from "@/lib/game/mode-registry";
 import { createRoomFn } from "@/lib/game/room.functions";
 import { formatTimerLong, gameInstruction } from "@/lib/game/timer";
@@ -49,7 +50,12 @@ import {
 import { listQuestionSets } from "@/lib/question-bank";
 import { cn } from "@/lib/utils";
 
+const createSearchSchema = z.object({
+  mode: z.enum(["quiz", "jigsaw", "connect_dots"]).optional(),
+});
+
 export const Route = createFileRoute("/author/create")({
+  validateSearch: createSearchSchema,
   beforeLoad: () => {
     const auth = getStoredAuth();
     if (!isAuthorAuthenticated(auth)) {
@@ -70,10 +76,12 @@ type Step = "details" | "mode" | "configure" | "review";
 function CreateRoomWizard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [step, setStep] = useState<Step>("details");
+  const { mode: presetMode } = Route.useSearch();
+  const skipModeStep = useRef(Boolean(presetMode));
+  const [step, setStep] = useState<Step>("mode");
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
-  const [mode, setMode] = useState<GameMode | null>(null);
+  const [mode, setMode] = useState<GameMode | null>(presetMode ?? null);
   const [questions, setQuestions] = useState<QuizQuestionDraft[]>(() => emptyQuizQuestions("quiz"));
   const [rewardCode, setRewardCode] = useState("");
   const [connectDotsPairs, setConnectDotsPairs] = useState<ConnectDotsContentPair[]>(() =>
@@ -170,22 +178,22 @@ function CreateRoomWizard() {
 
   const canContinue =
     !submitting &&
-    (step === "details" ||
-      (step === "mode" && Boolean(mode)) ||
+    ((step === "mode" && Boolean(mode)) ||
+      (step === "details" && Boolean(name.trim())) ||
       (step === "configure" && configValid));
 
   const goNext = () => {
-    if (step === "details") {
-      if (!name.trim()) {
-        toast.error("Enter a room / session name.");
-        return;
-      }
-      setStep("mode");
-      return;
-    }
     if (step === "mode") {
       if (!mode) {
         toast.error("Select a game type.");
+        return;
+      }
+      setStep("details");
+      return;
+    }
+    if (step === "details") {
+      if (!name.trim()) {
+        toast.error("Enter a room / session name.");
         return;
       }
       setStep("configure");
@@ -203,12 +211,15 @@ function CreateRoomWizard() {
   };
 
   const goBack = () => {
-    if (step === "mode") setStep("details");
-    else if (step === "configure") setStep("mode");
+    if (step === "details") setStep("mode");
+    else if (step === "configure") setStep("details");
     else if (step === "review") setStep("configure");
   };
 
-  const handleModeSelect = (next: GameMode) => {
+  const handleModeSelect = (next: GameMode, options?: { preserveSkip?: boolean }) => {
+    if (!options?.preserveSkip) {
+      skipModeStep.current = false;
+    }
     setMode(next);
     setTimerSeconds(null);
     if (modeUsesQuestions(next)) {
@@ -221,6 +232,14 @@ function CreateRoomWizard() {
       setActiveQ(0);
     }
   };
+
+  useEffect(() => {
+    if (presetMode) {
+      handleModeSelect(presetMode, { preserveSkip: true });
+    }
+    // Apply home-page preset once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleImage = async (file: File | undefined) => {
     if (!file) return;
@@ -372,7 +391,7 @@ function CreateRoomWizard() {
         <div
           className={cn(
             "mt-3 rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]",
-            step === "mode" && "overflow-visible",
+            step === "mode" && !skipModeStep.current && "overflow-visible",
           )}
         >
           <div className="border-b border-[var(--gamibar-border)] px-4 py-3.5 sm:px-5 sm:py-4">
@@ -380,19 +399,22 @@ function CreateRoomWizard() {
               Create session
             </p>
             <h1 className="mt-0.5 font-display text-xl font-extrabold text-[#111111] sm:text-2xl">
+              {step === "mode" && (skipModeStep.current ? "Your game" : "Pick a game")}
               {step === "details" && "Session details"}
-              {step === "mode" && "Pick a game"}
               {step === "configure" && "Game content"}
               {step === "review" && "Launch preview"}
             </h1>
+            {step === "mode" && skipModeStep.current && (
+              <p className="mt-1 text-sm text-[#525252]">
+                You chose this game from home. Continue to name your session.
+              </p>
+            )}
+            {step === "mode" && !skipModeStep.current && (
+              <p className="mt-1 text-sm text-[#525252]">Choose the game that fits this lesson.</p>
+            )}
             {step === "details" && (
               <p className="mt-1 text-sm text-[#525252]">
                 Name your room so students know they joined the right session.
-              </p>
-            )}
-            {step === "mode" && (
-              <p className="mt-1 text-sm text-[#525252]">
-                Choose the game that fits this lesson.
               </p>
             )}
             {step === "configure" && mode && (
@@ -413,9 +435,17 @@ function CreateRoomWizard() {
           <div
             className={cn(
               "px-4 py-4 sm:px-5 sm:py-5",
-              step === "mode" && "overflow-visible",
+              step === "mode" && !skipModeStep.current && "overflow-visible",
             )}
           >
+            {step === "mode" && skipModeStep.current && mode && modeCatalog && (
+              <SelectedGamePreview mode={mode} catalog={modeCatalog} />
+            )}
+
+            {step === "mode" && !skipModeStep.current && (
+              <GameModePicker value={mode} onChange={handleModeSelect} />
+            )}
+
             {step === "details" && (
               <div className="grid gap-4">
                 <div className="grid gap-2">
@@ -442,7 +472,14 @@ function CreateRoomWizard() {
               </div>
             )}
 
-            {step === "mode" && <GameModePicker value={mode} onChange={handleModeSelect} />}
+            {step === "mode" && skipModeStep.current && (
+              <p className="mt-4 text-center text-xs text-[#737373]">
+                Want a different game?{" "}
+                <Link to="/author" className="font-semibold text-[#111111] underline-offset-2 hover:underline">
+                  Go back home
+                </Link>
+              </p>
+            )}
 
             {step === "configure" && !mode && (
               <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center">
@@ -659,7 +696,7 @@ function CreateRoomWizard() {
                 variant="outline"
                 size="sm"
                 className="rounded-xl"
-                disabled={step === "details" || submitting}
+                disabled={step === "mode" || submitting}
                 onClick={goBack}
               >
                 Back
@@ -699,6 +736,45 @@ function CreateRoomWizard() {
         </div>
       </div>
     </AuthorShell>
+  );
+}
+
+function SelectedGamePreview({
+  mode,
+  catalog,
+}: {
+  mode: GameMode;
+  catalog: GameModeCatalogItem;
+}) {
+  const Icon = catalog.icon;
+  return (
+    <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
+      <div className="relative aspect-[16/10] overflow-hidden bg-[var(--gamibar-page)]">
+        <img src={catalog.preview} alt="" className="size-full object-cover" />
+        <span
+          className={cn(
+            "absolute left-3 top-3 grid size-10 place-items-center rounded-xl backdrop-blur-sm",
+            catalog.badgeClass,
+          )}
+        >
+          <Icon className="size-5" />
+        </span>
+      </div>
+      <div className="p-4 sm:p-5">
+        <p className="font-display text-lg font-bold text-[#111111]">{GAME_MODE_META[mode].title}</p>
+        <p className="mt-1 text-sm text-[#525252]">{catalog.tagline}</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {catalog.specs.map((spec) => (
+            <span
+              key={spec}
+              className="rounded-full bg-[var(--gamibar-page)] px-2 py-0.5 text-[10px] font-semibold text-[#737373]"
+            >
+              {spec}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
