@@ -133,7 +133,7 @@ function JoinCodePage() {
             Join your class
           </h1>
           <p className="mt-3 text-sm text-[#525252]">
-            Scan the QR on the author screen, or type the 6-digit code.
+            Scan the QR on the host screen, or type the 6-digit code.
           </p>
         </div>
 
@@ -212,7 +212,7 @@ function JoinCodePage() {
         <button
           type="button"
           onClick={() =>
-            toast.message("The author shows a QR code and room code on the live room screen.")
+            toast.message("The host shows a QR code and room code on the live room screen.")
           }
           className="mt-6 inline-flex items-center justify-center gap-1.5 text-sm font-medium text-[#737373] transition-colors hover:text-[#111111]"
         >

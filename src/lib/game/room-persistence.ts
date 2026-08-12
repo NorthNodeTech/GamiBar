@@ -159,7 +159,7 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
 
 function configFromPayload(
   payload: GamePayload,
-  settings?: Pick<Room, "showLeaderboardToStudents">,
+  settings?: Pick<Room, "showLeaderboardToStudents" | "duplicatedFromName">,
 ): Record<string, unknown> {
   let base: Record<string, unknown>;
   if (payload.mode === "quiz") {
@@ -186,7 +186,17 @@ function configFromPayload(
   if (settings?.showLeaderboardToStudents) {
     base.showLeaderboardToStudents = true;
   }
+  if (settings?.duplicatedFromName) {
+    base.duplicatedFromName = settings.duplicatedFromName;
+  }
   return base;
+}
+
+function readDuplicatedFromName(config: unknown): string | null {
+  const raw = (config ?? {}) as Record<string, unknown>;
+  return typeof raw.duplicatedFromName === "string" && raw.duplicatedFromName.trim()
+    ? raw.duplicatedFromName.trim()
+    : null;
 }
 
 function readShowLeaderboardToStudents(config: unknown): boolean {
@@ -353,6 +363,7 @@ function buildStoredRoom(
     status: Participant["status"];
     reconnect_token_hash: string;
     joined_at: string;
+    user_id: string | null;
   }>,
   answers: Array<{
     participant_id: string;
@@ -375,6 +386,7 @@ function buildStoredRoom(
   payload: GamePayload,
   authorToken = "",
   showLeaderboardToStudents = false,
+  duplicatedFromName = null,
 ): StoredRoom {
   const quizAnswers = new Map<string, Map<string, QuizAnswer>>();
   for (const answer of answers) {
@@ -417,6 +429,7 @@ function buildStoredRoom(
       joinedAt: ms(p.joined_at) ?? Date.now(),
       reconnectToken: "",
       connectionId: null,
+      userId: p.user_id,
     });
   }
 
@@ -437,6 +450,7 @@ function buildStoredRoom(
       endsAt: ms(row.ends_at),
       finishedAt: ms(row.finished_at),
       showLeaderboardToStudents,
+      duplicatedFromName,
     },
     participants: participantMap,
     quizAnswers,
@@ -605,6 +619,7 @@ async function loadRoomBundle(roomId: string, authorToken = ""): Promise<StoredR
     payload,
     authorToken,
     readShowLeaderboardToStudents(row.config),
+    readDuplicatedFromName(row.config),
   );
 }
 
@@ -712,7 +727,10 @@ export async function persist(stored: StoredRoom) {
     author_token_hash: authorTokenHash,
     status: room.status,
     mode: room.mode,
-    config: configFromPayload(payload, { showLeaderboardToStudents: room.showLeaderboardToStudents }),
+    config: configFromPayload(payload, {
+      showLeaderboardToStudents: room.showLeaderboardToStudents,
+      duplicatedFromName: room.duplicatedFromName,
+    }),
     max_participants: room.maxParticipants,
     started_at: iso(room.startedAt),
     ends_at: iso(room.endsAt),
@@ -729,7 +747,12 @@ export async function persist(stored: StoredRoom) {
 
     const { error: configError } = await supabase
       .from("gamibar_rooms")
-      .update({ config: configFromPayload(payload, { showLeaderboardToStudents: room.showLeaderboardToStudents }) })
+      .update({
+        config: configFromPayload(payload, {
+          showLeaderboardToStudents: room.showLeaderboardToStudents,
+          duplicatedFromName: room.duplicatedFromName,
+        }),
+      })
       .eq("id", room.id);
     if (configError) throw new Error(configError.message || "Could not save jigsaw config.");
   }
@@ -744,7 +767,7 @@ export async function persist(stored: StoredRoom) {
       reconnect_token_hash: await hashToken(participant.reconnectToken),
       joined_at: iso(participant.joinedAt) ?? new Date().toISOString(),
       last_seen_at: new Date().toISOString(),
-      user_id: null,
+      user_id: participant.userId ?? null,
     });
     if (error) throw new Error(error.message || "Could not save participant.");
   }

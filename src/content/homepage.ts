@@ -13,6 +13,9 @@ import {
 import connectDotsPreview from "@/assets/game-connect-dots-preview.png";
 import jigsawPreview from "@/assets/game-jigsaw-preview.webp";
 import quizPreview from "@/assets/game-quiz-preview.webp";
+import testimonialCorporate from "@/assets/testimonial-corporate-learning.webp";
+import testimonialMath from "@/assets/testimonial-math-classroom.webp";
+import testimonialPhysics from "@/assets/testimonial-physics-classroom.webp";
 import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
 import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, type GameMode } from "@/lib/game/config";
 
@@ -102,7 +105,7 @@ const MODE_PRESENTATION: Record<
 function gameModeMetaLine(mode: GameMode): string {
   switch (mode) {
     case "quiz":
-      return `${GAME_CONFIG.quiz.questionCount} MCQs · Accuracy-first ranking`;
+      return `${GAME_CONFIG.quiz.minQuestions}–${GAME_CONFIG.quiz.maxQuestions} MCQs · Accuracy-first ranking`;
     case "jigsaw":
       return `${JIGSAW_GRID.pieceCount} pieces · ${GAME_CONFIG.jigsaw.timeLimitSeconds}s timer`;
     case "connect_dots":
@@ -237,18 +240,24 @@ export const HOMEPAGE_TESTIMONIALS = [
       "I share the room code and the whole cohort is in within a minute. The Connect Dots round keeps even quiet students competing.",
     name: "Dr. Priya Nair",
     role: "Head of Physics, Ashford College",
+    image: testimonialPhysics,
+    imageAlt: "Physics classroom with students playing a live Connect Dots session",
   },
   {
     quote:
       "It feels like software students already use - not a clunky add-on. The live leaderboard changes the energy in the room immediately.",
     name: "Marcus Feld",
     role: "L&D Lead, Northline Group",
+    image: testimonialCorporate,
+    imageAlt: "Corporate training room with a live leaderboard on display",
   },
   {
     quote:
       "Quiz results show me which questions slowed the class down. I know exactly what to re-teach before the next session.",
     name: "Sofia Almeida",
     role: "Mathematics Faculty, Vernay University",
+    image: testimonialMath,
+    imageAlt: "University mathematics classroom during a live quiz review",
   },
 ] as const;
 
@@ -260,7 +269,7 @@ export const HOMEPAGE_FAQ_SECTION = {
 export const HOMEPAGE_FAQ = [
   {
     question: "Can I use my own questions and images?",
-    answer: `Yes. Quiz Challenge uses your multiple-choice bank (${GAME_CONFIG.quiz.questionCount} questions per round). Jigsaw Mission uses an image you upload. Connect Dots generates a fair grid puzzle for the difficulty you choose.`,
+    answer: `Yes. Quiz Challenge uses your multiple-choice bank — add as many questions as you need (up to ${GAME_CONFIG.quiz.maxQuestions}). Jigsaw Mission uses an image you upload. Connect Dots generates a fair grid puzzle for the difficulty you choose.`,
   },
   {
     question: "Do students need an account to join?",

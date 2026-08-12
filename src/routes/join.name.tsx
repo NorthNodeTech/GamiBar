@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlineErrorBanner, PageErrorState, PageLoader } from "@/components/ui/async-state";
 import { saveParticipantSession } from "@/lib/game/client-session";
+import { getLinkedParticipantUserId, getStoredAuth } from "@/lib/auth-store";
 import { getRoomSnapshotFn, joinRoomFn } from "@/lib/game/room.functions";
 import { GAME_MODE_META } from "@/lib/game/config";
 import { friendlyGameError } from "@/lib/accessibility";
@@ -69,6 +70,11 @@ function NicknamePage() {
     };
   }, [code]);
 
+  const linkedUserId = useMemo(() => getLinkedParticipantUserId(), []);
+  const signedIn = useMemo(() => {
+    const auth = getStoredAuth();
+    return Boolean(auth?.id && !auth.id.startsWith("guest"));
+  }, []);
   const avatarLetter = useMemo(
     () => (name.trim() ? name.trim().slice(0, 1).toUpperCase() : "?"),
     [name],
@@ -103,7 +109,9 @@ function NicknamePage() {
     setLoading(true);
     setJoinError(null);
     try {
-      const result = await joinRoomFn({ data: { code: clean, displayName: name } });
+      const result = await joinRoomFn({
+        data: { code: clean, displayName: name, userId: linkedUserId },
+      });
       if (!result.ok) {
         const message = friendlyGameError(result.error, "Could not join this room. Check the code and try again.");
         setJoinError(message);
@@ -187,6 +195,23 @@ function NicknamePage() {
             onDismiss={() => setJoinError(null)}
           />
         ) : null}
+
+        {!signedIn ? (
+          <p className="mt-6 text-center text-xs text-[#737373]">
+            <Link
+              to="/author/login"
+              search={{ redirect: `/join/name?code=${normalizeRoomCode(code)}` }}
+              className="font-semibold text-[#111111] underline-offset-2 hover:underline"
+            >
+              Sign in
+            </Link>{" "}
+            with your GamiBAR account to save games you join in Participated Games.
+          </p>
+        ) : (
+          <p className="mt-6 text-center text-xs text-emerald-700">
+            Signed in — this session will appear in Participated Games.
+          </p>
+        )}
       </div>
     </div>
   );

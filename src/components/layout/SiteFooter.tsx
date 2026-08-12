@@ -47,7 +47,7 @@ export function SiteFooter() {
               href="https://northnode.live/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center rounded-lg bg-white/95 p-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="inline-flex items-center transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               aria-label="Visit NorthNode"
             >
               <img
@@ -74,7 +74,7 @@ export function SiteFooter() {
             © {new Date().getFullYear()} GamiBAR. All rights reserved.
           </p>
           <div className="flex flex-col gap-3 sm:items-end">
-            <span className="text-xs text-[#525252]">Built for authors and students</span>
+            <span className="text-xs text-[#525252]">Built for teachers and students</span>
             <p className="text-[11px] text-[#737373]">
               Powered by{" "}
               <a

@@ -29,7 +29,7 @@ const games = [
     name: "Quiz Challenge",
     tagline: "SPEED RUN",
     copy: "Timed multiple choice with combo streaks and instant feedback.",
-    meta: "10 questions",
+    meta: "Flexible question count",
     xp: "400 XP",
     difficulty: "Medium",
     border: "hover:border-red-500/40",

@@ -82,14 +82,30 @@ function Landing() {
         <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-3 md:items-stretch">
           {HOMEPAGE_TESTIMONIALS.map((t, i) => (
             <Reveal key={t.name} delay={i * 0.08} className="h-full">
-              <Card3DTilt className="flex h-full flex-col justify-between p-6 sm:p-7">
-                <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">"{t.quote}"</p>
-                <div className="mt-5 flex items-center justify-between border-t border-[var(--gamibar-border)] pt-4 sm:mt-6">
-                  <div>
-                    <p className="text-sm font-bold text-[var(--foreground)]">{t.name}</p>
-                    <p className="text-xs text-[var(--gamibar-text-tertiary)]">{t.role}</p>
+              <Card3DTilt
+                variant="dark"
+                className="flex h-full min-h-[320px] flex-col justify-between overflow-hidden p-0 sm:min-h-[360px]"
+              >
+                <div className="relative flex h-full flex-col justify-between p-6 sm:p-7">
+                  <img
+                    src={t.image}
+                    alt=""
+                    aria-hidden
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/95 via-[#0a0a0f]/72 to-[#0a0a0f]/45" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.12),transparent_55%)]" />
+
+                  <p className="relative z-10 text-sm leading-relaxed text-white/90">"{t.quote}"</p>
+                  <div className="relative z-10 mt-5 flex items-center justify-between border-t border-white/15 pt-4 sm:mt-6">
+                    <div>
+                      <p className="text-sm font-bold text-white">{t.name}</p>
+                      <p className="text-xs text-white/65">{t.role}</p>
+                    </div>
+                    <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" aria-hidden />
                   </div>
-                  <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" />
                 </div>
               </Card3DTilt>
             </Reveal>

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { Logo } from "@/components/layout/Logo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
-import { authorNavItems, authorPageTitle } from "@/lib/author-nav";
+import { authorNavItems } from "@/lib/author-nav";
 import { useAuthSafe } from "@/lib/auth-store";
 import { clearAuthorRoom } from "@/lib/game/client-session";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,6 @@ export function AuthorShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, logout } = useAuthSafe();
-  const title = authorPageTitle(pathname);
   const isLive = pathname.startsWith("/author/room/");
   const onLiveRoom = isLive;
 
@@ -36,7 +35,7 @@ export function AuthorShell({ children }: { children: ReactNode }) {
 
           <nav
             className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-1"
-            aria-label="Author navigation"
+            aria-label="Main navigation"
           >
             {authorNavItems.map((item) => {
               const Icon = item.icon;
@@ -88,11 +87,6 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
-        {title && (
-          <div className="border-t border-[var(--gamibar-border)]/60 px-4 py-2 lg:px-8">
-            <p className="mx-auto max-w-7xl truncate text-xs font-medium text-[#737373]">{title}</p>
-          </div>
-        )}
       </header>
 
       <div className="relative flex-1">

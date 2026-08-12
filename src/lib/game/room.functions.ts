@@ -6,6 +6,7 @@ import {
   getRoomSnapshot,
   getAuthorRoomResults,
   duplicateRoom,
+  claimAuthorSession,
   joinRoom,
   reconnectParticipant,
   startGame,
@@ -47,7 +48,7 @@ export async function createRoomFn({
 export async function joinRoomFn({
   data,
 }: {
-  data: { code: string; displayName: string };
+  data: { code: string; displayName: string; userId?: string | null };
 }) {
   await ensureDemoRoom();
   return joinRoom(data);
@@ -86,9 +87,17 @@ export async function getAuthorRoomResultsFn({
 export async function duplicateRoomFn({
   data,
 }: {
-  data: { sourceRoomId: string; authorId: string; authorName: string };
+  data: { sourceRoomId: string; authorId: string; authorName: string; name: string };
 }) {
   return duplicateRoom(data);
+}
+
+export async function claimAuthorSessionFn({
+  data,
+}: {
+  data: { roomId: string; authorId: string };
+}) {
+  return claimAuthorSession(data);
 }
 
 export async function startGameFn({

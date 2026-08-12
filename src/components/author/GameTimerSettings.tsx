@@ -206,7 +206,7 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
   const displayValue = openEnded ? bounds.min : clampTimer(mode, value)!;
   const suggestedSeconds =
     mode === "quiz"
-      ? GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.questionCount
+      ? GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.defaultQuestionCount
       : mode === "quiz_jigsaw"
         ? GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600
         : mode === "jigsaw"

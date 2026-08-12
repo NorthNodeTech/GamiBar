@@ -9,10 +9,12 @@ import {
 
 export const GAME_CONFIG = {
   quiz: {
-    questionCount: 10,
+    minQuestions: 1,
+    maxQuestions: 16,
+    defaultQuestionCount: 10,
     /** Soft UI hint only; Quiz ranking is accuracy-first, then completion time. */
     recommendedSecondsPerQuestion: 20,
-    timeLimitSeconds: null as number | null, // untimed until all 10 submitted
+    timeLimitSeconds: null as number | null,
   },
   quiz_jigsaw: {
     questionCount: 9,
@@ -84,7 +86,7 @@ export const GAME_MODE_META: Record<
   quiz: {
     title: "Quiz Challenge",
     shortInstruction:
-      "Answer all 10 questions. One attempt per question. Results appear after completion.",
+      "Answer every question. One attempt per question. Results appear after completion.",
   },
   quiz_jigsaw: {
     title: "Puzzle Quest",

@@ -35,13 +35,3 @@ export const authorNavItems: AuthorNavItem[] = [
     match: (pathname) => pathname.startsWith("/author/participated"),
   },
 ];
-
-export function authorPageTitle(pathname: string): string | null {
-  if (pathname.startsWith("/author/room/")) return "Live control";
-  if (pathname.startsWith("/author/sessions/")) return "Game results";
-  if (pathname.startsWith("/author/sessions")) return "My Games";
-  if (pathname.startsWith("/author/participated")) return "Participated Games";
-  if (pathname.startsWith("/author/create")) return "Create session";
-  if (pathname === "/author" || pathname === "/author/") return "GamiBAR";
-  return null;
-}

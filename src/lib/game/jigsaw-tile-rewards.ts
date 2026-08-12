@@ -199,12 +199,21 @@ export function isTileCollectionLayout(value: unknown): value is TileCollectionL
   );
 }
 
-export function randomTileCollectionLayout(): TileCollectionLayout {
+export function horizontalTileCollectionLayout(
+  index: number,
+  total: number,
+): TileCollectionLayout {
+  const safeTotal = Math.max(1, total);
+  const x = safeTotal <= 1 ? 0.5 : index / (safeTotal - 1);
   return {
-    x: 0.02 + Math.random() * 0.72,
-    y: 0.02 + Math.random() * 0.68,
-    z: Math.floor(Math.random() * 1000),
+    x,
+    y: 0.5,
+    z: index,
   };
+}
+
+export function randomTileCollectionLayout(): TileCollectionLayout {
+  return horizontalTileCollectionLayout(0, 1);
 }
 
 export function readTileLayouts(payload: Record<string, unknown> | undefined): TileLayoutMap {
@@ -220,33 +229,38 @@ export function readTileLayouts(payload: Record<string, unknown> | undefined): T
   return out;
 }
 
-/** Assign scrambled collection layouts for earned tiles missing placement data. */
+/** Assign row layouts for earned tiles that do not have placement data. */
 export function ensureTileLayoutsForEarned(
   earnedTileIds: readonly string[],
   existing: Readonly<TileLayoutMap>,
 ): { tileLayouts: TileLayoutMap; changed: boolean } {
+  const sorted = [...earnedTileIds].sort((a, b) => a.localeCompare(b));
   const tileLayouts: TileLayoutMap = { ...existing };
   let changed = false;
 
-  for (const id of earnedTileIds) {
-    if (!(id in tileLayouts)) {
-      tileLayouts[id] = randomTileCollectionLayout();
+  sorted.forEach((id, index) => {
+    const next = horizontalTileCollectionLayout(index, sorted.length);
+    const current = tileLayouts[id];
+    if (!current || current.x !== next.x || current.y !== next.y) {
+      tileLayouts[id] = next;
       changed = true;
     }
-  }
+  });
 
   return { tileLayouts, changed };
 }
 
 export function mergeTileLayoutsForNewTiles(
   existing: Readonly<TileLayoutMap>,
-  newTileIds: readonly string[],
+  _newTileIds: readonly string[],
+  allTileIds: readonly string[],
 ): TileLayoutMap {
+  const sorted = [...allTileIds].sort((a, b) => a.localeCompare(b));
   const tileLayouts: TileLayoutMap = { ...existing };
-  for (const id of newTileIds) {
-    if (!(id in tileLayouts)) {
-      tileLayouts[id] = randomTileCollectionLayout();
-    }
-  }
+
+  sorted.forEach((id, index) => {
+    tileLayouts[id] = horizontalTileCollectionLayout(index, sorted.length);
+  });
+
   return tileLayouts;
 }

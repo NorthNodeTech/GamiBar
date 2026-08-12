@@ -28,9 +28,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { GAME_MODE_META } from "@/lib/game/config";
 import { loadAuthorRoom, saveAuthorRoom } from "@/lib/game/client-session";
-import { duplicateRoomFn } from "@/lib/game/room.functions";
+import { claimAuthorSessionFn, duplicateRoomFn } from "@/lib/game/room.functions";
 import { useAuth } from "@/lib/auth-store";
 import {
   deleteAuthorSession,
@@ -63,6 +64,16 @@ function formatCreatedDate(value: string): string {
   }).format(date);
 }
 
+function isActiveSession(status: string) {
+  return (
+    status === "LIVE" ||
+    status === "LOBBY" ||
+    status === "COUNTDOWN" ||
+    status === "READY" ||
+    status === "DRAFT"
+  );
+}
+
 function MyGamesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -70,6 +81,8 @@ function MyGamesPage() {
   const { user, isAuthor } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<AuthorSessionSummary | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [duplicateTarget, setDuplicateTarget] = useState<AuthorSessionSummary | null>(null);
+  const [duplicateName, setDuplicateName] = useState("");
 
   const sessionsQuery = useQuery({
     queryKey: ["author-sessions", user?.id],
@@ -88,16 +101,36 @@ function MyGamesPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const openLiveMutation = useMutation({
+    mutationFn: async (session: AuthorSessionSummary) => {
+      const res = await claimAuthorSessionFn({
+        data: { roomId: session.id, authorId: user!.id },
+      });
+      if (!res.ok) throw new Error(res.error);
+      return { session, res };
+    },
+    onSuccess: ({ session, res }) => {
+      saveAuthorRoom({
+        roomId: session.id,
+        code: res.room.code,
+        authorToken: res.authorToken,
+      });
+      navigate({ to: "/author/room/$roomId", params: { roomId: session.id } });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const duplicateMutation = useMutation({
-    mutationFn: (session: AuthorSessionSummary) =>
+    mutationFn: (input: { session: AuthorSessionSummary; name: string }) =>
       duplicateRoomFn({
         data: {
-          sourceRoomId: session.id,
+          sourceRoomId: input.session.id,
           authorId: user!.id,
           authorName: user!.name,
+          name: input.name,
         },
       }),
-    onSuccess: (result, session) => {
+    onSuccess: (result, { session, name }) => {
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -107,19 +140,24 @@ function MyGamesPage() {
         code: result.room.code,
         authorToken: result.authorToken,
       });
-      toast.success(`Duplicated "${session.name}" — new code ${result.room.code}`);
+      toast.success(`"${name}" created — new code ${result.room.code}`);
       void queryClient.invalidateQueries({ queryKey: ["author-sessions", user?.id] });
+      setDuplicateTarget(null);
+      setDuplicateName("");
       navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const sessions = sessionsQuery.data ?? [];
-  const busyId = duplicateMutation.isPending
-    ? duplicateMutation.variables?.id
-    : deleteMutation.isPending
-      ? deleteMutation.variables?.id
-      : null;
+  const busyId =
+    openLiveMutation.isPending
+      ? openLiveMutation.variables?.session.id
+      : duplicateMutation.isPending
+        ? duplicateMutation.variables?.session.id
+        : deleteMutation.isPending
+          ? deleteMutation.variables?.id
+          : null;
 
   return (
     <AuthorShell>
@@ -184,11 +222,14 @@ function MyGamesPage() {
                   key={session.id}
                   session={session}
                   busy={busyId === session.id}
-                  canOpenLive={savedRoom?.roomId === session.id}
+                  onOpenLive={() => openLiveMutation.mutate(session)}
                   onViewResults={() =>
                     navigate({ to: "/author/sessions/$roomId", params: { roomId: session.id } })
                   }
-                  onDuplicate={() => duplicateMutation.mutate(session)}
+                  onDuplicate={() => {
+                    setDuplicateTarget(session);
+                    setDuplicateName("");
+                  }}
                   onDelete={() => {
                     setDeleteTarget(session);
                     setDeleteConfirmName("");
@@ -199,6 +240,56 @@ function MyGamesPage() {
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={duplicateTarget != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDuplicateTarget(null);
+            setDuplicateName("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate game</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left text-sm text-muted-foreground">
+                <p>
+                  Same questions and settings, new join code and QR. Choose a name for this session.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="duplicate-game-name">New game name</Label>
+                  <Input
+                    id="duplicate-game-name"
+                    value={duplicateName}
+                    onChange={(e) => setDuplicateName(e.target.value)}
+                    placeholder="e.g. Period 2 — Connect Dots"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicateMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={duplicateMutation.isPending || duplicateName.trim().length === 0}
+              className="bg-[#111111] text-white hover:bg-black"
+              onClick={(e) => {
+                e.preventDefault();
+                if (!duplicateTarget) return;
+                duplicateMutation.mutate({
+                  session: duplicateTarget,
+                  name: duplicateName.trim(),
+                });
+              }}
+            >
+              {duplicateMutation.isPending ? "Creating…" : "Create duplicate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={deleteTarget != null}
@@ -215,18 +306,17 @@ function MyGamesPage() {
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-left text-sm text-muted-foreground">
                 <p>
-                  This permanently removes{" "}
-                  <span className="font-semibold text-foreground">{deleteTarget?.name}</span>, its
-                  participant data, scores, and results. This cannot be undone.
+                  Permanently removes{" "}
+                  <span className="font-semibold text-foreground">{deleteTarget?.name}</span> and all
+                  its data.
                 </p>
                 <p>
-                  Type the game name <span className="font-semibold text-foreground">{deleteTarget?.name}</span>{" "}
-                  to confirm:
+                  Type <span className="font-semibold text-foreground">DELETE</span> to confirm:
                 </p>
                 <Input
                   value={deleteConfirmName}
                   onChange={(e) => setDeleteConfirmName(e.target.value)}
-                  placeholder="Game name"
+                  placeholder="DELETE"
                   autoComplete="off"
                 />
               </div>
@@ -236,8 +326,7 @@ function MyGamesPage() {
             <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               disabled={
-                deleteMutation.isPending ||
-                deleteConfirmName.trim() !== (deleteTarget?.name ?? "").trim()
+                deleteMutation.isPending || deleteConfirmName.trim().toUpperCase() !== "DELETE"
               }
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(e) => {
@@ -257,25 +346,20 @@ function MyGamesPage() {
 function MyGameCard({
   session,
   busy,
-  canOpenLive,
+  onOpenLive,
   onViewResults,
   onDuplicate,
   onDelete,
 }: {
   session: AuthorSessionSummary;
   busy: boolean;
-  canOpenLive: boolean;
+  onOpenLive: () => void;
   onViewResults: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const isFinished = session.status === "FINISHED" || session.status === "CANCELLED";
-  const isStartable =
-    session.status === "LIVE" ||
-    session.status === "LOBBY" ||
-    session.status === "COUNTDOWN" ||
-    session.status === "READY" ||
-    session.status === "DRAFT";
+  const canOpenLive = isActiveSession(session.status);
 
   return (
     <li className="overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]">
@@ -325,12 +409,16 @@ function MyGameCard({
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/30 px-4 py-3 sm:px-5">
-        {canOpenLive && isStartable ? (
-          <Button asChild size="sm" className="rounded-xl bg-[#111111] hover:bg-black">
-            <Link to="/author/room/$roomId" params={{ roomId: session.id }}>
-              <Play className="mr-1.5 size-3.5 fill-current" />
-              Start game
-            </Link>
+        {canOpenLive ? (
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-xl bg-[#111111] hover:bg-black"
+            disabled={busy}
+            onClick={onOpenLive}
+          >
+            <Play className="mr-1.5 size-3.5 fill-current" />
+            Open live control
           </Button>
         ) : null}
         <Button
@@ -342,7 +430,7 @@ function MyGameCard({
           onClick={onViewResults}
         >
           <Eye className="mr-1.5 size-3.5" />
-          {isFinished ? "View results" : "View game"}
+          {isFinished ? "View results" : "View summary"}
         </Button>
         <Button
           type="button"
@@ -394,4 +482,3 @@ function MetaItem({
     </div>
   );
 }
-

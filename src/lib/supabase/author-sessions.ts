@@ -12,7 +12,15 @@ export type AuthorSessionSummary = {
   createdAt: string;
   playerCount: number;
   questionCount: number;
+  duplicatedFromName: string | null;
 };
+
+function readDuplicatedFromName(config: unknown): string | null {
+  const raw = (config ?? {}) as Record<string, unknown>;
+  return typeof raw.duplicatedFromName === "string" && raw.duplicatedFromName.trim()
+    ? raw.duplicatedFromName.trim()
+    : null;
+}
 
 type RoomRow = {
   id: string;
@@ -67,6 +75,7 @@ export async function fetchAuthorSessions(authorId: string, limit = 50): Promise
     createdAt: row.created_at,
     playerCount: row.gamibar_participants?.[0]?.count ?? 0,
     questionCount: questionCountFromConfig(row.mode, row.config),
+    duplicatedFromName: readDuplicatedFromName(row.config),
   }));
 }
 

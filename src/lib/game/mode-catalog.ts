@@ -39,7 +39,7 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     icon: Zap,
     tagline: "Speed, accuracy, and live rankings",
     specs: [
-      `${GAME_CONFIG.quiz.questionCount} MCQs`,
+      `${GAME_CONFIG.quiz.minQuestions}–${GAME_CONFIG.quiz.maxQuestions} MCQs`,
       "Live leaderboard",
       "One attempt per question",
     ],

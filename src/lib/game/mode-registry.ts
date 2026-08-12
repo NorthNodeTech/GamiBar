@@ -107,6 +107,13 @@ function finalizeQuizAttempts(
   }
 }
 
+function quizQuestionTotal(stored: StoredRoom): number {
+  if (stored.room.mode !== "quiz" || stored.room.payload.mode !== "quiz") {
+    return GAME_CONFIG.quiz.defaultQuestionCount;
+  }
+  return stored.room.payload.questions.length;
+}
+
 const QUIZ_MODE: LiveModeDefinition = {
   mode: "quiz",
   ranking: "quiz",
@@ -122,13 +129,13 @@ const QUIZ_MODE: LiveModeDefinition = {
     if (opts?.includeSecrets) return payload;
     return { mode: "quiz", questions: toPublicQuizQuestions(payload.questions), timeLimitSeconds: payload.timeLimitSeconds };
   },
-  computeLeaderboard: (stored) => quizLeaderboard(stored, GAME_CONFIG.quiz.questionCount),
+  computeLeaderboard: (stored) => quizLeaderboard(stored, quizQuestionTotal(stored)),
   isStudentFinished: ({ room, answeredCount, questionTotal, attemptCompleted }) => {
     if (room.mode !== "quiz" || room.payload.mode !== "quiz") return attemptCompleted;
     return answeredCount >= questionTotal || attemptCompleted;
   },
   finalizeIncompleteAttempts: (stored) =>
-    finalizeQuizAttempts(stored, GAME_CONFIG.quiz.questionCount, true),
+    finalizeQuizAttempts(stored, quizQuestionTotal(stored), true),
 };
 
 const JIGSAW_MODE: LiveModeDefinition = {

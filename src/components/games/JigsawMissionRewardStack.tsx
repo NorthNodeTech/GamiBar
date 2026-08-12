@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export {
   COLLECTION_CARD_SIZE as CARD_SIZE,
   tileLayoutRect,
+  tileRowLayoutRect,
   tileMetaFromId,
 } from "@/components/games/JigsawMissionScrambledTiles";
 

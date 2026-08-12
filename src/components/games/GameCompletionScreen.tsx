@@ -1,166 +1,127 @@
 import { CheckCircle2, Trophy } from "lucide-react";
 
-import { UnifiedLeaderboard } from "@/components/author/UnifiedLeaderboard";
 import { Confetti } from "@/components/games/Confetti";
-import { Logo } from "@/components/layout/Logo";
-import type { GameMode } from "@/lib/game/config";
 import type { GameCompletionViewModel } from "@/lib/game/completion";
-import type { LeaderboardRow } from "@/lib/game/types";
+import { formatDuration } from "@/lib/game/ranking";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const MODE_ACCENT: Record<
-  GameMode,
-  { badge: string; ring: string; metric: string; glow: string }
+  GameCompletionViewModel["mode"],
+  { badge: string; metric: string; ring: string }
 > = {
   quiz: {
     badge: "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]",
-    ring: "border-[var(--game-quiz)]/20",
     metric: "text-[var(--game-quiz-deep)]",
-    glow: "shadow-[0_24px_60px_rgba(239,68,68,0.1)]",
+    ring: "border-[var(--game-quiz)]/20",
   },
   quiz_jigsaw: {
     badge: "bg-[#EDE9FE] text-[#5B21B6]",
-    ring: "border-[#7C3AED]/20",
     metric: "text-[#5B21B6]",
-    glow: "shadow-[0_24px_60px_rgba(124,58,237,0.1)]",
+    ring: "border-[#7C3AED]/20",
   },
   jigsaw: {
     badge: "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw-deep)]",
-    ring: "border-[var(--game-jigsaw)]/20",
     metric: "text-[var(--game-jigsaw-deep)]",
-    glow: "shadow-[0_24px_60px_rgba(59,130,246,0.1)]",
+    ring: "border-[var(--game-jigsaw)]/20",
   },
   connect_dots: {
     badge: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
-    ring: "border-[var(--game-connect-dots)]/20",
     metric: "text-[var(--game-connect-dots-deep)]",
-    glow: "shadow-[0_24px_60px_rgba(16,185,129,0.1)]",
+    ring: "border-[var(--game-connect-dots)]/20",
   },
 };
 
 export function GameCompletionScreen({
   model,
   gameFinished,
-  showLeaderboard = false,
-  leaderboardRows = [],
-  participantId,
   onHome,
   celebrate = true,
   children,
 }: {
   model: GameCompletionViewModel;
   gameFinished: boolean;
+  /** @deprecated Leaderboard is no longer shown on the completion screen. */
   showLeaderboard?: boolean;
-  leaderboardRows?: LeaderboardRow[];
+  leaderboardRows?: unknown[];
   participantId?: string | null;
   onHome: () => void;
   celebrate?: boolean;
   children?: React.ReactNode;
 }) {
   const accent = MODE_ACCENT[model.mode];
-  const boardRows = leaderboardRows.map((row) => ({
-    ...row,
-    detail: row.detail ?? "",
-  }));
+  const completionTime = formatDuration(model.durationMs);
 
   return (
-    <div className="relative min-h-dvh-screen bg-[var(--gamibar-page)] px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-5">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-[var(--gamibar-page)] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       {celebrate && <Confetti />}
 
-      <div className="relative z-10 mx-auto max-w-lg">
-        <div className="flex justify-center">
-          <Logo size={40} />
-        </div>
-
-        <div className="mt-6 text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col">
+        <header className="shrink-0 text-center">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider",
+              "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
               accent.badge,
             )}
           >
-            <CheckCircle2 className="size-3.5" />
+            <CheckCircle2 className="size-3" />
             {model.modeTitle}
           </span>
-          <h1 className="mt-4 font-display text-[clamp(1.75rem,6vw,2.25rem)] font-extrabold tracking-tight text-[var(--foreground)]">
+          <h1 className="mt-2 font-display text-xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-2xl">
             Game completed
           </h1>
-          <p className="mt-2 text-sm text-[var(--muted-foreground)]">{model.roomName}</p>
-          <p className="mt-1 font-semibold text-[var(--foreground)]">{model.displayName}</p>
-        </div>
+          <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
+            {model.roomName}
+            <span className="mx-1.5 text-[var(--gamibar-border)]">·</span>
+            <span className="font-medium text-[var(--foreground)]">{model.displayName}</span>
+          </p>
+        </header>
 
-        <section
-          className={cn(
-            "mt-6 overflow-hidden rounded-[24px] border bg-[var(--gamibar-surface)]",
-            accent.ring,
-            accent.glow,
-          )}
-        >
-          {model.rank != null && (
-            <div className="flex items-center justify-center gap-2 border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/60 px-5 py-3">
-              <Trophy className={cn("size-4", accent.metric)} />
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Your rank{" "}
-                <span className={cn("font-display text-lg font-extrabold tabular-nums", accent.metric)}>
-                  #{model.rank}
-                </span>
-              </p>
-            </div>
-          )}
+        <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
+          <div
+            className={cn(
+              "rounded-2xl border bg-[var(--gamibar-surface)] px-3 py-2.5 text-center",
+              accent.ring,
+            )}
+          >
+            <p className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
+              <Trophy className={cn("size-3", accent.metric)} />
+              Your rank
+            </p>
+            <p className={cn("mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none", accent.metric)}>
+              {model.rank != null ? `#${model.rank}` : "—"}
+            </p>
+          </div>
 
           <div
             className={cn(
-              "grid gap-3 p-5",
-              model.metrics.length <= 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-2",
+              "rounded-2xl border bg-[var(--gamibar-surface)] px-3 py-2.5 text-center",
+              accent.ring,
             )}
           >
-            {model.metrics.map((metric) => (
-              <div
-                key={metric.label}
-                className={cn(
-                  "rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/70 px-4 py-3.5 text-center",
-                  metric.emphasis && "border-[var(--gamibar-border)] bg-white",
-                )}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--gamibar-text-tertiary)]">
-                  {metric.label}
-                </p>
-                <p
-                  className={cn(
-                    "mt-1 font-display text-[clamp(1.25rem,4vw,1.75rem)] font-extrabold leading-tight tabular-nums",
-                    metric.emphasis ? accent.metric : "text-[var(--foreground)]",
-                  )}
-                >
-                  {metric.value}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {!gameFinished && (
-            <p className="border-t border-[var(--gamibar-border)] px-5 py-4 text-center text-sm text-[var(--muted-foreground)]">
-              Waiting for the class to finish… Final rankings may update when the teacher ends the
-              game.
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
+              Completion time
             </p>
-          )}
-        </section>
-
-        {children}
-
-        {showLeaderboard && boardRows.length > 0 && (
-          <div className="mt-6">
-            <UnifiedLeaderboard
-              mode={model.mode}
-              rows={boardRows}
-              finished={gameFinished}
-              highlightParticipantId={participantId ?? undefined}
-            />
+            <p className="mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none text-[var(--foreground)]">
+              {completionTime}
+            </p>
           </div>
+        </div>
+
+        {children ? (
+          <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
+        ) : (
+          <div className="mt-3 min-h-0 flex-1" />
+        )}
+
+        {!gameFinished && (
+          <p className="mt-2 shrink-0 text-center text-[10px] leading-snug text-[var(--muted-foreground)]">
+            Waiting for the class to finish…
+          </p>
         )}
 
         <Button
-          className="mt-6 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90"
+          className="mt-2 h-11 shrink-0 rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90"
           onClick={onHome}
         >
           Back home

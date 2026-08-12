@@ -12,7 +12,7 @@ const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 export function questionCountForMode(mode: GameMode): number {
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.questionCount;
   if (mode === "jigsaw") return GAME_CONFIG.jigsaw.defaultQuestionCount;
-  return GAME_CONFIG.quiz.questionCount;
+  return GAME_CONFIG.quiz.defaultQuestionCount;
 }
 
 export function emptyQuizQuestions(mode: GameMode = "quiz"): QuizQuestionDraft[] {
@@ -40,9 +40,16 @@ export function quizCompletionCount(
   total: number;
   complete: boolean;
 } {
-  const total = mode === "jigsaw" ? questions.length : questionCountForMode(mode);
+  const total =
+    mode === "jigsaw" || mode === "quiz" ? questions.length : questionCountForMode(mode);
   const done = questions.slice(0, total).filter(isQuizQuestionComplete).length;
-  return { done, total, complete: done === total && total >= (mode === "jigsaw" ? GAME_CONFIG.jigsaw.minQuestions : 1) };
+  const minTotal =
+    mode === "jigsaw"
+      ? GAME_CONFIG.jigsaw.minQuestions
+      : mode === "quiz"
+        ? GAME_CONFIG.quiz.minQuestions
+        : 1;
+  return { done, total, complete: done === total && total >= minTotal };
 }
 
 export { connectDotsPairsProgress, isConnectDotsPairComplete };
@@ -73,6 +80,15 @@ export function validateGamePayload(
     return { ok: false, error: "Game payload does not match the selected mode." };
   }
   if (mode === "quiz" && payload.mode === "quiz") {
+    if (payload.questions.length < GAME_CONFIG.quiz.minQuestions) {
+      return { ok: false, error: "Add at least one question." };
+    }
+    if (payload.questions.length > GAME_CONFIG.quiz.maxQuestions) {
+      return {
+        ok: false,
+        error: `Use at most ${GAME_CONFIG.quiz.maxQuestions} questions.`,
+      };
+    }
     const { complete, done, total } = quizCompletionCount(payload.questions, "quiz");
     if (!complete) {
       return { ok: false, error: `Complete all quiz questions (${done}/${total}).` };

@@ -28,6 +28,8 @@ type ConnectDotsProps = {
   onComplete?: (paths: PathMap) => void;
   /** Called when the student links two dots that are not a correct pair. */
   onIncorrectLink?: () => void;
+  /** Scale the board to fit a bounded parent (e.g. completion summary card). */
+  fitToContainer?: boolean;
   className?: string;
 };
 
@@ -106,6 +108,7 @@ export function ConnectDots({
   onPathsChange,
   onComplete,
   onIncorrectLink,
+  fitToContainer = false,
   className,
 }: ConnectDotsProps) {
   const n = board.gridSize;
@@ -435,6 +438,11 @@ export function ConnectDots({
   };
 
   const cellSize = 100 / n;
+  const viewPad = fitToContainer ? cellSize * 0.35 : 0;
+  const viewBox =
+    viewPad > 0
+      ? `${-viewPad} ${-viewPad} ${100 + viewPad * 2} ${100 + viewPad * 2}`
+      : "0 0 100 100";
   const activeColor = activePairId ? pairById(board, activePairId)?.color : undefined;
   const linkColor = linkFrom ? pairById(board, linkFrom.pairId)?.color : undefined;
 
@@ -470,7 +478,14 @@ export function ConnectDots({
         </div>
       )}
 
-      <div className="relative mx-auto w-full max-w-[min(100%,100vw-2rem)] touch-none select-none sm:max-w-[min(100%,520px)]">
+      <div
+        className={cn(
+          "relative touch-none select-none",
+          fitToContainer
+            ? "mx-auto flex h-full w-full items-center justify-center"
+            : "mx-auto w-full max-w-[min(100%,100vw-2rem)] sm:max-w-[min(100%,520px)]",
+        )}
+      >
         {hoverTooltip ? (
           <div
             role="tooltip"
@@ -483,10 +498,13 @@ export function ConnectDots({
 
         <svg
           ref={svgRef}
-          viewBox={`0 0 100 100`}
+          viewBox={viewBox}
           role="img"
           aria-label={`Connect dots board. ${connected} of ${board.pairs.length} pairs connected.`}
-          className="aspect-square w-full rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
+          className={cn(
+            "aspect-square rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+            fitToContainer ? "h-full max-h-full w-full max-w-full overflow-visible" : "w-full",
+          )}
           tabIndex={disabled ? -1 : 0}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}

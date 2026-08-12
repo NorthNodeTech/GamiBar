@@ -10,7 +10,7 @@ import { JigsawMissionFlyingTile } from "@/components/games/JigsawMissionFlyingT
 import { JigsawMissionSuccess } from "@/components/games/JigsawMissionSuccess";
 import {
   JigsawMissionRewardStack,
-  tileLayoutRect,
+  tileRowLayoutRect,
   tileMetaFromId,
 } from "@/components/games/JigsawMissionRewardStack";
 import { JigsawPuzzle } from "@/components/games/JigsawPuzzle";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/async-state";
 import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, PUZZLE_QUEST_GRID } from "@/lib/game/config";
 import { buildGameCompletionViewModel } from "@/lib/game/completion";
+import { getModeCatalog } from "@/lib/game/mode-catalog";
 import {
   isJigsawMissionRetryRound,
   mergeJigsawMissionPayload,
@@ -190,23 +191,35 @@ function StudentPlayPage() {
         {room.mode === "jigsaw" &&
           room.payload.mode === "jigsaw" &&
           room.payload.jigsaw.imageUrl && (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--gamibar-border)] shadow-[var(--shadow-soft)]">
-              <img
-                src={room.payload.jigsaw.imageUrl}
-                alt="Your completed puzzle"
-                className="aspect-square w-full object-cover"
-                draggable={false}
-              />
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
+              <p className="shrink-0 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Your completed puzzle
+              </p>
+              <div className="min-h-0 flex-1 overflow-hidden px-2 pb-2">
+                <img
+                  src={room.payload.jigsaw.imageUrl}
+                  alt="Your completed puzzle"
+                  className="size-full rounded-xl object-contain"
+                  draggable={false}
+                />
+              </div>
             </div>
+          )}
+        {room.mode === "connect_dots" &&
+          room.payload.mode === "connect_dots" && (
+            <ConnectDotsCompletionCard
+              board={room.payload.connectDots}
+              attemptPayload={snapshot.myAttempt?.payload}
+            />
           )}
         {room.mode === "quiz_jigsaw" &&
           typeof snapshot.myAttempt?.payload?.rewardCode === "string" &&
           snapshot.myAttempt.payload.rewardCode && (
-            <div className="mt-4 rounded-2xl border-2 border-dashed border-[#7C3AED] bg-[#EDE9FE] px-6 py-4 text-center">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#5B21B6]">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#7C3AED] bg-[#EDE9FE] px-4 py-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#5B21B6]">
                 Your reward code
               </p>
-              <p className="mt-2 font-display text-2xl font-extrabold tracking-widest text-[#111111]">
+              <p className="mt-1 font-display text-xl font-extrabold tracking-widest text-[#111111] sm:text-2xl">
                 {String(snapshot.myAttempt.payload.rewardCode)}
               </p>
             </div>
@@ -218,7 +231,7 @@ function StudentPlayPage() {
   if (room.status !== "LIVE" && room.status !== "COUNTDOWN") {
     return playShell(
       <Centered>
-        <p className="text-sm text-[#525252]">Waiting for the author to start…</p>
+        <p className="text-sm text-[#525252]">Waiting for the host to start…</p>
         <Button
           className="mt-4 rounded-xl"
           onClick={() => navigate({ to: "/join/lobby", search: { code: room.code } })}
@@ -556,6 +569,61 @@ function QuizPlay({
   );
 }
 
+function ConnectDotsCompletionCard({
+  board,
+  attemptPayload,
+}: {
+  board: ConnectDotsBoardConfig;
+  attemptPayload?: Record<string, unknown>;
+}) {
+  const catalog = getModeCatalog("connect_dots");
+  const savedPayload = (attemptPayload ?? {}) as { paths?: PathMap; routes?: PathMap };
+  const savedPaths = savedPayload.paths ?? savedPayload.routes ?? {};
+  const hasSavedPaths = Object.keys(savedPaths).length > 0;
+
+  const publicBoard = useMemo(
+    () => ({
+      gridSize: board.gridSize,
+      difficulty: board.difficulty,
+      pairs: board.pairs,
+      seed: board.seed,
+    }),
+    [board],
+  );
+
+  return (
+    <div className="@container flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
+      <p className="shrink-0 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+        Your completed board
+      </p>
+      <div className="flex min-h-0 flex-1 items-center justify-center px-2 py-2">
+        {hasSavedPaths ? (
+          <div className="aspect-square h-[min(100cqh,100cqw)] w-[min(100cqw,100cqh)] max-h-full max-w-full shrink-0 p-0.5">
+            <ConnectDots
+              board={publicBoard}
+              solution={board.solution}
+              initialPaths={savedPaths}
+              disabled
+              showControls={false}
+              fitToContainer
+              className="size-full"
+            />
+          </div>
+        ) : catalog ? (
+          <div className="flex aspect-square h-[min(100cqh,100cqw)] w-[min(100cqw,100cqh)] max-h-full max-w-full items-center justify-center rounded-xl bg-[var(--game-connect-dots-soft)] p-3">
+            <img
+              src={catalog.preview}
+              alt="Connect Dots"
+              className="max-h-full max-w-full object-contain"
+              draggable={false}
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function ConnectDotsPlay({
   roomId,
   reconnectToken,
@@ -846,7 +914,6 @@ function JigsawMissionPlay({
   const [flyRects, setFlyRects] = useState<{ from: DOMRect; to: DOMRect } | null>(null);
   const [rewardAnimating, setRewardAnimating] = useState(false);
   const activeFlyRef = useRef<string | null>(null);
-  const rotationSaveRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     activeFlyRef.current = activeFlyTileId;
@@ -925,7 +992,7 @@ function JigsawMissionPlay({
 
   const handleRotateTile = useCallback(
     (tileId: string) => {
-      if (timedOut || rotationSaveRef.current.has(tileId)) return;
+      if (timedOut) return;
       if (isAnimatingReward && !localAssembly) return;
       if (assemblySuccess || showComplete || completed) return;
       if (!earnedTileIds.includes(tileId)) return;
@@ -941,7 +1008,6 @@ function JigsawMissionPlay({
         },
       }));
 
-      rotationSaveRef.current.add(tileId);
       void rotateJigsawMissionTileFn({
         data: {
           roomId,
@@ -960,17 +1026,17 @@ function JigsawMissionPlay({
               },
             }));
             toast.error(friendlyGameError(res.error, "Could not save the rotation. Try again."));
-            return;
-          }
-          if (res.tileRotations) {
-            setLocalMissionPayload((prev) => ({
-              ...prev,
-              tileRotations: res.tileRotations,
-            }));
           }
         })
-        .finally(() => {
-          rotationSaveRef.current.delete(tileId);
+        .catch(() => {
+          setLocalMissionPayload((prev) => ({
+            ...prev,
+            tileRotations: {
+              ...readTileRotations(prev),
+              [tileId]: current,
+            },
+          }));
+          toast.error("Could not save the rotation. Try again.");
         });
     },
     [
@@ -1006,17 +1072,21 @@ function JigsawMissionPlay({
         window.requestAnimationFrame(measure);
         return;
       }
+      const flyIndex = displayedTileIds.includes(activeFlyTileId)
+        ? displayedTileIds.indexOf(activeFlyTileId)
+        : displayedTileIds.length;
+      const flyTotal = displayedTileIds.includes(activeFlyTileId)
+        ? displayedTileIds.length
+        : displayedTileIds.length + 1;
+
       setFlyRects({
         from: fromEl.getBoundingClientRect(),
-        to: tileLayoutRect(
-          collectionEl,
-          tileLayouts[activeFlyTileId] ?? { x: 0.1, y: 0.1, z: 0 },
-        ),
+        to: tileRowLayoutRect(collectionEl, flyIndex, flyTotal, collectionCardSize),
       });
     };
 
     measure();
-  }, [activeFlyTileId, tileLayouts]);
+  }, [activeFlyTileId, collectionCardSize, displayedTileIds]);
 
   useEffect(
     () => () => {
@@ -1085,7 +1155,7 @@ function JigsawMissionPlay({
           mergeTileRotationsForNewTiles(readTileRotations(localMissionPayload), newTiles);
         const nextLayouts =
           res.tileLayouts ??
-          mergeTileLayoutsForNewTiles(readTileLayouts(localMissionPayload), newTiles);
+          mergeTileLayoutsForNewTiles(readTileLayouts(localMissionPayload), newTiles, nextEarned);
         setLocalMissionPayload((prev) => ({
           ...mergeJigsawMissionPayload(prev, {
             phase: res.allPiecesUnlocked ? "assemble" : "quiz",
@@ -1156,7 +1226,7 @@ function JigsawMissionPlay({
         return;
       }
       setAssemblySuccess({ durationMs: res.durationMs ?? null });
-      window.setTimeout(() => setShowComplete(true), 2800);
+      window.setTimeout(() => setShowComplete(true), 1200);
       toast.success("Puzzle complete!");
     } finally {
       setAssemblySubmitting(false);
@@ -1388,7 +1458,7 @@ function JigsawPlay({
   if (!imageUrl) {
     return (
       <Centered>
-        <p className="text-sm text-[#525252]">The author has not uploaded a puzzle image yet.</p>
+        <p className="text-sm text-[#525252]">The host has not uploaded a puzzle image yet.</p>
       </Centered>
     );
   }

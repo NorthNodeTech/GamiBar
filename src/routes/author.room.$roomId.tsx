@@ -357,9 +357,6 @@ function AuthorRoomPage() {
                       <Label htmlFor="show-leaderboard" className="text-sm font-semibold text-[var(--foreground)]">
                         Show leaderboard to students
                       </Label>
-                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                        Off by default. Students only see final results when the game ends.
-                      </p>
                     </div>
                     <Switch
                       id="show-leaderboard"

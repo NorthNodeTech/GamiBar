@@ -23,7 +23,7 @@ export const Route = createFileRoute("/author/login")({
     }
   },
   head: () => ({
-    meta: [{ title: "Author sign in - GamiBAR" }],
+    meta: [{ title: "Sign in - GamiBAR" }],
   }),
   component: AuthorLoginPage,
 });
@@ -42,7 +42,7 @@ function AuthorLoginPage() {
 
   return (
     <AuthShell
-      title="Author sign in"
+      title="Sign in"
       subtitle="Sign in to create live classroom sessions and host Quiz, Jigsaw, or Connect Dots games."
       footer={
         <>
@@ -52,7 +52,7 @@ function AuthorLoginPage() {
             search={{ redirect: destination }}
             className="font-semibold text-[var(--gamibar-brand)] underline-offset-4 transition-colors hover:text-[var(--gamibar-brand-hover)] hover:underline"
           >
-            Create an author account
+            Create an account
           </Link>
         </>
       }

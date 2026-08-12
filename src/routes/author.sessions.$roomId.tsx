@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Play, Trophy } from "lucide-react";
+import { toast } from "sonner";
 
 import { CompletionTimeline } from "@/components/author/LiveLeaderboard";
 import { RoomCodeDisplay } from "@/components/author/RoomCodeDisplay";
@@ -9,7 +10,8 @@ import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner, PageLoader } from "@/components/ui/async-state";
 import { GAME_MODE_META } from "@/lib/game/config";
-import { getAuthorRoomResultsFn } from "@/lib/game/room.functions";
+import { saveAuthorRoom } from "@/lib/game/client-session";
+import { claimAuthorSessionFn, getAuthorRoomResultsFn } from "@/lib/game/room.functions";
 import { useAuth } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +41,7 @@ function formatCreatedDate(value: string): string {
 
 function SessionResultsPage() {
   const { roomId } = Route.useParams();
+  const navigate = useNavigate();
   const { user, isAuthor } = useAuth();
 
   const resultsQuery = useQuery({
@@ -51,6 +54,25 @@ function SessionResultsPage() {
       if (!res.ok) throw new Error(res.error);
       return res;
     },
+  });
+
+  const openLiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await claimAuthorSessionFn({
+        data: { roomId, authorId: user!.id },
+      });
+      if (!res.ok) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: (res) => {
+      saveAuthorRoom({
+        roomId: res.room.id,
+        code: res.room.code,
+        authorToken: res.authorToken,
+      });
+      navigate({ to: "/author/room/$roomId", params: { roomId: res.room.id } });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const data = resultsQuery.data;
@@ -145,15 +167,29 @@ function SessionResultsPage() {
 
             {(data.room.status === "LOBBY" ||
               data.room.status === "LIVE" ||
-              data.room.status === "COUNTDOWN") && (
+              data.room.status === "COUNTDOWN" ||
+              data.room.status === "READY" ||
+              data.room.status === "DRAFT") && (
               <div className="mt-6 rounded-2xl border border-[var(--gamibar-brand)]/25 bg-[var(--gamibar-brand-soft)] px-5 py-4">
                 <p className="text-sm text-[var(--muted-foreground)]">
-                  This game is still active. Open live control from the same browser where you
-                  created it, or duplicate it to host a new session.
+                  This game is still active. Open live control to start the session, share the join
+                  code, and monitor players in real time.
                 </p>
-                <Button asChild size="sm" className="mt-3 rounded-xl bg-[#111111] hover:bg-black">
-                  <Link to="/author/sessions">Back to history</Link>
-                </Button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-xl bg-[#111111] hover:bg-black"
+                    disabled={openLiveMutation.isPending}
+                    onClick={() => openLiveMutation.mutate()}
+                  >
+                    <Play className="mr-1.5 size-3.5 fill-current" />
+                    {openLiveMutation.isPending ? "Opening…" : "Open live control"}
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="rounded-xl">
+                    <Link to="/author/sessions">Back to My Games</Link>
+                  </Button>
+                </div>
               </div>
             )}
           </>

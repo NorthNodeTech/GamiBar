@@ -23,7 +23,7 @@ export const Route = createFileRoute("/author/register")({
     }
   },
   head: () => ({
-    meta: [{ title: "Create author account - GamiBAR" }],
+    meta: [{ title: "Create account - GamiBAR" }],
   }),
   component: AuthorRegisterPage,
 });
@@ -41,7 +41,7 @@ function AuthorRegisterPage() {
 
   return (
     <AuthShell
-      title="Create author account"
+      title="Create account"
       subtitle="Register once to host live classroom games. Your profile is saved securely in GamiBAR."
       footer={
         <>
@@ -76,7 +76,7 @@ function AuthorRegisterPage() {
               navigate({ to: "/author/login", search: { redirect: destination } });
               return;
             }
-            toast.success("Author account created.");
+            toast.success("Account created.");
             navigate({ to: destination });
           } finally {
             setSubmitting(false);
@@ -147,7 +147,7 @@ function AuthorRegisterPage() {
               Creating account…
             </>
           ) : (
-            "Create author account"
+            "Create account"
           )}
         </Button>
       </form>

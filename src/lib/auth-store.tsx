@@ -59,11 +59,21 @@ const PUBLIC_AUTHOR_PATHS = new Set(["/author/login", "/author/register"]);
 
 /** Normalize post-login redirect targets and block prerender/crawl loops. */
 export function sanitizeAuthorRedirect(redirectTo: string | undefined, fallback = "/author/create"): string {
-  if (!redirectTo?.startsWith("/author")) return fallback;
-  const pathOnly = redirectTo.split("?")[0]?.split("#")[0] ?? "";
-  const cleaned = pathOnly.replace(/\/+$/, "") || "/author";
+  if (!redirectTo?.startsWith("/")) return fallback;
+  const hashSplit = redirectTo.split("#")[0] ?? redirectTo;
+  const [pathOnly, query] = hashSplit.split("?");
+  const cleaned = (pathOnly ?? "").replace(/\/+$/, "") || "/";
   if (cleaned.includes("//") || PUBLIC_AUTHOR_PATHS.has(cleaned)) return fallback;
-  return cleaned;
+  const allowed = cleaned.startsWith("/author") || cleaned.startsWith("/join");
+  if (!allowed) return fallback;
+  return query ? `${cleaned}?${query}` : cleaned;
+}
+
+/** Account id to attach when joining a room as a signed-in user. */
+export function getLinkedParticipantUserId(): string | undefined {
+  const auth = getStoredAuth();
+  if (!auth?.id || auth.id.startsWith("guest")) return undefined;
+  return auth.id;
 }
 
 type AuthCtx = {

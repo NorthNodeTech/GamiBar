@@ -103,7 +103,7 @@ function QuestionBankPage() {
           to="/author"
           className="text-sm font-medium text-[#525252] hover:text-[#111111]"
         >
-          ← Author home
+          ← Home
         </Link>
 
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">

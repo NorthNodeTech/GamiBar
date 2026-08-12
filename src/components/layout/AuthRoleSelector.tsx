@@ -5,7 +5,7 @@ import type { UserRole } from "@/lib/auth-store";
 
 const roles = [
   { id: "student" as const, label: "Student", icon: GraduationCap },
-  { id: "author" as const, label: "Author", icon: BookOpen },
+  { id: "author" as const, label: "Host", icon: BookOpen },
 ];
 
 export function AuthRoleSelector({

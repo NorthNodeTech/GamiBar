@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Trophy } from "lucide-react";
 
 import { AuthorShell } from "@/components/layout/AuthorShell";
+import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { GAME_MODE_META } from "@/lib/game/config";
 import { useAuth } from "@/lib/auth-store";
@@ -38,7 +39,9 @@ function ParticipatedGamesPage() {
     <AuthorShell>
       <div className="mx-auto max-w-3xl px-2 py-8">
         <h1 className="font-display text-3xl font-extrabold text-[#111111]">Participated Games</h1>
-        <p className="mt-2 text-sm text-[#525252]">Games you joined as a player.</p>
+        <p className="mt-2 text-sm text-[#525252]">
+          Sessions you joined as a player — hosted by someone else.
+        </p>
 
         <div className="mt-8">
           {participatedQuery.isLoading ? (
@@ -57,9 +60,13 @@ function ParticipatedGamesPage() {
             <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-white px-6 py-12 text-center">
               <Trophy className="mx-auto size-8 text-[#737373]" />
               <p className="mt-4 text-sm text-[#525252]">No participated games yet.</p>
-              <p className="mt-1 text-xs text-[#737373]">
-                Join a live game with your account to see your scores here.
+              <p className="mt-2 max-w-sm mx-auto text-xs leading-relaxed text-[#737373]">
+                Sign in, join a live session with a room code, and your score will show up here.
+                Games you host yourself appear under My Games.
               </p>
+              <Button asChild className="mt-6 rounded-xl bg-[#111111] hover:bg-black">
+                <Link to="/join">Join a game</Link>
+              </Button>
             </div>
           ) : (
             <ul className="space-y-3">
@@ -72,7 +79,7 @@ function ParticipatedGamesPage() {
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-[#111111]">{game.gameName}</p>
                       <p className="mt-0.5 text-xs text-[#737373]">
-                        {GAME_MODE_META[game.mode]?.title ?? game.mode}
+                        {GAME_MODE_META[game.mode]?.title ?? game.mode} · Hosted by {game.hostName}
                       </p>
                     </div>
                     <span

@@ -43,10 +43,10 @@ export function LobbyWall({
           <h2 className="mt-1 font-display text-xl font-extrabold text-[var(--foreground)] sm:text-2xl">
             {joined === 0
               ? "Waiting for students"
-              : `${joined} student${joined === 1 ? "" : "s"} in the ring`}
+              : `${joined} student${joined === 1 ? "" : "s"} in the lobby`}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Names appear around the game as students join the room.
+            Names appear here as students join.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function LobbyWall({
         </div>
       </div>
 
-      <div className="relative mt-4 overflow-visible pb-6 sm:pb-8">
+      <div className="relative mt-4">
         <LobbyRing participants={participants} mode={mode} roomName={roomName} />
       </div>
     </div>

@@ -16,6 +16,7 @@ import {
   jigsawAssemblyValidationMessage,
   layoutFromPlacements,
   validateJigsawAssembly,
+  allSlotsFilled,
 } from "@/lib/game/jigsaw-assembly";
 import {
   ASSEMBLY_DRAG_THRESHOLD_COARSE_PX,
@@ -24,9 +25,13 @@ import {
   ASSEMBLY_SNAP_RATIO_COARSE,
   findSnapSlot,
 } from "@/lib/game/jigsaw-assembly-drag";
-import { pointerMovedBeyondTapThreshold } from "@/lib/game/jigsaw-tile-interaction";
+import {
+  pointerMovedBeyondTapThreshold,
+  ROTATE_TAP_STRICT_PX,
+} from "@/lib/game/jigsaw-tile-interaction";
 import type { TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
 import { buildJigsawTiles, type JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
+import { jigsawSkeletonBoardWidthClass } from "@/lib/game/jigsaw-grid";
 import { cn } from "@/lib/utils";
 
 type DragState = {
@@ -114,6 +119,8 @@ export function JigsawMissionAssembly({
 
   const pendingDragRef = useRef<PendingDrag | null>(null);
   const dragStartedRef = useRef(false);
+  const lastDragEndedAtRef = useRef(0);
+  const lastAutoSubmitKeyRef = useRef<string | null>(null);
   const activeListenersRef = useRef<{
     move: (e: PointerEvent) => void;
     up: (e: PointerEvent) => void;
@@ -136,6 +143,12 @@ export function JigsawMissionAssembly({
   const draggingTileId = drag?.tileId ?? null;
 
   const interactionsDisabled = submitting || disabled || locked;
+
+  const puzzleComplete = useMemo(() => {
+    if (!allSlotsFilled(placements)) return false;
+    const layout = layoutFromPlacements(placements);
+    return validateJigsawAssembly(layout, tileRotations, total, cols, rows).ok;
+  }, [placements, tileRotations, total, cols, rows]);
 
   const slotSnapAt = useCallback(
     (clientX: number, clientY: number) =>
@@ -196,6 +209,7 @@ export function JigsawMissionAssembly({
       setDrag(null);
       setSnapSlot(null);
       setDragPoint(null);
+      lastDragEndedAtRef.current = Date.now();
     },
     [clearActiveListeners, placePiece, removeFromSlot, slotSnapAt],
   );
@@ -289,7 +303,14 @@ export function JigsawMissionAssembly({
       if (
         !dragStartedRef.current &&
         onRotateTile &&
-        !pointerMovedBeyondTapThreshold(pending.startX, pending.startY, ev.clientX, ev.clientY, dragThreshold)
+        Date.now() - lastDragEndedAtRef.current > 400 &&
+        !pointerMovedBeyondTapThreshold(
+          pending.startX,
+          pending.startY,
+          ev.clientX,
+          ev.clientY,
+          ROTATE_TAP_STRICT_PX,
+        )
       ) {
         onRotateTile(pending.tileId);
       }
@@ -301,6 +322,22 @@ export function JigsawMissionAssembly({
   };
 
   useEffect(() => () => clearActiveListeners(), [clearActiveListeners]);
+
+  useEffect(() => {
+    if (submitMessage) lastAutoSubmitKeyRef.current = null;
+  }, [submitMessage]);
+
+  useEffect(() => {
+    if (locked || interactionsDisabled || drag || pendingDragRef.current) return;
+    if (!puzzleComplete) return;
+
+    const layout = layoutFromPlacements(placements);
+    const submitKey = JSON.stringify({ layout, tileRotations });
+    if (lastAutoSubmitKeyRef.current === submitKey) return;
+
+    lastAutoSubmitKeyRef.current = submitKey;
+    onSubmit(layout);
+  }, [puzzleComplete, locked, interactionsDisabled, drag, placements, tileRotations, onSubmit]);
 
   const handleSubmit = () => {
     if (locked || interactionsDisabled) return;
@@ -365,54 +402,76 @@ export function JigsawMissionAssembly({
         {liveMessage}
       </p>
 
-      <JigsawMissionSkeletonBoard
-        cols={cols}
-        rows={rows}
-        slotRefs={slotRefs}
-        slotClassName={(slotIndex) => {
-          const isSnapTarget = snapSlot === slotIndex && drag != null;
-          return isSnapTarget
-            ? "border-[var(--game-jigsaw)] bg-[var(--game-jigsaw-soft)]/30 ring-2 ring-[var(--game-jigsaw)]/35"
-            : undefined;
-        }}
-        renderSlot={(slotIndex) => {
-          const pieceId = placements[slotIndex];
-          const showGhost = snapSlot === slotIndex && drag != null;
-          const justLanded = landedSlot === slotIndex;
+      {puzzleComplete ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          className={cn(
+            "mx-auto overflow-hidden rounded-2xl shadow-2xl ring-4 ring-[var(--game-jigsaw)]/25",
+            jigsawSkeletonBoardWidthClass(cols),
+          )}
+        >
+          <img
+            src={imageUrl}
+            alt="Completed puzzle"
+            className="aspect-square w-full object-cover"
+            draggable={false}
+          />
+        </motion.div>
+      ) : (
+        <JigsawMissionSkeletonBoard
+          cols={cols}
+          rows={rows}
+          slotRefs={slotRefs}
+          slotClassName={(slotIndex) => {
+            const isSnapTarget = snapSlot === slotIndex && drag != null;
+            return isSnapTarget
+              ? "border-[var(--game-jigsaw)] bg-[var(--game-jigsaw-soft)]/30 ring-2 ring-[var(--game-jigsaw)]/35"
+              : undefined;
+          }}
+          renderSlot={(slotIndex) => {
+            const pieceId = placements[slotIndex];
+            const showGhost = snapSlot === slotIndex && drag != null;
+            const justLanded = landedSlot === slotIndex;
 
-          return (
-            <>
-              {showGhost && drag ? renderPieceFace(drag.pieceId, "opacity-45") : null}
-              {pieceId != null && drag?.pieceId !== pieceId && (
-                <motion.div
-                  key={`${slotIndex}-${pieceId}`}
-                  initial={justLanded ? { scale: 0.88, opacity: 0.7 } : false}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 460, damping: 28 }}
-                  className="absolute inset-0"
-                >
-                  <button
-                    type="button"
-                    className="size-full cursor-grab touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 active:cursor-grabbing"
-                    style={{ touchAction: "none" }}
-                    aria-label="Puzzle piece on the board. Tap to rotate. Drag to move."
-                    aria-grabbed={drag?.pieceId === pieceId}
-                    onPointerDown={(e) => {
-                      const tileId = tileIdFromPieceIndex(pieceId, cols, rows);
-                      if (!tileId) return;
-                      onPointerDown(pieceId, tileId, e, slotIndex);
-                    }}
+            return (
+              <>
+                {showGhost && drag ? renderPieceFace(drag.pieceId, "opacity-45") : null}
+                {pieceId != null && drag?.pieceId !== pieceId && (
+                  <motion.div
+                    key={`${slotIndex}-${pieceId}`}
+                    initial={justLanded ? { scale: 0.88, opacity: 0.7 } : false}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 460, damping: 28 }}
+                    className="absolute inset-0"
                   >
-                    {renderPieceFace(pieceId)}
-                  </button>
-                </motion.div>
-              )}
-            </>
-          );
-        }}
-      />
+                    <button
+                      type="button"
+                      className="size-full cursor-grab touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 active:cursor-grabbing"
+                      style={{ touchAction: "none" }}
+                      aria-label="Puzzle piece on the board. Tap to rotate. Drag to move."
+                      aria-grabbed={drag?.pieceId === pieceId}
+                      onClick={(e) => e.preventDefault()}
+                      onPointerDown={(e) => {
+                        const tileId = tileIdFromPieceIndex(pieceId, cols, rows);
+                        if (!tileId) return;
+                        onPointerDown(pieceId, tileId, e, slotIndex);
+                      }}
+                    >
+                      {renderPieceFace(pieceId)}
+                    </button>
+                  </motion.div>
+                )}
+              </>
+            );
+          }}
+        />
+      )}
 
-      <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[#F3F4F6] p-2.5 sm:p-4">
+      {!puzzleComplete ? (
+        <>
+          <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[#F3F4F6] p-2.5 sm:p-4">
         <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] sm:text-xs">
           Your puzzle pieces
         </p>
@@ -435,15 +494,20 @@ export function JigsawMissionAssembly({
           emptyMessage="All pieces are on the board"
           areaClassName="max-w-none"
         />
-      </div>
+          </div>
 
-      <p className="text-center text-[11px] leading-snug text-[var(--muted-foreground)] md:text-xs">
-        <span className="md:hidden">Tap to rotate · drag onto the board · submit when done.</span>
-        <span className="hidden md:inline">
-          Tap a piece to rotate it 90°. Drag pieces onto the board — they snap into the nearest slot.
-          Figure out where each tile belongs, then submit.
-        </span>
-      </p>
+          <p className="text-center text-[11px] leading-snug text-[var(--muted-foreground)] md:text-xs">
+            <span className="md:hidden">Tap to rotate · drag onto the board.</span>
+            <span className="hidden md:inline">
+              Tap a piece to rotate it 90°. Drag pieces onto the board — they snap into the nearest slot.
+            </span>
+          </p>
+        </>
+      ) : (
+        <p className="text-center text-sm font-medium text-[var(--game-jigsaw-deep)]" role="status">
+          {submitting ? "Checking your puzzle…" : "Puzzle complete!"}
+        </p>
+      )}
 
       {displaySubmitMessage && (
         <p
@@ -454,7 +518,7 @@ export function JigsawMissionAssembly({
         </p>
       )}
 
-      {!locked ? (
+      {!locked && !puzzleComplete ? (
         <Button
           type="button"
           className="h-12 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 md:h-12"
@@ -462,6 +526,17 @@ export function JigsawMissionAssembly({
           onClick={handleSubmit}
         >
           {submitting ? "Checking…" : "Submit puzzle"}
+        </Button>
+      ) : null}
+
+      {puzzleComplete && displaySubmitMessage && !locked ? (
+        <Button
+          type="button"
+          className="h-12 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 md:h-12"
+          disabled={interactionsDisabled}
+          onClick={handleSubmit}
+        >
+          {submitting ? "Checking…" : "Try again"}
         </Button>
       ) : null}
 

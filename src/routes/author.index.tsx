@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Blocks, CircleDot, Play, Plus, Zap } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowRight, Blocks, CircleDot, Plus, ScanLine, Zap } from "lucide-react";
 
 import gameConnectDotsPreview from "@/assets/game-connect-dots-preview.png";
 import gameJigsawPreview from "@/assets/game-jigsaw-preview.webp";
@@ -9,7 +8,6 @@ import gameQuizPreview from "@/assets/game-quiz-preview.webp";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import type { GameMode } from "@/lib/game/config";
-import { loadAuthorRoom } from "@/lib/game/client-session";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/")({
@@ -18,7 +16,7 @@ export const Route = createFileRoute("/author/")({
       { title: "GamiBAR" },
       {
         name: "description",
-        content: "Create or start a live classroom game.",
+        content: "Create or join a live classroom game.",
       },
     ],
   }),
@@ -57,15 +55,6 @@ const gameModes = [
 
 function AuthorHome() {
   const navigate = useNavigate();
-  const savedRoom = useMemo(() => loadAuthorRoom(), []);
-
-  const handleStartGame = () => {
-    if (savedRoom) {
-      navigate({ to: "/author/room/$roomId", params: { roomId: savedRoom.roomId } });
-      return;
-    }
-    navigate({ to: "/author/sessions" });
-  };
 
   const openCreateWithMode = (mode: GameMode) => {
     navigate({ to: "/author/create", search: { mode } });
@@ -91,11 +80,11 @@ function AuthorHome() {
             <Button
               type="button"
               variant="outline"
-              onClick={handleStartGame}
+              onClick={() => navigate({ to: "/join" })}
               className="h-14 w-full rounded-2xl border-[var(--gamibar-border)] bg-white text-base font-semibold text-[#111111] hover:bg-[var(--gamibar-page)]"
             >
-              <Play className="mr-2 size-5 fill-current" />
-              Start Game
+              <ScanLine className="mr-2 size-5" />
+              Join Game
             </Button>
           </div>
 

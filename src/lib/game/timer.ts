@@ -86,11 +86,16 @@ export function resolvePayloadTimeLimit(payload: GamePayload): number | null {
   return payload.timeLimitSeconds ?? null;
 }
 
-export function gameInstruction(mode: GameMode, timeLimitSeconds: number | null): string {
+export function gameInstruction(
+  mode: GameMode,
+  timeLimitSeconds: number | null,
+  questionCount?: number,
+): string {
   if (mode === "quiz") {
+    const count = questionCount ?? GAME_CONFIG.quiz.defaultQuestionCount;
     return timeLimitSeconds == null
-      ? "Answer all 10 questions. One attempt per question. Results appear after completion."
-      : `Answer all 10 questions within ${formatTimerLong(timeLimitSeconds)}. One attempt per question.`;
+      ? `Answer all ${count} questions. One attempt per question. Results appear after completion.`
+      : `Answer all ${count} questions within ${formatTimerLong(timeLimitSeconds)}. One attempt per question.`;
   }
   if (mode === "quiz_jigsaw") {
     const count = GAME_CONFIG.quiz_jigsaw.questionCount;

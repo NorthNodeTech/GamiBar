@@ -81,7 +81,7 @@ export function StudentLobbyView({
             <p className="font-display text-3xl font-bold tabular-nums text-[#111111]">{participants.length}</p>
           </div>
 
-          <div className="mt-5 overflow-visible pb-4 sm:pb-6">
+          <div className="mt-5">
             <LobbyRing
               participants={participants}
               mode={mode}
@@ -99,7 +99,7 @@ export function StudentLobbyView({
         <div className="mt-5 flex items-center justify-center gap-3 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/25 bg-[var(--gamibar-brand-soft)]/40 px-4 py-4">
           <Loader2 className="size-5 animate-spin text-[var(--gamibar-brand)]" />
           <div>
-            <p className="text-sm font-semibold text-[#111111]">Waiting for the author to start</p>
+            <p className="text-sm font-semibold text-[#111111]">Waiting for the host to start</p>
             <p className="text-xs text-[#525252]">Stay on this screen - the game launches automatically</p>
           </div>
         </div>

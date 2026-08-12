@@ -127,7 +127,7 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
           await stopScanner(scanner, containerRef.current);
           return;
         }
-        const message = "Allow camera access to scan the QR on the author screen.";
+        const message = "Allow camera access to scan the QR on the host screen.";
         setCameraError(message);
         setStarting(false);
         setFlipping(false);
@@ -233,7 +233,7 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
         {scanning && !cameraError && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-10 text-center">
             <p className="text-sm font-medium text-white">Align the QR inside the frame</p>
-            <p className="mt-0.5 text-xs text-white/70">Shown on the author&apos;s projector or screen</p>
+            <p className="mt-0.5 text-xs text-white/70">Shown on the host&apos;s projector or screen</p>
           </div>
         )}
       </div>

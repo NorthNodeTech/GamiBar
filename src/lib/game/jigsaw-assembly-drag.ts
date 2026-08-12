@@ -42,3 +42,7 @@ export const ASSEMBLY_SNAP_RATIO_COARSE = 0.55;
 /** Minimum pointer movement (px) before a drag begins — avoids accidental drags on tap. */
 export const ASSEMBLY_DRAG_THRESHOLD_PX = 6;
 export const ASSEMBLY_DRAG_THRESHOLD_COARSE_PX = 10;
+
+/** Max pointer movement (px) that still counts as a rotate tap — looser than drag start. */
+export const ROTATE_TAP_THRESHOLD_PX = 14;
+export const ROTATE_TAP_THRESHOLD_COARSE_PX = 22;

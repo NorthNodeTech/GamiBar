@@ -96,6 +96,8 @@ export type Room = {
   finishedAt: number | null;
   /** When true during LIVE quiz, students see the live leaderboard. Default false. */
   showLeaderboardToStudents: boolean;
+  /** Author-only label — not shown to students. */
+  duplicatedFromName?: string | null;
 };
 
 export type Participant = {
@@ -106,6 +108,8 @@ export type Participant = {
   joinedAt: number;
   reconnectToken: string;
   connectionId: string | null;
+  /** Linked GamiBAR account — used for Participated Games history. */
+  userId?: string | null;
 };
 
 export type QuizAnswerRecord = {

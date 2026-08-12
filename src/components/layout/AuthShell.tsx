@@ -10,7 +10,7 @@ const highlights = [
   { icon: Gamepad2, text: "Quiz, Jigsaw, and Connect Dots in one live session" },
   { icon: Users, text: "Unlimited students join with a code or QR" },
   { icon: Trophy, text: "Real-time leaderboard and classroom energy" },
-  { icon: Shield, text: "Secure author accounts backed by Supabase" },
+  { icon: Shield, text: "Secure accounts backed by Supabase" },
 ] as const;
 
 const fadeUp = {
@@ -159,7 +159,7 @@ export function AuthShell({
 
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--gamibar-brand)]/20 bg-[var(--gamibar-brand-soft)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-brand)]">
               <Zap className="size-3" />
-              Author access
+              Host access
             </span>
 
             <h1 className="mt-4 font-display text-[1.65rem] font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-3xl">

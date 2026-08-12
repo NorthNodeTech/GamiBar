@@ -272,9 +272,9 @@ function CreateRoomWizard() {
     }
   };
 
-  const addJigsawQuestion = () => {
-    if (questions.length >= GAME_CONFIG.jigsaw.maxQuestions) {
-      toast.error(`Maximum ${GAME_CONFIG.jigsaw.maxQuestions} questions.`);
+  const addQuestion = (limits: { minQuestions: number; maxQuestions: number }) => {
+    if (questions.length >= limits.maxQuestions) {
+      toast.error(`Maximum ${limits.maxQuestions} questions.`);
       return;
     }
     setQuestions((prev) => [
@@ -289,14 +289,19 @@ function CreateRoomWizard() {
     setActiveQ(questions.length);
   };
 
-  const removeJigsawQuestion = () => {
-    if (questions.length <= GAME_CONFIG.jigsaw.minQuestions) {
+  const removeQuestion = (limits: { minQuestions: number; maxQuestions: number }) => {
+    if (questions.length <= limits.minQuestions) {
       toast.error("Keep at least one question.");
       return;
     }
     setQuestions((prev) => prev.slice(0, -1));
     setActiveQ((i) => Math.min(i, questions.length - 2));
   };
+
+  const addJigsawQuestion = () => addQuestion(GAME_CONFIG.jigsaw);
+  const removeJigsawQuestion = () => removeQuestion(GAME_CONFIG.jigsaw);
+  const addQuizQuestion = () => addQuestion(GAME_CONFIG.quiz);
+  const removeQuizQuestion = () => removeQuestion(GAME_CONFIG.quiz);
 
   const addConnectDotsPair = () => {
     if (connectDotsPairs.length >= GAME_CONFIG.connect_dots.maxPairs) {
@@ -385,7 +390,7 @@ function CreateRoomWizard() {
           className="inline-flex items-center gap-1.5 text-sm font-medium text-[#525252] transition-colors hover:text-[#111111]"
         >
           <ChevronLeft className="size-4" />
-          Author home
+          Home
         </Link>
 
         <div
@@ -420,7 +425,7 @@ function CreateRoomWizard() {
             {step === "configure" && mode && (
               <p className="mt-1 text-sm text-[#525252]">
                 {mode === "quiz" &&
-                  `Add ${GAME_CONFIG.quiz.questionCount} multiple-choice questions for your class.`}
+                  "Add multiple-choice questions for your class. Use Add or Remove to set how many you need."}
                 {mode === "quiz_jigsaw" &&
                   `Add ${GAME_CONFIG.quiz_jigsaw.questionCount} questions, upload a puzzle image, and set a reward code.`}
                 {mode === "jigsaw" &&
@@ -498,13 +503,47 @@ function CreateRoomWizard() {
                 <GameTimerSettings mode={mode} value={timerSeconds} onChange={setTimerSeconds} />
 
                 {mode === "quiz" && (
-                  <QuizEditor
-                    questions={questions}
-                    activeQ={activeQ}
-                    setActiveQ={setActiveQ}
-                    setQuestions={setQuestions}
-                    progress={quizProgress}
-                  />
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#111111]">
+                          {questions.length} question{questions.length === 1 ? "" : "s"}
+                        </p>
+                        <p className="text-xs text-[#737373]">
+                          One attempt per question · accuracy-first ranking
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={questions.length <= GAME_CONFIG.quiz.minQuestions}
+                          onClick={removeQuizQuestion}
+                        >
+                          Remove
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={questions.length >= GAME_CONFIG.quiz.maxQuestions}
+                          onClick={addQuizQuestion}
+                        >
+                          Add question
+                        </Button>
+                      </div>
+                    </div>
+                    <QuizEditor
+                      questions={questions}
+                      activeQ={activeQ}
+                      setActiveQ={setActiveQ}
+                      setQuestions={setQuestions}
+                      progress={quizProgress}
+                    />
+                  </>
                 )}
 
                 {mode === "quiz_jigsaw" && (
@@ -670,6 +709,9 @@ function CreateRoomWizard() {
                 accentClass={modeCatalog.accentClass}
                 badgeClass={modeCatalog.badgeClass}
                 timeLimitSeconds={payload.timeLimitSeconds}
+                questionCount={
+                  mode === "quiz" && payload.mode === "quiz" ? payload.questions.length : undefined
+                }
               />
               </div>
             )}
@@ -1237,6 +1279,7 @@ function ReviewLaunchCard({
   accentClass,
   badgeClass,
   timeLimitSeconds,
+  questionCount,
 }: {
   name: string;
   subject: string;
@@ -1245,9 +1288,10 @@ function ReviewLaunchCard({
   accentClass: string;
   badgeClass: string;
   timeLimitSeconds: number | null;
+  questionCount?: number;
 }) {
   const catalog = getModeCatalog(mode);
-  const instruction = gameInstruction(mode, timeLimitSeconds);
+  const instruction = gameInstruction(mode, timeLimitSeconds, questionCount);
 
   return (
     <div className="grid gap-4">

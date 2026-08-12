@@ -1,62 +1,52 @@
-import { forwardRef, useMemo, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { forwardRef, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "framer-motion";
 
 import { JigsawTileFace } from "@/components/games/JigsawTileFace";
 import { JigsawTileCardVisual } from "@/components/games/JigsawTileCardVisual";
-import type { TileCollectionLayout, TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
-import { bindRotateOnTap } from "@/lib/game/jigsaw-tile-interaction";
-import { ASSEMBLY_DRAG_THRESHOLD_PX } from "@/lib/game/jigsaw-assembly-drag";
+import type { TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
+import { bindExplicitRotateTap } from "@/lib/game/jigsaw-tile-interaction";
 import { buildJigsawTiles, tileIndexFromId, type JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
 import { cn } from "@/lib/utils";
 
 export const COLLECTION_CARD_SIZE = 56;
 export const ASSEMBLY_PILE_CARD_SIZE = 68;
+export const COLLECTION_TILE_GAP_PX = 8;
 const PAD_X = 12;
 const PAD_Y = 10;
 
-export function collectionAreaHeight(tileCount: number, cardSize = COLLECTION_CARD_SIZE): string {
-  if (cardSize >= 76) {
-    if (tileCount <= 4) return "10rem";
-    if (tileCount <= 9) return "12rem";
-    return "14rem";
-  }
-  if (cardSize > 60) {
-    if (tileCount <= 4) return "9rem";
-    if (tileCount <= 9) return "11rem";
-    return "13rem";
-  }
-  if (tileCount <= 2) return "5.75rem";
-  if (tileCount <= 6) return "7.25rem";
-  if (tileCount <= 12) return "8.75rem";
-  return "10.25rem";
+export function collectionAreaHeight(_tileCount: number, cardSize = COLLECTION_CARD_SIZE): string {
+  const totalPx = cardSize + PAD_Y * 2;
+  return `${totalPx / 16}rem`;
 }
 
-export function layoutPositionStyle(
-  layout: TileCollectionLayout,
-  cardSize: number,
-  padX = PAD_X,
-  padY = PAD_Y,
-): CSSProperties {
-  return {
-    left: `calc(${padX}px + ${layout.x} * (100% - ${padX * 2}px - ${cardSize}px))`,
-    top: `calc(${padY}px + ${layout.y} * (100% - ${padY * 2}px - ${cardSize}px))`,
-    zIndex: layout.z,
-  };
-}
-
-export function tileLayoutRect(
+/** Target rect for a tile in the horizontal collection row (used by fly-in animation). */
+export function tileRowLayoutRect(
   container: HTMLElement,
-  layout: TileCollectionLayout,
+  index: number,
+  total: number,
   cardSize = COLLECTION_CARD_SIZE,
+  gap = COLLECTION_TILE_GAP_PX,
   padX = PAD_X,
   padY = PAD_Y,
 ): DOMRect {
   const base = container.getBoundingClientRect();
-  const innerW = Math.max(0, base.width - padX * 2 - cardSize);
-  const innerH = Math.max(0, base.height - padY * 2 - cardSize);
-  const left = base.left + padX + layout.x * innerW;
-  const top = base.top + padY + layout.y * innerH;
+  const safeTotal = Math.max(1, total);
+  const rowWidth = safeTotal * cardSize + Math.max(0, safeTotal - 1) * gap;
+  const startX = base.left + Math.max(padX, (base.width - rowWidth) / 2);
+  const left = startX + index * (cardSize + gap);
+  const top = base.top + padY + Math.max(0, (base.height - padY * 2 - cardSize) / 2);
   return new DOMRect(left, top, cardSize, cardSize);
+}
+
+/** @deprecated Use tileRowLayoutRect for the horizontal collection row. */
+export function tileLayoutRect(
+  container: HTMLElement,
+  _layout: { x: number; y: number; z: number },
+  cardSize = COLLECTION_CARD_SIZE,
+  index = 0,
+  total = 1,
+) {
+  return tileRowLayoutRect(container, index, total, cardSize);
 }
 
 type JigsawMissionScrambledTilesProps = {
@@ -83,7 +73,7 @@ export const JigsawMissionScrambledTiles = forwardRef<HTMLDivElement, JigsawMiss
     {
       tileIds,
       tileRotations,
-      tileLayouts,
+      tileLayouts: _tileLayouts,
       imageSrc,
       cols,
       rows,
@@ -93,7 +83,6 @@ export const JigsawMissionScrambledTiles = forwardRef<HTMLDivElement, JigsawMiss
       rotateDisabled,
       onTilePointerDown,
       draggingTileId,
-      tapDragThreshold = ASSEMBLY_DRAG_THRESHOLD_PX,
       emptyMessage = "Answer correctly to collect puzzle pieces",
       className,
       areaClassName,
@@ -108,26 +97,31 @@ export const JigsawMissionScrambledTiles = forwardRef<HTMLDivElement, JigsawMiss
       return map;
     }, [cols, rows]);
 
+    const sortedTileIds = useMemo(
+      () => [...tileIds].sort((a, b) => a.localeCompare(b)),
+      [tileIds],
+    );
+
     return (
       <div
         ref={ref}
         className={cn(
-          "relative mx-auto w-full min-w-0",
+          "relative mx-auto flex w-full min-w-0 items-center justify-center overflow-x-auto px-3 py-2.5",
           collectionAreaHeight(tileIds.length, cardSize),
-          cardSize >= 64 ? "max-w-none" : "max-w-[13rem]",
+          cardSize >= 64 ? "max-w-none" : "max-w-none",
           areaClassName,
         )}
+        style={{ gap: COLLECTION_TILE_GAP_PX }}
         aria-label={`${tileIds.length} puzzle pieces`}
       >
-        {tileIds.length === 0 ? (
-          <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-[#D1D5DB] bg-white/70 px-3">
+        {sortedTileIds.length === 0 ? (
+          <div className="flex h-full min-h-[inherit] w-full items-center justify-center rounded-xl border-2 border-dashed border-[#D1D5DB] bg-white/70 px-3">
             <p className="text-center text-[11px] leading-snug text-[#737373]">{emptyMessage}</p>
           </div>
         ) : (
-          tileIds.map((id) => {
+          sortedTileIds.map((id) => {
             const tile = tilesById.get(id);
-            const layout = tileLayouts[id];
-            if (!tile || !layout) return null;
+            if (!tile) return null;
 
             const rotation = tileRotations[id] ?? (0 as JigsawTileCardRotation);
             const isDragging = draggingTileId === id;
@@ -143,16 +137,13 @@ export const JigsawMissionScrambledTiles = forwardRef<HTMLDivElement, JigsawMiss
                 }
                 animate={{ scale: 1, opacity: isDragging ? 0.35 : 1 }}
                 transition={{ type: "spring", stiffness: 420, damping: 26 }}
-                className={cn("absolute", className)}
-                style={{
-                  width: cardSize,
-                  height: cardSize,
-                  ...layoutPositionStyle(layout, cardSize),
-                }}
+                className={cn("shrink-0", className)}
+                style={{ width: cardSize, height: cardSize }}
               >
                 <button
                   type="button"
                   disabled={!canRotate && !isDraggable}
+                  onClick={(e) => e.preventDefault()}
                   onPointerDown={(e) => {
                     if (e.button !== 0) return;
                     if (!canRotate && !isDraggable) return;
@@ -163,10 +154,10 @@ export const JigsawMissionScrambledTiles = forwardRef<HTMLDivElement, JigsawMiss
                       return;
                     }
 
-                    bindRotateOnTap(
+                    bindExplicitRotateTap(
+                      e.currentTarget,
                       { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY },
                       () => onRotateTile?.(id),
-                      tapDragThreshold,
                     );
                   }}
                   aria-label={

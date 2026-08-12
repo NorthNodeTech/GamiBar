@@ -5,6 +5,7 @@ export type ParticipatedGameSummary = {
   participantId: string;
   roomId: string;
   gameName: string;
+  hostName: string;
   mode: GameMode;
   playedAt: string;
   score: number | null;
@@ -22,6 +23,8 @@ type ParticipantRow = {
     name: string;
     mode: GameMode;
     status: string;
+    author_id: string | null;
+    author_name: string;
   } | null;
   gamibar_attempts: Array<{
     score: number | null;
@@ -30,6 +33,7 @@ type ParticipantRow = {
   }> | null;
 };
 
+/** Games the user joined as a player in sessions hosted by someone else. */
 export async function fetchParticipatedGames(userId: string, limit = 50): Promise<ParticipatedGameSummary[]> {
   const { data, error } = await supabase
     .from("gamibar_participants")
@@ -43,7 +47,9 @@ export async function fetchParticipatedGames(userId: string, limit = 50): Promis
         id,
         name,
         mode,
-        status
+        status,
+        author_id,
+        author_name
       ),
       gamibar_attempts (
         score,
@@ -61,7 +67,11 @@ export async function fetchParticipatedGames(userId: string, limit = 50): Promis
   }
 
   return ((data ?? []) as ParticipantRow[])
-    .filter((row) => row.gamibar_rooms)
+    .filter((row) => {
+      const room = row.gamibar_rooms;
+      if (!room) return false;
+      return room.author_id !== userId;
+    })
     .map((row) => {
       const attempt = row.gamibar_attempts?.[0];
       const room = row.gamibar_rooms!;
@@ -69,6 +79,7 @@ export async function fetchParticipatedGames(userId: string, limit = 50): Promis
         participantId: row.id,
         roomId: room.id,
         gameName: room.name,
+        hostName: room.author_name,
         mode: room.mode,
         playedAt: attempt?.updated_at ?? row.joined_at,
         score: attempt?.score ?? null,

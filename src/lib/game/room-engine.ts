@@ -97,6 +97,9 @@ function publicRoom(stored: StoredRoom, opts?: { includeSecrets?: boolean }) {
     endsAt: room.endsAt,
     finishedAt: room.finishedAt,
     showLeaderboardToStudents: room.showLeaderboardToStudents,
+    ...(opts?.includeSecrets && room.duplicatedFromName
+      ? { duplicatedFromName: room.duplicatedFromName }
+      : {}),
     participantCount: participants.size,
     participants: [...participants.values()].map((p) => ({
       id: p.id,
@@ -105,7 +108,13 @@ function publicRoom(stored: StoredRoom, opts?: { includeSecrets?: boolean }) {
       joinedAt: p.joinedAt,
     })),
     payload,
-    instruction: gameInstruction(room.mode, resolvePayloadTimeLimit(room.payload)),
+    instruction: gameInstruction(
+      room.mode,
+      resolvePayloadTimeLimit(room.payload),
+      room.mode === "quiz" && room.payload.mode === "quiz"
+        ? room.payload.questions.length
+        : undefined,
+    ),
   };
 }
 
@@ -175,8 +184,12 @@ function findParticipantByDisplayName(
 async function reattachParticipantSession(
   stored: StoredRoom,
   participant: Participant,
+  userId?: string | null,
 ): Promise<{ participantId: string; reconnectToken: string }> {
   participant.reconnectToken = createReconnectToken();
+  if (userId && !participant.userId) {
+    participant.userId = userId;
+  }
   if (stored.room.status === "LIVE" || stored.room.status === "COUNTDOWN") {
     if (participant.status !== "COMPLETED") {
       participant.status = "PLAYING";
@@ -220,6 +233,7 @@ export async function createRoom(input: {
   authorName: string;
   mode: GameMode;
   payload: GamePayload;
+  duplicatedFromName?: string | null;
 }) {
   const name = sanitizeRoomText(input.name, 80);
   const subject = sanitizeRoomText(input.subject || "General", 60);
@@ -252,6 +266,7 @@ export async function createRoom(input: {
     endsAt: null,
     finishedAt: null,
     showLeaderboardToStudents: false,
+    duplicatedFromName: input.duplicatedFromName ?? null,
   };
 
   const stored: StoredRoom = {
@@ -273,7 +288,7 @@ export async function createRoom(input: {
   };
 }
 
-export async function joinRoom(input: { code: string; displayName: string }) {
+export async function joinRoom(input: { code: string; displayName: string; userId?: string | null }) {
   const code = normalizeRoomCode(input.code);
   if (!isValidRoomCodeFormat(code)) {
     return { ok: false as const, error: "Enter a valid 6-digit room code." };
@@ -292,7 +307,7 @@ export async function joinRoom(input: { code: string; displayName: string }) {
     if (!canStudentEnterRoom(stored.room.status)) {
       return { ok: false as const, error: "This room is closed." };
     }
-    const session = await reattachParticipantSession(stored, existing);
+    const session = await reattachParticipantSession(stored, existing, input.userId);
     return {
       ok: true as const,
       rejoined: true as const,
@@ -326,6 +341,7 @@ export async function joinRoom(input: { code: string; displayName: string }) {
     joinedAt: Date.now(),
     reconnectToken: createReconnectToken(),
     connectionId: null,
+    userId: input.userId ?? null,
   };
   stored.participants.set(participant.id, participant);
   ensureAttemptRecord(stored, participant.id);
@@ -528,6 +544,7 @@ export async function duplicateRoom(input: {
   sourceRoomId: string;
   authorId: string;
   authorName: string;
+  name: string;
 }) {
   const stored = await loadById(input.sourceRoomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
@@ -535,17 +552,17 @@ export async function duplicateRoom(input: {
     return { ok: false as const, error: "You can only duplicate your own games." };
   }
 
-  const copyName = stored.room.name.trim().endsWith("(copy)")
-    ? stored.room.name.trim()
-    : `${stored.room.name.trim()} (copy)`;
+  const name = sanitizeRoomText(input.name, 80);
+  if (!name) return { ok: false as const, error: "Game name is required." };
 
   const created = await createRoom({
-    name: copyName,
+    name,
     subject: stored.room.subject,
     authorId: input.authorId,
     authorName: input.authorName,
     mode: stored.room.mode,
     payload: stored.room.payload,
+    duplicatedFromName: stored.room.name.trim(),
   });
 
   if (!created.ok) return created;
@@ -554,11 +571,31 @@ export async function duplicateRoom(input: {
   return created;
 }
 
+/** Issue a fresh host token for a game the signed-in author owns (My Games → live control). */
+export async function claimAuthorSession(input: { roomId: string; authorId: string }) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (stored.room.authorId !== input.authorId) {
+    return { ok: false as const, error: "You do not have access to this game." };
+  }
+
+  const authorToken = createId("author");
+  stored.authorToken = authorToken;
+  stored.authorTokenHash = await hashToken(authorToken);
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    authorToken,
+    room: publicRoom(stored, { includeSecrets: true }),
+  };
+}
+
 export async function startGame(input: { roomId: string; authorToken: string }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
   if (!(await verifyAuthorToken(stored, input.authorToken))) {
-    return { ok: false as const, error: "Only the author can start the game." };
+    return { ok: false as const, error: "Only the host can start the game." };
   }
   if (stored.participants.size < 1) {
     return { ok: false as const, error: "Wait for at least one student to join." };
@@ -602,7 +639,7 @@ export async function stopGame(input: { roomId: string; authorToken: string }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
   if (!(await verifyAuthorToken(stored, input.authorToken))) {
-    return { ok: false as const, error: "Only the author can stop the game." };
+    return { ok: false as const, error: "Only the host can stop the game." };
   }
   if (stored.room.status !== "LIVE" && stored.room.status !== "COUNTDOWN") {
     return { ok: false as const, error: "Game is not live." };
@@ -625,7 +662,7 @@ export async function setShowLeaderboardToStudents(input: {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
   if (!(await verifyAuthorToken(stored, input.authorToken))) {
-    return { ok: false as const, error: "Only the author can change this setting." };
+    return { ok: false as const, error: "Only the host can change this setting." };
   }
   if (stored.room.mode !== "quiz") {
     return { ok: false as const, error: "Live leaderboard visibility applies to Quiz Challenge only." };
@@ -688,8 +725,13 @@ export async function submitQuizAnswer(input: {
     submittedAt: Date.now(),
   });
 
+  const questionTotal =
+    stored.room.mode === "quiz" && stored.room.payload.mode === "quiz"
+      ? stored.room.payload.questions.length
+      : GAME_CONFIG.quiz.defaultQuestionCount;
+
   const attempt = ensureAttemptRecord(stored, participant.id);
-  attempt.progress = map.size / GAME_CONFIG.quiz.questionCount;
+  attempt.progress = map.size / questionTotal;
   attempt.correctCount = [...map.values()].filter((a) => a.isCorrect).length;
 
   pushEvent(stored, {
@@ -697,10 +739,10 @@ export async function submitQuizAnswer(input: {
     participantId: participant.id,
     displayName: participant.displayName,
     progress: attempt.progress,
-    detail: `${map.size}/${GAME_CONFIG.quiz.questionCount}`,
+    detail: `${map.size}/${questionTotal}`,
   });
 
-  if (map.size >= GAME_CONFIG.quiz.questionCount) {
+  if (map.size >= questionTotal) {
     const completedAt = Date.now();
     attempt.completed = true;
     attempt.completedAt = completedAt;
@@ -723,7 +765,7 @@ export async function submitQuizAnswer(input: {
     ok: true as const,
     locked: true,
     answeredCount: map.size,
-    total: GAME_CONFIG.quiz.questionCount,
+    total: questionTotal,
     completed: attempt.completed,
     nextQuestionId: nextUnanswered?.id ?? null,
   };
