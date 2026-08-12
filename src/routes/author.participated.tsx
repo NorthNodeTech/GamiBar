@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Trophy } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Trophy } from "lucide-react";
 
+import { GameModeMiniPreview } from "@/components/author/GameModeMiniPreview";
+import { AuthorPageFrame } from "@/components/author/AuthorPageFrame";
+import { AuthorPageHeader } from "@/components/author/AuthorPageHeader";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
@@ -19,8 +22,9 @@ function formatPlayedDate(value: string): string {
   const ms = Number(value);
   const date = Number.isFinite(ms) ? new Date(ms) : new Date(value);
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   }).format(date);
 }
 
@@ -37,15 +41,12 @@ function ParticipatedGamesPage() {
 
   return (
     <AuthorShell>
-      <div className="mx-auto max-w-3xl px-2 py-8">
-        <h1 className="font-display text-3xl font-extrabold text-[#111111]">Participated Games</h1>
-        <p className="mt-2 text-sm text-[#525252]">
-          Sessions you joined as a player — hosted by someone else.
-        </p>
+      <AuthorPageFrame width="md">
+        <AuthorPageHeader title="Participated Games" />
 
-        <div className="mt-8">
+        <div className="mt-5 sm:mt-6">
           {participatedQuery.isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#737373]">
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--muted-foreground)]">
               <Loader2 className="size-4 animate-spin" />
               Loading…
             </div>
@@ -57,68 +58,74 @@ function ParticipatedGamesPage() {
               retrying={participatedQuery.isFetching}
             />
           ) : games.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-white px-6 py-12 text-center">
-              <Trophy className="mx-auto size-8 text-[#737373]" />
-              <p className="mt-4 text-sm text-[#525252]">No participated games yet.</p>
-              <p className="mt-2 max-w-sm mx-auto text-xs leading-relaxed text-[#737373]">
-                Sign in, join a live session with a room code, and your score will show up here.
-                Games you host yourself appear under My Games.
-              </p>
-              <Button asChild className="mt-6 rounded-xl bg-[#111111] hover:bg-black">
+            <div className="author-card border-dashed px-6 py-12 text-center">
+              <Trophy className="mx-auto size-8 text-[var(--muted-foreground)]" />
+              <p className="mt-3 text-sm text-[var(--muted-foreground)]">No games yet</p>
+              <Button asChild className="mt-4 h-11 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]">
                 <Link to="/join">Join a game</Link>
               </Button>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3">
               {games.map((game) => (
                 <li
                   key={game.participantId}
-                  className="rounded-2xl border border-[var(--gamibar-border)] bg-white px-4 py-4 shadow-[var(--shadow-soft)] sm:px-5"
+                  className={cn(
+                    "author-card overflow-hidden",
+                    game.completed && "ring-1 ring-emerald-500/20",
+                  )}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-[#111111]">{game.gameName}</p>
-                      <p className="mt-0.5 text-xs text-[#737373]">
-                        {GAME_MODE_META[game.mode]?.title ?? game.mode} · Hosted by {game.hostName}
+                  <div className="flex items-center gap-3 p-3 sm:p-3.5">
+                    <GameModeMiniPreview mode={game.mode} size="sm" className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                        {game.gameName}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-[var(--muted-foreground)]">
+                        {GAME_MODE_META[game.mode]?.title ?? game.mode}
                       </p>
                     </div>
+                    <div className="shrink-0 pl-1 text-right">
+                      <p className="font-display text-lg font-bold tabular-nums leading-none text-[var(--foreground)] sm:text-xl">
+                        {game.score != null ? game.score : "—"}
+                      </p>
+                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                        Score
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/40 px-3 py-2 text-xs sm:px-3.5">
+                    <span className="truncate text-[var(--muted-foreground)]">
+                      {formatPlayedDate(game.playedAt)}
+                    </span>
                     <span
                       className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+                        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
                         game.completed
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-neutral-100 text-neutral-700",
+                          ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+                          : "bg-[var(--gamibar-surface)] text-[var(--muted-foreground)]",
                       )}
                     >
-                      {game.completed ? "Completed" : "In progress"}
+                      {game.completed ? (
+                        <>
+                          <CheckCircle2 className="size-3" />
+                          Completed
+                        </>
+                      ) : (
+                        <>
+                          <Circle className="size-3" />
+                          Joined
+                        </>
+                      )}
                     </span>
                   </div>
-                  <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">Date</dt>
-                      <dd className="mt-0.5 text-sm font-medium text-[#111111]">
-                        {formatPlayedDate(game.playedAt)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">Score</dt>
-                      <dd className="mt-0.5 text-sm font-medium text-[#111111]">
-                        {game.score != null ? game.score : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">Status</dt>
-                      <dd className="mt-0.5 text-sm font-medium text-[#111111]">
-                        {game.completed ? "Finished" : "Joined"}
-                      </dd>
-                    </div>
-                  </dl>
                 </li>
               ))}
             </ul>
           )}
         </div>
-      </div>
+      </AuthorPageFrame>
     </AuthorShell>
   );
 }

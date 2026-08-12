@@ -2,6 +2,7 @@ import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { GameModeMiniPreview } from "@/components/author/GameModeMiniPreview";
 import { GAME_MODE_CATALOG, getCoreModeCatalog } from "@/lib/game/mode-catalog";
 import type { GameMode } from "@/lib/game/config";
 import { GAME_MODE_META } from "@/lib/game/config";
@@ -79,109 +80,120 @@ export function GameModePicker({
   const activeItem = catalog[active]!;
 
   return (
-    <div
-      className="relative mx-auto w-full overflow-visible"
-      onTouchStart={(e) => setTouchStartX(e.touches[0]?.clientX ?? null)}
-      onTouchEnd={(e) => {
-        if (touchStartX == null) return;
-        const delta = (e.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
-        if (delta > 48) goPrev();
-        else if (delta < -48) goNext();
-        setTouchStartX(null);
-      }}
-    >
-      <div className="relative overflow-visible px-10 sm:px-14 md:px-16">
-        <button
-          type="button"
-          onClick={goPrev}
-          aria-label="Previous game mode"
-          className="absolute left-0 top-1/2 z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--surface)] sm:size-11"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={goNext}
-          aria-label="Next game mode"
-          className="absolute right-0 top-1/2 z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--surface)] sm:size-11"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-
-        <div
-          className="relative mx-auto w-full max-w-[min(100%,280px)] overflow-visible sm:max-w-[320px] md:max-w-[360px]"
-          style={{ perspective: "1400px" }}
-        >
-          <div className="pointer-events-none invisible" aria-hidden>
-            <PickerCard item={activeItem} selected={value === activeItem.mode} />
-          </div>
-
-          {catalog.map((item, index) => {
-            const offset = ringOffset(index, active, count);
-            if (Math.abs(offset) > 1) return null;
-
-            const isCenter = offset === 0;
-            const shift = offset * shiftPercent;
-            const selected = value === item.mode;
-
-            return (
-              <motion.div
-                key={item.mode}
-                className={cn(
-                  "absolute left-1/2 top-0 w-full max-w-[min(100%,280px)] origin-center sm:max-w-[320px] md:max-w-[360px]",
-                  !isCenter && "cursor-pointer",
-                )}
-                initial={false}
-                animate={{
-                  x: `calc(-50% + ${shift}%)`,
-                  scale: isCenter ? 1 : 0.84,
-                  zIndex: isCenter ? 30 : 12 - Math.abs(offset),
-                  opacity: isCenter ? 1 : 0.55,
-                  rotateY: offset * -8,
-                  filter: isCenter ? "blur(0px)" : "blur(0.35px)",
-                }}
-                transition={{ type: "spring", stiffness: 260, damping: 28 }}
-                onClick={() => {
-                  if (!isCenter) focusIndex(index);
-                }}
-                aria-hidden={!isCenter}
-              >
-                <PickerCard
-                  item={item}
-                  selected={selected && isCenter}
-                  featured={isCenter}
-                  onSelect={() => focusIndex(index)}
-                />
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div
-        className="mt-4 flex items-center justify-center gap-2 sm:mt-5"
-        role="tablist"
-        aria-label="Game modes"
-      >
+    <>
+      {/* Phone: stacked cards — no horizontal carousel overflow */}
+      <div className="flex flex-col gap-3 md:hidden">
         {catalog.map((item, index) => (
-          <button
+          <PickerCard
             key={item.mode}
-            type="button"
-            role="tab"
-            aria-selected={index === active}
-            aria-label={`Select ${GAME_MODE_META[item.mode].title}`}
-            onClick={() => focusIndex(index)}
-            className={cn(
-              "h-2.5 rounded-full transition-all duration-300",
-              index === active
-                ? "w-7 bg-[var(--gamibar-brand)]"
-                : "w-2.5 bg-[var(--gamibar-border)] hover:bg-[var(--muted-foreground)]",
-            )}
+            item={item}
+            selected={value === item.mode}
+            featured={value === item.mode}
+            onSelect={() => focusIndex(index)}
           />
         ))}
       </div>
-    </div>
+
+      {/* Tablet+: carousel */}
+      <div
+        className="relative mx-auto hidden w-full md:block"
+        onTouchStart={(e) => setTouchStartX(e.touches[0]?.clientX ?? null)}
+        onTouchEnd={(e) => {
+          if (touchStartX == null) return;
+          const delta = (e.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
+          if (delta > 48) goPrev();
+          else if (delta < -48) goNext();
+          setTouchStartX(null);
+        }}
+      >
+        <div className="relative px-12 lg:px-14">
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Previous game mode"
+            className="tap-target absolute left-0 top-1/2 z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-[var(--shadow-soft)]"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next game mode"
+            className="tap-target absolute right-0 top-1/2 z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-[var(--shadow-soft)]"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+
+          <div
+            className="relative mx-auto w-full max-w-[340px] overflow-visible lg:max-w-[380px]"
+            style={{ perspective: "1400px" }}
+          >
+            <div className="pointer-events-none invisible" aria-hidden>
+              <PickerCard item={activeItem} selected={value === activeItem.mode} />
+            </div>
+
+            {catalog.map((item, index) => {
+              const offset = ringOffset(index, active, count);
+              if (Math.abs(offset) > 1) return null;
+
+              const isCenter = offset === 0;
+              const shift = offset * shiftPercent;
+              const selected = value === item.mode;
+
+              return (
+                <motion.div
+                  key={item.mode}
+                  className={cn(
+                    "absolute left-1/2 top-0 w-full max-w-[340px] origin-center lg:max-w-[380px]",
+                    !isCenter && "cursor-pointer",
+                  )}
+                  initial={false}
+                  animate={{
+                    x: `calc(-50% + ${shift}%)`,
+                    scale: isCenter ? 1 : 0.88,
+                    zIndex: isCenter ? 30 : 12 - Math.abs(offset),
+                    opacity: isCenter ? 1 : 0.5,
+                    rotateY: offset * -6,
+                  }}
+                  transition={{ type: "spring", stiffness: 260, damping: 28 }}
+                  onClick={() => {
+                    if (!isCenter) focusIndex(index);
+                  }}
+                  aria-hidden={!isCenter}
+                >
+                  <PickerCard
+                    item={item}
+                    selected={selected && isCenter}
+                    featured={isCenter}
+                    onSelect={() => focusIndex(index)}
+                  />
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-center gap-2" role="tablist" aria-label="Game modes">
+          {catalog.map((item, index) => (
+            <button
+              key={item.mode}
+              type="button"
+              role="tab"
+              aria-selected={index === active}
+              aria-label={`Select ${GAME_MODE_META[item.mode].title}`}
+              onClick={() => focusIndex(index)}
+              className={cn(
+                "h-2.5 rounded-full transition-all duration-300",
+                index === active
+                  ? "w-6 bg-[var(--gamibar-brand)]"
+                  : "w-2.5 bg-[var(--gamibar-border)]",
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -203,44 +215,35 @@ function PickerCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-[var(--gamibar-surface)] text-left transition-all duration-200",
+        "tap-target group relative flex w-full min-h-[4.5rem] items-stretch gap-3 overflow-hidden rounded-2xl border bg-[var(--gamibar-surface)] p-3.5 text-left transition-all sm:gap-4 sm:p-4",
         selected
-          ? cn("border-[var(--foreground)] ring-2 ring-[var(--foreground)]/10", item.glowClass)
+          ? cn("border-[var(--foreground)] ring-2 ring-[var(--gamibar-brand)]/15", item.glowClass)
           : "border-[var(--gamibar-border)]",
         featured && "shadow-[var(--shadow-lift)]",
       )}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden sm:aspect-[16/10]">
-        <img
-          src={item.preview}
-          alt=""
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <span
-          className={cn(
-            "absolute left-3 top-3 grid size-9 place-items-center rounded-xl backdrop-blur-sm sm:size-10",
-            item.badgeClass,
-          )}
-        >
-          <Icon className="size-4 sm:size-5" />
-        </span>
-        {selected && (
-          <span className="absolute right-3 top-3 grid size-7 place-items-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-lg sm:size-8">
-            <Check className="size-3.5 sm:size-4" />
-          </span>
-        )}
-      </div>
+      <GameModeMiniPreview mode={item.mode} size="md" className="rounded-xl" />
 
-      <div className="flex flex-1 flex-col p-3.5 sm:p-4">
-        <p className="font-display text-base font-bold text-[var(--foreground)] sm:text-lg">
-          {GAME_MODE_META[item.mode].title}
-        </p>
-        <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">{item.tagline}</p>
-        <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
-          {item.specs.map((spec) => (
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-display text-base font-bold text-[var(--foreground)] sm:text-lg">
+            {GAME_MODE_META[item.mode].title}
+          </p>
+          {selected ? (
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--foreground)] text-[var(--background)]">
+              <Check className="size-3.5" />
+            </span>
+          ) : (
+            <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", item.badgeClass)}>
+              <Icon className="size-4" />
+            </span>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {item.specs.slice(0, 2).map((spec) => (
             <span
               key={spec}
-              className="rounded-full bg-[var(--gamibar-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)]"
+              className="rounded-md bg-[var(--gamibar-page)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--muted-foreground)] sm:text-[10px]"
             >
               {spec}
             </span>

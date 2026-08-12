@@ -10,7 +10,8 @@ import {
 export const GAME_CONFIG = {
   quiz: {
     minQuestions: 1,
-    maxQuestions: 16,
+    /** 0 = no upper limit on question count. */
+    maxQuestions: 0,
     defaultQuestionCount: 10,
     /** Soft UI hint only; Quiz ranking is accuracy-first, then completion time. */
     recommendedSecondsPerQuestion: 20,
@@ -57,6 +58,10 @@ export const GAME_CONFIG = {
 
 export function isRoomCapacityUnlimited(maxParticipants: number): boolean {
   return maxParticipants <= 0;
+}
+
+export function isQuizQuestionCountUnlimited(maxQuestions: number): boolean {
+  return maxQuestions <= 0;
 }
 
 export function isRoomFull(participantCount: number, maxParticipants: number): boolean {

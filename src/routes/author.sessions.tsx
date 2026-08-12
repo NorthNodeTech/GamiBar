@@ -8,12 +8,16 @@ import {
   Loader2,
   Play,
   Plus,
+  Search,
   Trash2,
   Users,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { AuthorPageFrame } from "@/components/author/AuthorPageFrame";
+import { AuthorPageHeader } from "@/components/author/AuthorPageHeader";
+import { GameModeMiniPreview } from "@/components/author/GameModeMiniPreview";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import {
   AlertDialog,
@@ -83,6 +87,8 @@ function MyGamesPage() {
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [duplicateTarget, setDuplicateTarget] = useState<AuthorSessionSummary | null>(null);
   const [duplicateName, setDuplicateName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "done">("all");
 
   const sessionsQuery = useQuery({
     queryKey: ["author-sessions", user?.id],
@@ -150,6 +156,20 @@ function MyGamesPage() {
   });
 
   const sessions = sessionsQuery.data ?? [];
+
+  const filteredSessions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return sessions.filter((session) => {
+      if (statusFilter === "active" && !isActiveSession(session.status)) return false;
+      if (statusFilter === "done" && isActiveSession(session.status)) return false;
+      if (!q) return true;
+      return (
+        session.name.toLowerCase().includes(q) ||
+        session.code.includes(q) ||
+        (GAME_MODE_META[session.mode]?.title ?? session.mode).toLowerCase().includes(q)
+      );
+    });
+  }, [sessions, searchQuery, statusFilter]);
   const busyId =
     openLiveMutation.isPending
       ? openLiveMutation.variables?.session.id
@@ -161,30 +181,31 @@ function MyGamesPage() {
 
   return (
     <AuthorShell>
-      <div className="mx-auto max-w-4xl px-2 py-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-3xl font-extrabold text-[#111111]">My Games</h1>
-            <p className="mt-2 text-sm text-[#525252]">Games you created and hosted.</p>
-          </div>
-          <Button asChild className="rounded-xl bg-[#111111] hover:bg-black">
-            <Link to="/author/create">
-              <Plus className="mr-2 size-4" />
-              Create Game
-            </Link>
-          </Button>
-        </div>
+      <AuthorPageFrame width="md">
+        <AuthorPageHeader
+          title="My Games"
+          actions={
+            <Button asChild className="w-full rounded-xl bg-[var(--gamibar-brand)] font-semibold shadow-[0_8px_24px_-8px_rgba(239,68,68,0.45)] hover:bg-[var(--gamibar-brand-hover)] sm:w-auto">
+              <Link to="/author/create">
+                <Plus className="mr-2 size-4" />
+                Create Game
+              </Link>
+            </Button>
+          }
+        />
 
         {savedRoom && (
-          <div className="mt-6 rounded-2xl border border-[var(--gamibar-brand)]/30 bg-[var(--gamibar-brand-soft)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-brand)]">
-              Active in this browser
-            </p>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-              <p className="font-mono text-2xl font-bold tracking-[0.2em] text-[#111111]">
-                {savedRoom.code}
-              </p>
-              <Button asChild size="sm" className="rounded-xl bg-[#111111] hover:bg-black">
+          <div className="author-card mt-5 overflow-hidden border-[var(--gamibar-brand)]/25 bg-[var(--gamibar-brand-soft)]/40 p-4 sm:mt-6 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-brand)]">
+                  Active in this browser
+                </p>
+                <p className="mt-1 font-mono text-xl font-bold tracking-[0.18em] text-[var(--foreground)] sm:text-2xl">
+                  {savedRoom.code}
+                </p>
+              </div>
+              <Button asChild className="h-11 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 sm:w-auto sm:min-h-0">
                 <Link to="/author/room/$roomId" params={{ roomId: savedRoom.roomId }}>
                   Open live control
                   <ArrowRight className="ml-2 size-4" />
@@ -194,7 +215,44 @@ function MyGamesPage() {
           </div>
         )}
 
-        <div className="mt-8">
+        {sessions.length > 0 ? (
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, code, or mode…"
+                className="h-10 rounded-xl pl-9"
+              />
+            </div>
+            <div className="flex w-full gap-1 rounded-xl bg-[var(--gamibar-page)] p-1 sm:w-auto">
+              {(
+                [
+                  ["all", "All"],
+                  ["active", "Active"],
+                  ["done", "Done"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatusFilter(key)}
+                  className={cn(
+                    "tap-target flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition-colors sm:flex-none sm:px-3 sm:py-1.5",
+                    statusFilter === key
+                      ? "bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-sm"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-5 sm:mt-6">
           {sessionsQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#737373]">
               <Loader2 className="size-4 animate-spin" />
@@ -208,16 +266,22 @@ function MyGamesPage() {
               retrying={sessionsQuery.isFetching}
             />
           ) : sessions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-white px-6 py-12 text-center">
-              <Gamepad2 className="mx-auto size-8 text-[#737373]" />
-              <p className="mt-4 text-sm text-[#525252]">No games yet.</p>
-              <Button asChild className="mt-4 rounded-xl bg-[#111111] hover:bg-black">
+            <div className="author-card border-dashed px-6 py-14 text-center">
+              <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--gamibar-page)] text-[var(--muted-foreground)]">
+                <Gamepad2 className="size-7" />
+              </div>
+              <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No games yet</p>
+              <Button asChild className="mt-5 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]">
                 <Link to="/author/create">Create Game</Link>
               </Button>
             </div>
+          ) : filteredSessions.length === 0 ? (
+            <div className="author-card border-dashed px-6 py-10 text-center">
+              <p className="text-sm text-[var(--muted-foreground)]">No games match your search.</p>
+            </div>
           ) : (
-            <ul className="space-y-4">
-              {sessions.map((session) => (
+            <ul className="grid gap-2.5 sm:gap-3">
+              {filteredSessions.map((session) => (
                 <MyGameCard
                   key={session.id}
                   session={session}
@@ -239,7 +303,7 @@ function MyGamesPage() {
             </ul>
           )}
         </div>
-      </div>
+      </AuthorPageFrame>
 
       <AlertDialog
         open={duplicateTarget != null}
@@ -360,125 +424,90 @@ function MyGameCard({
 }) {
   const isFinished = session.status === "FINISHED" || session.status === "CANCELLED";
   const canOpenLive = isActiveSession(session.status);
+  const modeTitle = GAME_MODE_META[session.mode]?.title ?? session.mode;
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]">
-      <div className="border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/50 px-4 py-3 sm:px-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-[#111111]">{session.name}</p>
-            <p className="mt-0.5 text-xs text-[#737373]">{session.subject}</p>
+    <li className="author-card overflow-hidden">
+      <div className="flex items-start gap-3 p-3 sm:p-4">
+        <GameModeMiniPreview mode={session.mode} size="md" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-[var(--foreground)]">{session.name}</p>
+              <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                {modeTitle} · {formatCreatedDate(session.createdAt)}
+              </p>
+            </div>
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
+                session.status === "LIVE"
+                  ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+                  : isFinished
+                    ? "bg-[var(--gamibar-page)] text-[var(--muted-foreground)]"
+                    : "bg-amber-500/12 text-amber-800 dark:text-amber-400",
+              )}
+            >
+              {statusLabel[session.status] ?? session.status}
+            </span>
           </div>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
-              session.status === "LIVE"
-                ? "bg-emerald-100 text-emerald-800"
-                : isFinished
-                  ? "bg-neutral-100 text-neutral-700"
-                  : "bg-amber-100 text-amber-900",
-            )}
-          >
-            {statusLabel[session.status] ?? session.status}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
-        <MetaItem label="Mode" value={GAME_MODE_META[session.mode]?.title ?? session.mode} />
-        <MetaItem label="Code" value={session.code} mono />
-        <MetaItem label="Created" value={formatCreatedDate(session.createdAt)} />
-        <MetaItem
-          label="Questions"
-          value={
-            session.mode === "connect_dots"
-              ? `${session.questionCount} pair${session.questionCount === 1 ? "" : "s"}`
-              : String(session.questionCount)
-          }
-        />
-        <MetaItem
-          label="Participants"
-          value={
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--muted-foreground)]">
+            <span className="inline-flex items-center gap-1 font-mono tracking-wider">{session.code}</span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-3.5" />
               {session.playerCount}
             </span>
-          }
-        />
-        <MetaItem label="Status" value={statusLabel[session.status] ?? session.status} />
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/30 px-4 py-3 sm:px-5">
+      <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/50 px-3 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-1.5 sm:px-4 sm:py-2">
         {canOpenLive ? (
           <Button
             type="button"
             size="sm"
-            className="rounded-xl bg-[#111111] hover:bg-black"
+            className="col-span-2 h-10 rounded-lg bg-[var(--foreground)] px-3 text-xs text-[var(--background)] hover:opacity-90 sm:col-span-1 sm:h-8 sm:px-2.5"
             disabled={busy}
             onClick={onOpenLive}
           >
-            <Play className="mr-1.5 size-3.5 fill-current" />
-            Open live control
+            <Play className="mr-1 size-3 fill-current" />
+            Open live
           </Button>
         ) : null}
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="rounded-xl"
+          className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
           disabled={busy}
           onClick={onViewResults}
         >
-          <Eye className="mr-1.5 size-3.5" />
-          {isFinished ? "View results" : "View summary"}
+          <Eye className="mr-1 size-3" />
+          {isFinished ? "Results" : "Summary"}
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="rounded-xl"
+          className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
           disabled={busy}
           onClick={onDuplicate}
         >
-          <Copy className="mr-1.5 size-3.5" />
+          <Copy className="mr-1 size-3" />
           Duplicate
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="rounded-xl text-red-700 hover:bg-red-50 hover:text-red-800"
+          className="h-10 rounded-lg px-2.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 sm:col-span-1 sm:ml-auto sm:h-8"
           disabled={busy}
           onClick={onDelete}
         >
-          <Trash2 className="mr-1.5 size-3.5" />
+          <Trash2 className="mr-1 size-3" />
           Delete
         </Button>
       </div>
     </li>
-  );
-}
-
-function MetaItem({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">{label}</p>
-      <p
-        className={cn(
-          "mt-0.5 text-sm font-medium text-[#111111]",
-          mono && "font-mono tracking-[0.12em]",
-        )}
-      >
-        {value}
-      </p>
-    </div>
   );
 }

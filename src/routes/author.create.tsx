@@ -273,7 +273,7 @@ function CreateRoomWizard() {
   };
 
   const addQuestion = (limits: { minQuestions: number; maxQuestions: number }) => {
-    if (questions.length >= limits.maxQuestions) {
+    if (limits.maxQuestions > 0 && questions.length >= limits.maxQuestions) {
       toast.error(`Maximum ${limits.maxQuestions} questions.`);
       return;
     }
@@ -381,13 +381,13 @@ function CreateRoomWizard() {
     <AuthorShell>
       <div
         className={cn(
-          "mx-auto w-full pb-6 md:pb-8",
+          "author-page mx-auto w-full min-w-0 pb-6 md:pb-8",
           isCompactStep ? "max-w-lg" : "max-w-5xl",
         )}
       >
         <Link
           to="/author"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-[#525252] transition-colors hover:text-[#111111]"
+          className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
         >
           <ChevronLeft className="size-4" />
           Home
@@ -395,15 +395,19 @@ function CreateRoomWizard() {
 
         <div
           className={cn(
-            "mt-3 rounded-2xl border border-[var(--gamibar-border)] bg-white shadow-[var(--shadow-soft)]",
-            step === "mode" && !skipModeStep.current && "overflow-visible",
+            "author-card relative mt-3 overflow-hidden",
+            step === "mode" && !skipModeStep.current && "md:overflow-visible",
           )}
         >
-          <div className="border-b border-[var(--gamibar-border)] px-4 py-3.5 sm:px-5 sm:py-4">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--gamibar-brand)]/45 to-transparent"
+          />
+          <div className="border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/50 px-4 py-3.5 sm:px-5 sm:py-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--gamibar-brand)]">
               Create session
             </p>
-            <h1 className="mt-0.5 font-display text-xl font-extrabold text-[#111111] sm:text-2xl">
+            <h1 className="mt-0.5 font-display text-xl font-extrabold text-[var(--foreground)] sm:text-2xl">
               {step === "mode" && (skipModeStep.current ? "Your game" : "Pick a game")}
               {step === "details" && "Session details"}
               {step === "configure" && "Game content"}
@@ -415,15 +419,15 @@ function CreateRoomWizard() {
               </p>
             )}
             {step === "mode" && !skipModeStep.current && (
-              <p className="mt-1 text-sm text-[#525252]">Choose the game that fits this lesson.</p>
+              <p className="mt-1 hidden text-sm text-[#525252] sm:block">Choose the game that fits this lesson.</p>
             )}
             {step === "details" && (
-              <p className="mt-1 text-sm text-[#525252]">
+              <p className="mt-1 hidden text-sm text-[#525252] sm:block">
                 Name your room so students know they joined the right session.
               </p>
             )}
             {step === "configure" && mode && (
-              <p className="mt-1 text-sm text-[#525252]">
+              <p className="mt-1 hidden text-sm text-[#525252] sm:block">
                 {mode === "quiz" &&
                   "Add multiple-choice questions for your class. Use Add or Remove to set how many you need."}
                 {mode === "quiz_jigsaw" &&
@@ -440,7 +444,7 @@ function CreateRoomWizard() {
           <div
             className={cn(
               "px-4 py-4 sm:px-5 sm:py-5",
-              step === "mode" && !skipModeStep.current && "overflow-visible",
+              step === "mode" && !skipModeStep.current && "md:overflow-visible",
             )}
           >
             {step === "mode" && skipModeStep.current && mode && modeCatalog && (
@@ -529,7 +533,10 @@ function CreateRoomWizard() {
                           variant="outline"
                           size="sm"
                           className="rounded-xl"
-                          disabled={questions.length >= GAME_CONFIG.quiz.maxQuestions}
+                          disabled={
+                            GAME_CONFIG.quiz.maxQuestions > 0 &&
+                            questions.length >= GAME_CONFIG.quiz.maxQuestions
+                          }
                           onClick={addQuizQuestion}
                         >
                           Add question
@@ -717,7 +724,7 @@ function CreateRoomWizard() {
             )}
           </div>
 
-          <div className="sticky bottom-16 z-10 rounded-b-2xl border-t border-[var(--gamibar-border)] bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5 md:bottom-0">
+          <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 rounded-b-[1.25rem] border-t border-[var(--gamibar-border)] bg-[var(--gamibar-surface)]/95 px-4 py-3 backdrop-blur-md sm:px-5 md:bottom-0">
             {createError ? (
               <InlineErrorBanner
                 className="mb-3"
@@ -736,8 +743,7 @@ function CreateRoomWizard() {
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className="rounded-xl"
+                className="h-11 min-w-[5.5rem] rounded-xl sm:h-9 sm:min-w-0 sm:px-3 sm:text-sm"
                 disabled={step === "mode" || submitting}
                 onClick={goBack}
               >
@@ -747,8 +753,7 @@ function CreateRoomWizard() {
               {step !== "review" ? (
                 <Button
                   type="button"
-                  size="sm"
-                  className="rounded-xl bg-[#111111] px-5 hover:bg-black"
+                  className="h-11 rounded-xl bg-[#111111] px-5 hover:bg-black sm:h-9 sm:px-4 sm:text-sm"
                   disabled={!canContinue}
                   onClick={goNext}
                 >
@@ -758,8 +763,7 @@ function CreateRoomWizard() {
               ) : (
                 <Button
                   type="button"
-                  size="sm"
-                  className="rounded-xl bg-[#111111] px-5 hover:bg-black"
+                  className="h-11 rounded-xl bg-[#111111] px-5 hover:bg-black sm:h-9 sm:px-4 sm:text-sm"
                   disabled={!configValid || submitting}
                   onClick={() => void handleCreate()}
                 >

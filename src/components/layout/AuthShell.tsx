@@ -113,7 +113,7 @@ export function AuthShell({
         <p className="relative text-xs text-white/30">© {new Date().getFullYear()} GamiBar. All rights reserved.</p>
       </div>
 
-      <div className="relative flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 lg:min-h-0 lg:px-10 lg:py-16">
+      <div className="relative flex min-h-dvh items-center justify-center px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8 lg:min-h-0 lg:px-10 lg:py-16">
         <div className="pointer-events-none absolute inset-0 hidden lg:block">
           <div className="absolute left-1/2 top-0 h-64 w-[min(100%,520px)] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(239,68,68,0.08),transparent_70%)]" />
         </div>

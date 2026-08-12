@@ -31,9 +31,9 @@ export function AuthorWizardSteps({
               <span
                 className={cn(
                   "grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-bold sm:size-8",
-                  done && "bg-[var(--game-connect-dots)] text-white",
-                  active && "bg-[#111111] text-white ring-2 ring-[#111111]/15 sm:ring-4",
-                  !done && !active && "border border-[var(--gamibar-border)] bg-white text-[#737373]",
+                  done && "bg-[var(--gamibar-brand)] text-white",
+                  active && "bg-[var(--foreground)] text-[var(--background)] ring-2 ring-[var(--gamibar-brand)]/20 sm:ring-4",
+                  !done && !active && "border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--muted-foreground)]",
                 )}
               >
                 {done ? "✓" : index + 1}
@@ -41,7 +41,7 @@ export function AuthorWizardSteps({
               <span
                 className={cn(
                   "max-w-[4.5rem] truncate text-center text-[10px] font-semibold sm:max-w-none sm:text-xs",
-                  active ? "text-[#111111]" : done ? "text-[var(--game-connect-dots-deep)]" : "text-[#737373]",
+                  active ? "text-[var(--foreground)]" : done ? "text-[var(--gamibar-brand)]" : "text-[var(--muted-foreground)]",
                 )}
               >
                 {compact ? step.short : step.label}
@@ -51,7 +51,7 @@ export function AuthorWizardSteps({
               <div
                 className={cn(
                   "mx-1 h-px flex-1 min-w-[8px] sm:mx-2",
-                  index < currentIndex ? "bg-[var(--game-connect-dots)]" : "bg-[var(--gamibar-border)]",
+                  index < currentIndex ? "bg-[var(--gamibar-brand)]" : "bg-[var(--gamibar-border)]",
                 )}
               />
             )}

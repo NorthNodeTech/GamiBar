@@ -83,7 +83,7 @@ export function validateGamePayload(
     if (payload.questions.length < GAME_CONFIG.quiz.minQuestions) {
       return { ok: false, error: "Add at least one question." };
     }
-    if (payload.questions.length > GAME_CONFIG.quiz.maxQuestions) {
+    if (payload.questions.length > GAME_CONFIG.quiz.maxQuestions && GAME_CONFIG.quiz.maxQuestions > 0) {
       return {
         ok: false,
         error: `Use at most ${GAME_CONFIG.quiz.maxQuestions} questions.`,

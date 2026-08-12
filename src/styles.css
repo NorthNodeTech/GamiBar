@@ -850,4 +850,77 @@
       max-height: min(42vh, 420px);
     }
   }
+
+  /* Author portal — shared card + panel surfaces */
+  .author-card {
+    border-radius: 1.25rem;
+    border: 1px solid var(--gamibar-border);
+    background: var(--gamibar-surface);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .author-card-interactive {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+
+  .author-card-interactive:hover {
+    box-shadow: var(--shadow-lift);
+  }
+
+  .author-hero-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--gamibar-brand) 18%, var(--gamibar-border));
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(239, 68, 68, 0.1), transparent 55%),
+      var(--gamibar-surface);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .author-hero-panel::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--gamibar-brand) 55%, transparent),
+      transparent
+    );
+  }
+
+  /* Author portal — touch targets + mobile layout helpers */
+  .tap-target {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .tap-target {
+      min-height: 0;
+      min-width: 0;
+    }
+  }
+
+  .author-shell main {
+    min-width: 0;
+  }
+
+  /* Landscape phones: tighter vertical rhythm */
+  @media (max-height: 480px) and (orientation: landscape) {
+    .author-shell header {
+      position: relative;
+    }
+
+    .author-page {
+      padding-bottom: 0.75rem;
+    }
+  }
 }

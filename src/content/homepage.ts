@@ -105,7 +105,7 @@ const MODE_PRESENTATION: Record<
 function gameModeMetaLine(mode: GameMode): string {
   switch (mode) {
     case "quiz":
-      return `${GAME_CONFIG.quiz.minQuestions}–${GAME_CONFIG.quiz.maxQuestions} MCQs · Accuracy-first ranking`;
+      return "Unlimited MCQs · Accuracy-first ranking";
     case "jigsaw":
       return `${JIGSAW_GRID.pieceCount} pieces · ${GAME_CONFIG.jigsaw.timeLimitSeconds}s timer`;
     case "connect_dots":
@@ -269,7 +269,7 @@ export const HOMEPAGE_FAQ_SECTION = {
 export const HOMEPAGE_FAQ = [
   {
     question: "Can I use my own questions and images?",
-    answer: `Yes. Quiz Challenge uses your multiple-choice bank — add as many questions as you need (up to ${GAME_CONFIG.quiz.maxQuestions}). Jigsaw Mission uses an image you upload. Connect Dots generates a fair grid puzzle for the difficulty you choose.`,
+    answer: `Yes. Quiz Challenge uses your multiple-choice bank — add as many questions as you need. Jigsaw Mission uses an image you upload. Connect Dots generates a fair grid puzzle for the difficulty you choose.`,
   },
   {
     question: "Do students need an account to join?",
