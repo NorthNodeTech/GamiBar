@@ -54,6 +54,8 @@ function publicConnectDotsBoard(
       question: p.question,
       answer: p.answer,
     })),
+    /** Maze routing paths — required for auto-draw on correct dot links. */
+    solution: config.solution,
   };
 }
 

@@ -1,4 +1,5 @@
 import type { QuizQuestionDraft } from "@/lib/game/types";
+import { readTileRotations, readTileLayouts } from "@/lib/game/jigsaw-tile-rewards";
 
 export type JigsawMissionPayload = {
   phase?: "quiz" | "assemble";
@@ -6,6 +7,12 @@ export type JigsawMissionPayload = {
   firstRoundComplete?: boolean;
   /** Current question id during retry rounds. */
   retryQuestionId?: string | null;
+  /** Unique tile ids the student has earned from correct answers. */
+  earnedTileIds?: string[];
+  /** Visual card rotation per earned tile id (0, 90, 180, or 270 degrees). */
+  tileRotations?: Record<string, 0 | 90 | 180 | 270>;
+  /** Scrambled collection placement per earned tile id. */
+  tileLayouts?: Record<string, { x: number; y: number; z: number }>;
 };
 
 export function readJigsawMissionPayload(raw: Record<string, unknown> | undefined): JigsawMissionPayload {
@@ -20,6 +27,17 @@ export function readJigsawMissionPayload(raw: Record<string, unknown> | undefine
         : raw.retryQuestionId === null
           ? null
           : undefined,
+    earnedTileIds: Array.isArray(raw.earnedTileIds)
+      ? raw.earnedTileIds.filter((id): id is string => typeof id === "string")
+      : undefined,
+    tileRotations: (() => {
+      const rotations = readTileRotations(raw);
+      return Object.keys(rotations).length > 0 ? rotations : undefined;
+    })(),
+    tileLayouts: (() => {
+      const layouts = readTileLayouts(raw);
+      return Object.keys(layouts).length > 0 ? layouts : undefined;
+    })(),
   };
 }
 

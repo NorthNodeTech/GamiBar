@@ -41,6 +41,7 @@ type ConnectDotsMatchBoardProps = {
   completed?: boolean;
   onProgress?: (matched: number, total: number) => void;
   onMatchesChange?: (matches: ConnectDotsMatchMap) => void;
+  onRoutesChange?: (routes: Record<string, RouteCell[]>) => void;
   onComplete?: (matches: ConnectDotsMatchMap, routes: Record<string, RouteCell[]>) => void;
   /** Restore a finished or in-progress board (e.g. after reconnect). */
   initialMatches?: ConnectDotsMatchMap;
@@ -113,6 +114,7 @@ export function ConnectDotsMatchBoard({
   completed = false,
   onProgress,
   onMatchesChange,
+  onRoutesChange,
   onComplete,
   className,
   initialMatches,
@@ -219,6 +221,10 @@ export function ConnectDotsMatchBoard({
     onMatchesChange?.(locked);
   }, [locked, onMatchesChange]);
 
+  useEffect(() => {
+    onRoutesChange?.(Object.fromEntries(lockedRoutes));
+  }, [lockedRoutes, onRoutesChange]);
+
   const frozen = disabled || completed;
 
   useEffect(() => {
@@ -227,11 +233,16 @@ export function ConnectDotsMatchBoard({
 
   useEffect(() => {
     if (disabled || completedRef.current) return;
-    if (matchedCount === pairs.length && pairs.length > 0) {
+    const allMatched = matchedCount === pairs.length && pairs.length > 0;
+    const allRouted = pairs.every((pair) => {
+      const route = lockedRoutes.get(pair.id);
+      return Array.isArray(route) && route.length >= 2;
+    });
+    if (allMatched && allRouted) {
       completedRef.current = true;
       onComplete?.(locked, Object.fromEntries(lockedRoutes));
     }
-  }, [disabled, completed, locked, lockedRoutes, matchedCount, onComplete, pairs.length]);
+  }, [disabled, completed, locked, lockedRoutes, matchedCount, onComplete, pairs]);
 
   const dotFor = useCallback(
     (endpoint: Endpoint): DotPoint | null => dotPositions.get(dotKey(endpoint)) ?? null,

@@ -19,6 +19,7 @@ import {
   submitQuizJigsawAnswer,
   submitJigsawMissionAnswer,
   submitJigsawMissionAssembly,
+  rotateJigsawMissionTile,
 } from "@/lib/game/room-engine";
 
 /** Client-side room API for static SPA (Supabase-backed). Same `{ data }` call shape as before. */
@@ -151,6 +152,19 @@ export async function submitJigsawMissionAnswerFn({
   };
 }) {
   return submitJigsawMissionAnswer(data);
+}
+
+export async function rotateJigsawMissionTileFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    tileId: string;
+    rotation: number;
+  };
+}) {
+  return rotateJigsawMissionTile(data);
 }
 
 export async function submitJigsawProgressFn({

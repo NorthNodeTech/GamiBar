@@ -17,7 +17,7 @@ import { AuthorWizardSteps } from "@/components/author/AuthorWizardSteps";
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
 import { GameModePicker } from "@/components/author/GameModePicker";
 import { GameTimerSettings } from "@/components/author/GameTimerSettings";
-import { ConnectDotsMatchBoard } from "@/components/games/ConnectDotsMatchBoard";
+import { ConnectDots } from "@/components/games/ConnectDots";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
@@ -543,11 +543,12 @@ function CreateRoomWizard() {
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
                       <div>
                         <p className="text-sm font-semibold text-[#111111]">
-                          {questions.length} question{questions.length === 1 ? "" : "s"} ={" "}
-                          {questions.length} puzzle piece{questions.length === 1 ? "" : "s"}
+                          {questions.length} question{questions.length === 1 ? "" : "s"} ·{" "}
+                          {jigsawGrid.tileCount} square tile{jigsawGrid.tileCount === 1 ? "" : "s"}
                         </p>
                         <p className="text-xs text-[#737373]">
-                          Grid auto-splits into {jigsawGrid.cols}×{jigsawGrid.rows} · wrong answers retry at the end
+                          Image splits into a {jigsawGrid.cols}×{jigsawGrid.rows} grid · wrong answers retry at
+                          the end
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -701,6 +702,17 @@ function CreateRoomWizard() {
   );
 }
 
+function isQuizQuestionComplete(item: QuizQuestionDraft): boolean {
+  return Boolean(
+    item.prompt.trim() &&
+      item.correctOption &&
+      item.options.A.trim() &&
+      item.options.B.trim() &&
+      item.options.C.trim() &&
+      item.options.D.trim(),
+  );
+}
+
 function QuizEditor({
   questions,
   activeQ,
@@ -718,6 +730,9 @@ function QuizEditor({
 }) {
   const q = questions[activeQ]!;
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
+  const currentComplete = isQuizQuestionComplete(q);
+  const hasNext = activeQ < questions.length - 1;
+  const hasPrev = activeQ > 0;
   const pct = Math.round((progress.done / progress.total) * 100);
   const accentBadge =
     accent === "purple"
@@ -759,14 +774,7 @@ function QuizEditor({
 
       <div className="flex flex-wrap gap-1.5">
         {questions.map((item, i) => {
-          const done = Boolean(
-            item.prompt.trim() &&
-              item.correctOption &&
-              item.options.A.trim() &&
-              item.options.B.trim() &&
-              item.options.C.trim() &&
-              item.options.D.trim(),
-          );
+          const done = isQuizQuestionComplete(item);
           return (
             <button
               key={item.id}
@@ -851,6 +859,32 @@ function QuizEditor({
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--gamibar-border)] pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 rounded-xl"
+            disabled={!hasPrev}
+            onClick={() => setActiveQ(activeQ - 1)}
+          >
+            <ChevronLeft className="mr-1 size-4" />
+            Previous
+          </Button>
+          <p className="text-center text-xs text-[#737373]">
+            Question {activeQ + 1} of {questions.length}
+            {currentComplete ? " · Ready" : ""}
+          </p>
+          <Button
+            type="button"
+            className="h-11 rounded-xl bg-[#111111] hover:bg-black"
+            disabled={!hasNext}
+            onClick={() => setActiveQ(activeQ + 1)}
+          >
+            Next question
+            <ChevronRight className="ml-1 size-4" />
+          </Button>
         </div>
       </div>
     </div>
@@ -970,7 +1004,7 @@ function ConnectDotsPairEditor({
             {pairs.length} pair{pairs.length === 1 ? "" : "s"}
           </p>
           <p className="text-xs text-[#737373]">
-            Questions on the left, shuffled answers on the right. Timer: {timerLabel}.
+            Colored dots on the grid — one per question and answer. Timer: {timerLabel}.
           </p>
         </div>
         <div className="flex gap-2">
@@ -1100,9 +1134,19 @@ function ConnectDotsPairEditor({
             Shuffle answers
           </Button>
         </div>
-        <ConnectDotsMatchBoard pairs={pairs} shuffleSeed={board.seed} disabled />
+        <ConnectDots
+          board={{
+            gridSize: board.gridSize,
+            difficulty: board.difficulty,
+            pairs: board.pairs,
+            seed: board.seed,
+          }}
+          solution={board.solution}
+          showControls={false}
+          disabled
+        />
         <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
-          Preview only — students draw paths between matching dots during the live game.
+          Preview only — students hover dots to read text, then drag between matching pairs.
         </p>
       </div>
     </div>

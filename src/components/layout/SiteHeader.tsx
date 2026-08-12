@@ -27,10 +27,10 @@ export function SiteHeader() {
       <div className="safe-area-x mx-auto grid h-14 w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:h-16 md:grid-cols-[auto_1fr_auto] md:gap-4">
         <Link
           to="/"
-          className="group col-start-1 row-start-1 flex min-w-0 items-center gap-2 sm:gap-2.5"
+          className="group col-start-1 row-start-1 flex min-w-0 items-center gap-2.5 sm:gap-3"
         >
-          <Logo size={36} />
-          <span className="truncate font-display text-base font-bold tracking-tight text-[var(--foreground)] transition-colors group-hover:text-[var(--muted-foreground)] sm:text-lg">
+          <Logo size={36} className="relative top-px" />
+          <span className="truncate font-display text-base font-bold leading-none tracking-tight text-[var(--foreground)] transition-colors group-hover:text-[var(--muted-foreground)] sm:text-lg">
             Gami<span className="font-black text-red-500">BAR</span>
           </span>
         </Link>

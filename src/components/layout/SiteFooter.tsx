@@ -31,9 +31,9 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-[#E5E7EB] bg-[#111111] text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
         <div>
-          <div className="flex items-center gap-3">
-            <Logo size={36} />
-            <span className="font-display text-base font-bold text-white">
+          <div className="flex items-center gap-2.5">
+            <Logo size={36} tone="on-dark" />
+            <span className="font-display text-base font-bold leading-none text-white">
               Gami<span className="text-red-500">BAR</span>
             </span>
           </div>
@@ -41,6 +41,26 @@ export function SiteFooter() {
             Where learning becomes a game. Live quizzes, collaborative puzzles and connect-the-dots
             challenges for classrooms.
           </p>
+          <div className="mt-5 flex items-center gap-2.5">
+            <span className="text-[11px] text-[#737373]">by</span>
+            <a
+              href="https://northnode.live/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-lg bg-white/95 p-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              aria-label="Visit NorthNode"
+            >
+              <img
+                src={northNodeLogo}
+                alt="NorthNode"
+                width={120}
+                height={40}
+                loading="lazy"
+                decoding="async"
+                className="h-7 w-auto max-w-[7.5rem] object-contain sm:h-8"
+              />
+            </a>
+          </div>
         </div>
 
         <FooterCol title="Product" items={productItems} />
@@ -55,18 +75,17 @@ export function SiteFooter() {
           </p>
           <div className="flex flex-col gap-3 sm:items-end">
             <span className="text-xs text-[#525252]">Built for authors and students</span>
-            <div className="flex items-center gap-2.5">
-              <span className="text-[11px] text-[#737373]">Software by</span>
-              <img
-                src={northNodeLogo}
-                alt="North Node"
-                width={120}
-                height={40}
-                loading="lazy"
-                decoding="async"
-                className="h-7 w-auto max-w-[7.5rem] object-contain opacity-90 sm:h-8"
-              />
-            </div>
+            <p className="text-[11px] text-[#737373]">
+              Powered by{" "}
+              <a
+                href="https://northnode.live/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[#A3A3A3] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              >
+                northnode
+              </a>
+            </p>
           </div>
         </div>
       </div>

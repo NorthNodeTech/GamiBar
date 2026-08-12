@@ -16,6 +16,7 @@ import { themeInitScript } from "@/lib/theme-store";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { ScrollManager } from "@/components/layout/ScrollManager";
 import { SignatureIntroLoader } from "@/components/layout/SignatureIntroLoader";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { AuthProvider } from "@/lib/auth-store";
@@ -116,8 +117,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap",
       },
-      { rel: "icon", href: "/favicon.webp", type: "image/webp" },
-      { rel: "apple-touch-icon", href: "/favicon.webp" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -131,6 +132,11 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if(location.pathname==="/"&&!location.hash){try{history.scrollRestoration="manual";scrollTo(0,0);}catch(e){}}`,
+          }}
+        />
         <HeadContent />
       </head>
       <body className="bg-background font-sans text-foreground antialiased selection:bg-neutral-200 dark:selection:bg-neutral-700">
@@ -168,6 +174,7 @@ function RootComponent() {
         <AuthProvider>
           <PlayerProvider>
             <SessionProvider>
+              <ScrollManager />
               <SignatureIntroLoader />
               {!hideChrome && <AmbientBackground />}
               <div className="relative z-0 flex min-h-dvh-screen max-w-[100vw] flex-col overflow-x-clip text-foreground selection:bg-neutral-200 dark:selection:bg-neutral-700">

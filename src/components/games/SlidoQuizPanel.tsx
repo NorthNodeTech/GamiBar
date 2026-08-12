@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 
@@ -31,8 +31,11 @@ type SlidoQuizPanelProps = {
   selected: QuizOptionId | null;
   feedback: "correct" | "wrong" | null;
   submitting: boolean;
+  disabled?: boolean;
   onSelect: (opt: QuizOptionId) => void;
   onSubmit: () => void;
+  /** Anchor for reward fly-out animations (correct feedback banner). */
+  feedbackRef?: RefObject<HTMLDivElement | null>;
 };
 
 export function SlidoQuizPanel({
@@ -42,26 +45,28 @@ export function SlidoQuizPanel({
   selected,
   feedback,
   submitting,
+  disabled = false,
   onSelect,
   onSubmit,
+  feedbackRef,
 }: SlidoQuizPanelProps) {
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
 
   return (
     <div className="flex flex-col">
-      <div className="mb-4 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <span className="rounded-full bg-[#EDE9FE] px-3 py-1 text-xs font-bold text-[#5B21B6]">
+      <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <span className="w-fit rounded-full bg-[#EDE9FE] px-3 py-1 text-xs font-bold text-[#5B21B6]">
           Question {questionIndex + 1} of {totalQuestions}
         </span>
         <div
-          className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:overflow-visible sm:px-0"
+          className="flex max-w-full flex-wrap gap-1 sm:flex-nowrap sm:overflow-visible"
           aria-hidden="true"
         >
           {Array.from({ length: totalQuestions }, (_, i) => (
             <div
               key={i}
               className={cn(
-                "h-1.5 w-4 rounded-full transition-colors",
+                "h-1.5 w-3 shrink-0 rounded-full transition-colors sm:w-4",
                 i < questionIndex
                   ? "bg-[#7C3AED]"
                   : i === questionIndex
@@ -83,14 +88,14 @@ export function SlidoQuizPanel({
         >
           <h2
             id={`quiz-question-${question.id}`}
-            className="font-display text-[clamp(1.125rem,3.5vw,1.5rem)] font-bold leading-snug text-[#111111]"
+            className="font-display text-[clamp(1.0625rem,4.2vw,1.5rem)] font-bold leading-snug text-[#111111]"
           >
             {question.prompt}
           </h2>
         </motion.div>
       </AnimatePresence>
 
-      <fieldset className="mt-6 border-0 p-0">
+      <fieldset className="mt-4 border-0 p-0 md:mt-6">
         <legend className="sr-only">
           Answer choices for question {questionIndex + 1} of {totalQuestions}
         </legend>
@@ -99,12 +104,12 @@ export function SlidoQuizPanel({
             <button
               key={opt}
               type="button"
-              disabled={submitting || feedback !== null}
+              disabled={submitting || feedback !== null || disabled}
               onClick={() => onSelect(opt)}
               aria-pressed={selected === opt}
               aria-label={`Option ${opt}: ${question.options[opt]}`}
               className={cn(
-                "flex min-h-[3.25rem] w-full touch-manipulation items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-semibold text-white transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 sm:min-h-14 sm:py-3",
+                "flex min-h-14 w-full touch-manipulation items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-semibold text-white transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 sm:min-h-14 sm:py-3",
                 OPTION_COLORS[opt],
                 selected === opt && "scale-[1.02] ring-4 ring-white/40",
                 feedback !== null && selected !== opt && "opacity-50",
@@ -125,6 +130,7 @@ export function SlidoQuizPanel({
       <AnimatePresence>
         {feedback && (
           <motion.div
+            ref={feedback === "correct" ? feedbackRef : undefined}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
@@ -155,10 +161,10 @@ export function SlidoQuizPanel({
       {!feedback && (
         <button
           type="button"
-          disabled={!selected || submitting}
+          disabled={!selected || submitting || disabled}
           onClick={onSubmit}
           aria-label={submitting ? "Checking answer" : "Submit answer"}
-          className="mt-6 flex h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-[#111111] text-sm font-bold text-white transition-colors hover:bg-black active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 disabled:opacity-40 sm:h-14"
+          className="mt-4 flex h-12 min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-[#111111] text-sm font-bold text-white transition-colors hover:bg-black active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 disabled:opacity-40 md:mt-6 md:h-14"
         >
           {submitting ? "Checking…" : "Submit answer"}
         </button>
@@ -171,10 +177,12 @@ export function SlidoProgressHeader({
   piecesUnlocked,
   totalPieces,
   endsAt,
+  onTimedOut,
 }: {
   piecesUnlocked: number;
   totalPieces: number;
   endsAt: number | null;
+  onTimedOut?: (timedOut: boolean) => void;
 }) {
   const [left, setLeft] = useState<number | null>(null);
 
@@ -186,17 +194,33 @@ export function SlidoProgressHeader({
     return () => clearInterval(id);
   }, [endsAt]);
 
+  const timedOutRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (left == null) return;
+    const next = left === 0;
+    if (timedOutRef.current === next) return;
+    timedOutRef.current = next;
+    onTimedOut?.(next);
+  }, [left, onTimedOut]);
+
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-[#7C3AED]">Puzzle Quest</p>
-        <p className="text-sm font-semibold text-[#111111]">
+    <div className="flex min-w-0 items-center justify-between gap-2 border-b border-[#E5E7EB] bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6 sm:py-3">
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[#7C3AED] sm:text-xs">
+          Jigsaw Mission
+        </p>
+        <p className="truncate text-xs font-semibold text-[#111111] sm:text-sm">
           {piecesUnlocked} / {totalPieces} pieces unlocked
         </p>
       </div>
       {left != null && (
-        <span className="rounded-full bg-[#EDE9FE] px-3 py-1 text-xs font-bold tabular-nums text-[#5B21B6]">
-          {left}s
+        <span
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-bold tabular-nums",
+            left === 0 ? "bg-red-100 text-red-800" : "bg-[#EDE9FE] text-[#5B21B6]",
+          )}
+        >
+          {left === 0 ? "Time's up" : `${left}s`}
         </span>
       )}
     </div>

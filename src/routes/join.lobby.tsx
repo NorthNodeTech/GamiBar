@@ -27,10 +27,10 @@ function StudentLobbyPage() {
   const participant = useMemo(() => loadParticipantSession(), [code]);
   const reconnectToken =
     participant && participant.code === code ? participant.reconnectToken : undefined;
-  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling(
-    { code, reconnectToken },
-    1200,
-  );
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling({
+    code,
+    reconnectToken,
+  });
   const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
@@ -131,7 +131,11 @@ function StudentLobbyPage() {
   return (
     <>
       {isReconnecting ? (
-        <ConnectionBanner onRetry={retry} retrying={retrying} />
+        <ConnectionBanner
+          message="Connection interrupted. Live updates paused — retrying automatically."
+          onRetry={retry}
+          retrying={retrying}
+        />
       ) : null}
       <StudentLobbyView
         roomName={room.name}

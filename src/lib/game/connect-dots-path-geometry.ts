@@ -208,3 +208,34 @@ export function routingGridSize(pairCount: number): { rows: number; cols: number
   const cols = Math.max(6, Math.min(14, pairCount + 4));
   return { rows, cols };
 }
+
+/** Server-side validation for Connect Dots match-board completion. */
+export function validateConnectDotsMatchRoutes(
+  routes: Record<string, RouteCell[]>,
+  pairIds: string[],
+  rows: number,
+  cols: number,
+): { ok: true } | { ok: false; error: string } {
+  const grid = { x: 0, y: 0, width: cols, height: rows };
+  const locked = new Map<string, RouteCell[]>();
+
+  for (const pairId of pairIds) {
+    const cells = routes[pairId];
+    if (!Array.isArray(cells) || cells.length < 2) {
+      return { ok: false, error: "Complete every connection with a valid path before finishing." };
+    }
+
+    const entry = cells[0]!;
+    const exit = cells[cells.length - 1]!;
+    const result = validateRoutePath(cells, rows, cols, locked, grid, pairId, entry, exit);
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: "One or more paths overlap or leave the board. Adjust your routes and try again.",
+      };
+    }
+    locked.set(pairId, cells);
+  }
+
+  return { ok: true };
+}

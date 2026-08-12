@@ -32,6 +32,7 @@ import {
 import {
   isRouteCellInGrid,
   routingGridSize,
+  validateConnectDotsMatchRoutes,
   type RouteCell,
 } from "@/lib/game/connect-dots-path-geometry";
 import {
@@ -43,8 +44,21 @@ import {
   resolveJigsawMissionQuestionId,
   retryPoolQuestionIds,
 } from "@/lib/game/jigsaw-mission-flow";
-import { validateJigsawLayout } from "@/lib/game/jigsaw-assembly";
-import type { RouteCell } from "@/lib/game/connect-dots-path-geometry";
+import {
+  jigsawAssemblyValidationMessage,
+  validateJigsawAssembly,
+} from "@/lib/game/jigsaw-assembly";
+import {
+  allQuestionsAnsweredCorrectly,
+  allTilesEarned,
+  ensureTileRotationsForEarned,
+  ensureTileLayoutsForEarned,
+  isTileCardRotation,
+  mergeEarnedTileIds,
+  readEarnedTileIds,
+  readTileRotations,
+  readTileLayouts,
+} from "@/lib/game/jigsaw-tile-rewards";
 import type {
   GamePayload,
   LeaderboardRow,
@@ -103,12 +117,32 @@ function isTimedOut(stored: StoredRoom): boolean {
   return stored.room.endsAt != null && Date.now() >= stored.room.endsAt;
 }
 
-function rejectIfNotAcceptingInput(stored: StoredRoom): { ok: false; error: string } | null {
+function rejectIfNotAcceptingInput(
+  stored: StoredRoom,
+): { ok: false; error: string } | null {
   if (stored.room.status !== "LIVE") {
     return { ok: false, error: "Game is not accepting answers." };
   }
   if (isTimedOut(stored)) {
     return { ok: false, error: "Time is up." };
+  }
+  return null;
+}
+
+async function rejectIfNotAcceptingInputAsync(
+  stored: StoredRoom,
+): Promise<{ ok: false; error: string } | null> {
+  if (stored.room.status !== "LIVE" && stored.room.status !== "COUNTDOWN") {
+    return { ok: false, error: "Game is not accepting answers." };
+  }
+  if (isTimedOut(stored)) {
+    if (stored.room.status === "LIVE" || stored.room.status === "COUNTDOWN") {
+      await finalizeGame(stored);
+    }
+    return { ok: false, error: "Time is up." };
+  }
+  if (stored.room.status !== "LIVE") {
+    return { ok: false, error: "Game is not accepting answers." };
   }
   return null;
 }
@@ -356,6 +390,37 @@ export async function reconnectParticipant(input: { reconnectToken: string }) {
   };
 }
 
+function backfillJigsawMissionTilePresentation(stored: StoredRoom, participantId: string): boolean {
+  if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") return false;
+
+  const attempt = stored.attempts.get(participantId);
+  if (!attempt) return false;
+
+  const { questions, jigsaw } = stored.room.payload;
+  const total = questions.length;
+  const earnedTileIds = readEarnedTileIds(
+    attempt.payload,
+    jigsaw.cols,
+    jigsaw.rows,
+    attempt.correctCount ?? 0,
+    total,
+  );
+  if (earnedTileIds.length === 0) return false;
+
+  const { tileRotations, changed: rotationsChanged } = ensureTileRotationsForEarned(
+    earnedTileIds,
+    readTileRotations(attempt.payload),
+  );
+  const { tileLayouts, changed: layoutsChanged } = ensureTileLayoutsForEarned(
+    earnedTileIds,
+    readTileLayouts(attempt.payload),
+  );
+  if (!rotationsChanged && !layoutsChanged) return false;
+
+  attempt.payload = { ...attempt.payload, tileRotations, tileLayouts };
+  return true;
+}
+
 export async function getRoomSnapshot(input: {
   roomId?: string;
   code?: string;
@@ -408,6 +473,12 @@ export async function getRoomSnapshot(input: {
           isCorrect: revealOwnAnswerCorrectness ? a.isCorrect : undefined,
         }))
       : [];
+
+  if (participantId && stored.room.mode === "jigsaw" && stored.room.payload.mode === "jigsaw") {
+    if (backfillJigsawMissionTilePresentation(stored, participantId)) {
+      await persist(stored);
+    }
+  }
 
   return {
     ok: true as const,
@@ -581,7 +652,7 @@ export async function submitQuizAnswer(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "quiz" || stored.room.payload.mode !== "quiz") {
     return { ok: false as const, error: "This room is not a quiz." };
@@ -667,7 +738,7 @@ export async function submitQuizJigsawAnswer(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "quiz_jigsaw" || stored.room.payload.mode !== "quiz_jigsaw") {
     return { ok: false as const, error: "This room is not a Puzzle Quest session." };
@@ -777,7 +848,7 @@ export async function submitJigsawMissionAnswer(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
     return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
@@ -806,6 +877,8 @@ export async function submitJigsawMissionAnswer(input: {
   }
 
   const total = questions.length;
+  const { cols, rows } = stored.room.payload.jigsaw;
+  const tileCount = Math.max(1, cols * rows);
   let mission = readJigsawMissionPayload(attempt.payload);
   if (mission.phase === undefined) {
     mission = initialJigsawMissionPayload();
@@ -854,10 +927,20 @@ export async function submitJigsawMissionAnswer(input: {
     });
     await persist(stored);
 
+    const earnedTileIds = readEarnedTileIds(
+      attempt.payload,
+      cols,
+      rows,
+      correctIds.size,
+      total,
+    );
+
     return {
       ok: true as const,
       correct: false,
-      piecesUnlocked: correctIds.size,
+      piecesUnlocked: earnedTileIds.length,
+      totalTiles: tileCount,
+      earnedTileIds,
       total,
       allPiecesUnlocked: false,
       isRetryRound: firstRoundComplete,
@@ -878,9 +961,18 @@ export async function submitJigsawMissionAnswer(input: {
     submittedAt: Date.now(),
   });
 
-  const piecesUnlocked = correctIds.size + 1;
-  attempt.correctCount = piecesUnlocked;
-  attempt.progress = piecesUnlocked / total;
+  const correctQuestionCount = correctIds.size + 1;
+  attempt.correctCount = correctQuestionCount;
+  attempt.progress = correctQuestionCount / total;
+
+  const existingEarned = readEarnedTileIds(attempt.payload, cols, rows, correctIds.size, total);
+  const earnedTileIds = mergeEarnedTileIds(
+    existingEarned,
+    correctQuestionCount,
+    total,
+    tileCount,
+    cols,
+  );
 
   if (!firstRoundComplete) {
     firstRoundIndex += 1;
@@ -892,30 +984,49 @@ export async function submitJigsawMissionAnswer(input: {
   const poolAfter = retryPoolQuestionIds(questions, new Set([...correctIds, input.questionId]));
   retryQuestionId = firstRoundComplete ? (poolAfter[0] ?? null) : null;
 
-  const allPiecesUnlocked = piecesUnlocked >= total;
+  const allQuestionsDone = allQuestionsAnsweredCorrectly(correctQuestionCount, total);
+  const allPiecesUnlocked = allQuestionsDone && allTilesEarned(earnedTileIds, tileCount);
+  const { tileRotations } = ensureTileRotationsForEarned(
+    earnedTileIds,
+    readTileRotations(attempt.payload),
+  );
+  const { tileLayouts } = ensureTileLayoutsForEarned(
+    earnedTileIds,
+    readTileLayouts(attempt.payload),
+  );
 
   pushEvent(stored, {
     type: "player_progress",
     participantId: participant.id,
     displayName: participant.displayName,
     progress: attempt.progress,
-    detail: `${piecesUnlocked}/${total} pieces`,
+    detail: `${earnedTileIds.length}/${tileCount} tiles · ${correctQuestionCount}/${total} questions`,
   });
 
   if (allPiecesUnlocked) {
-    attempt.payload = mergeJigsawMissionPayload(attempt.payload, {
-      phase: "assemble",
-      firstRoundIndex,
-      firstRoundComplete: true,
-      retryQuestionId: null,
-    });
+    attempt.payload = {
+      ...mergeJigsawMissionPayload(attempt.payload, {
+        phase: "assemble",
+        firstRoundIndex,
+        firstRoundComplete: true,
+        retryQuestionId: null,
+      }),
+      earnedTileIds,
+      tileRotations,
+      tileLayouts,
+    };
   } else {
-    attempt.payload = mergeJigsawMissionPayload(attempt.payload, {
-      phase: "quiz",
-      firstRoundIndex,
-      firstRoundComplete,
-      retryQuestionId,
-    });
+    attempt.payload = {
+      ...mergeJigsawMissionPayload(attempt.payload, {
+        phase: "quiz",
+        firstRoundIndex,
+        firstRoundComplete,
+        retryQuestionId,
+      }),
+      earnedTileIds,
+      tileRotations,
+      tileLayouts,
+    };
   }
 
   await persist(stored);
@@ -923,7 +1034,11 @@ export async function submitJigsawMissionAnswer(input: {
   return {
     ok: true as const,
     correct: true,
-    piecesUnlocked,
+    piecesUnlocked: earnedTileIds.length,
+    totalTiles: tileCount,
+    earnedTileIds,
+    tileRotations,
+    tileLayouts,
     total,
     allPiecesUnlocked,
     isRetryRound: inRetryRound || (firstRoundComplete && !allPiecesUnlocked),
@@ -939,6 +1054,62 @@ export async function submitJigsawMissionAnswer(input: {
   };
 }
 
+export async function rotateJigsawMissionTile(input: {
+  roomId: string;
+  reconnectToken: string;
+  tileId: string;
+  rotation: number;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
+  if (reject) return reject;
+  if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
+    return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
+  }
+
+  if (!isTileCardRotation(input.rotation)) {
+    return { ok: false as const, error: "Invalid rotation." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const attempt = ensureAttemptRecord(stored, participant.id);
+  if (attempt.completed) {
+    return { ok: false as const, error: "You already completed this puzzle." };
+  }
+
+  const { questions, jigsaw } = stored.room.payload;
+  const total = questions.length;
+  const earnedTileIds = readEarnedTileIds(
+    attempt.payload,
+    jigsaw.cols,
+    jigsaw.rows,
+    attempt.correctCount ?? 0,
+    total,
+  );
+
+  if (!earnedTileIds.includes(input.tileId)) {
+    return { ok: false as const, error: "That puzzle piece has not been earned yet." };
+  }
+
+  const tileRotations = {
+    ...readTileRotations(attempt.payload),
+    [input.tileId]: input.rotation,
+  };
+
+  attempt.payload = { ...attempt.payload, tileRotations };
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    tileId: input.tileId,
+    rotation: input.rotation,
+    tileRotations,
+  };
+}
+
 export async function submitJigsawProgress(input: {
   roomId: string;
   reconnectToken: string;
@@ -949,7 +1120,7 @@ export async function submitJigsawProgress(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "jigsaw") {
     return { ok: false as const, error: "This room is not a jigsaw." };
@@ -1022,7 +1193,7 @@ export async function submitJigsawMissionAssembly(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "jigsaw" || stored.room.payload.mode !== "jigsaw") {
     return { ok: false as const, error: "This room is not a Jigsaw Mission session." };
@@ -1031,7 +1202,7 @@ export async function submitJigsawMissionAssembly(input: {
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
   if (!participant) return { ok: false as const, error: "Participant not found." };
 
-  const { questions } = stored.room.payload;
+  const { questions, jigsaw } = stored.room.payload;
   const questionTotal = questions.length;
   const gridTotal = Math.max(1, input.totalPieces);
   const attempt = ensureAttemptRecord(stored, participant.id);
@@ -1047,27 +1218,34 @@ export async function submitJigsawMissionAssembly(input: {
     };
   }
 
+  const earnedTileIds = readEarnedTileIds(
+    attempt.payload,
+    jigsaw.cols,
+    jigsaw.rows,
+    attempt.correctCount ?? 0,
+    questionTotal,
+  );
+  if (!allTilesEarned(earnedTileIds, gridTotal)) {
+    return {
+      ok: false as const,
+      error: "Earn every puzzle tile before submitting the assembly.",
+    };
+  }
+
   const layout = input.layout.slice(0, gridTotal);
+  const tileRotations = readTileRotations(attempt.payload);
   attempt.payload = {
     ...mergeJigsawMissionPayload(attempt.payload, { phase: "assemble" }),
     assemblyLayout: layout,
   };
 
-  if (layout.some((p) => p < 0)) {
+  const validation = validateJigsawAssembly(layout, tileRotations, gridTotal, jigsaw.cols, jigsaw.rows);
+  if (!validation.ok) {
     await persist(stored);
     return {
       ok: true as const,
       solved: false,
-      message: "Place every puzzle piece on the board before submitting.",
-    };
-  }
-
-  if (!validateJigsawLayout(layout, gridTotal)) {
-    await persist(stored);
-    return {
-      ok: true as const,
-      solved: false,
-      message: "Not quite — the image is not complete yet. Keep rearranging the pieces.",
+      message: jigsawAssemblyValidationMessage(validation.reason),
     };
   }
 
@@ -1104,7 +1282,7 @@ export async function submitConnectDotsPaths(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
     return { ok: false as const, error: "This room is not Connect Dots." };
@@ -1182,7 +1360,7 @@ export async function submitConnectDotsMatches(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
     return { ok: false as const, error: "This room is not Connect Dots." };
@@ -1200,37 +1378,31 @@ export async function submitConnectDotsMatches(input: {
   const totalPairs = contentPairs.length || stored.room.payload.connectDots.pairCount;
   const sanitized = sanitizeConnectDotsMatches(input.matches, contentPairs);
   const connected = Object.keys(sanitized).length;
-
-  if (connected === totalPairs && totalPairs > 0) {
-    const routes = input.routes ?? {};
-    const { rows, cols } = routingGridSize(totalPairs);
-    for (const pairId of Object.keys(sanitized)) {
-      const route = routes[pairId];
-      if (!Array.isArray(route) || route.length < 2) {
-        return {
-          ok: false as const,
-          error: "Complete every connection with a valid path before finishing.",
-        };
-      }
-      for (const cell of route as RouteCell[]) {
-        if (!isRouteCellInGrid(cell, rows, cols)) {
-          return {
-            ok: false as const,
-            error: "Complete every connection with a valid path before finishing.",
-          };
-        }
-      }
-    }
-  }
+  const { rows, cols } = routingGridSize(totalPairs);
 
   attempt.correctCount = connected;
   attempt.progress = totalPairs ? connected / totalPairs : 0;
+  const existingPayload = attempt.payload ?? {};
   attempt.payload = {
+    ...existingPayload,
     matches: sanitized,
     ...(input.routes ? { routes: input.routes } : {}),
   };
 
   const fullyComplete = connected === totalPairs && totalPairs > 0;
+
+  if (fullyComplete) {
+    const routes = (attempt.payload.routes as Record<string, RouteCell[]> | undefined) ?? {};
+    const routeValidation = validateConnectDotsMatchRoutes(
+      routes,
+      Object.keys(sanitized),
+      rows,
+      cols,
+    );
+    if (!routeValidation.ok) {
+      return { ok: false as const, error: routeValidation.error };
+    }
+  }
 
   if (fullyComplete) {
     const completedAt = Date.now();
@@ -1271,7 +1443,7 @@ export async function recordConnectDotsIncorrectAttempt(input: {
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  const reject = rejectIfNotAcceptingInput(stored);
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
   if (reject) return reject;
   if (stored.room.mode !== "connect_dots" || stored.room.payload.mode !== "connect_dots") {
     return { ok: false as const, error: "This room is not Connect Dots." };

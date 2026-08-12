@@ -1,15 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 
 import { friendlyGameError } from "@/lib/accessibility";
 import { ConnectDots } from "@/components/games/ConnectDots";
-import { ConnectDotsMatchBoard } from "@/components/games/ConnectDotsMatchBoard";
 import { JigsawMissionAssembly } from "@/components/games/JigsawMissionAssembly";
+import { JigsawMissionFlyingTile } from "@/components/games/JigsawMissionFlyingTile";
+import { JigsawMissionSuccess } from "@/components/games/JigsawMissionSuccess";
+import {
+  JigsawMissionRewardStack,
+  tileLayoutRect,
+  tileMetaFromId,
+} from "@/components/games/JigsawMissionRewardStack";
 import { JigsawPuzzle } from "@/components/games/JigsawPuzzle";
 import { PuzzleQuestBoard } from "@/components/games/PuzzleQuestBoard";
 import { SlidoProgressHeader, SlidoQuizPanel } from "@/components/games/SlidoQuizPanel";
 import { GameCompletionScreen } from "@/components/games/GameCompletionScreen";
+import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import {
   ConnectionBanner,
@@ -21,20 +29,33 @@ import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, PUZZLE_QUEST_GRID } from "@/l
 import { buildGameCompletionViewModel } from "@/lib/game/completion";
 import {
   isJigsawMissionRetryRound,
+  mergeJigsawMissionPayload,
+  nextRetryQuestionId,
   readJigsawMissionPayload,
   resolveJigsawMissionQuestionId,
   retryPoolQuestionIds,
 } from "@/lib/game/jigsaw-mission-flow";
+import {
+  mergeTileLayoutsForNewTiles,
+  mergeTileRotationsForNewTiles,
+  newlyEarnedTileIds,
+  nextClockwiseTileCardRotation,
+  readEarnedTileIds,
+  readTileLayouts,
+  readTileRotations,
+} from "@/lib/game/jigsaw-tile-rewards";
+import type { JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
 import { isStudentSessionFinished } from "@/lib/game/mode-registry";
+import { useJigsawTouchLayout } from "@/lib/game/use-jigsaw-mobile-layout";
 import { loadParticipantSession, saveParticipantSession } from "@/lib/game/client-session";
 import {
   getRoomSnapshotFn,
   reconnectParticipantFn,
-  submitConnectDotsMatchesFn,
   submitConnectDotsPathsFn,
   recordConnectDotsIncorrectAttemptFn,
   submitJigsawMissionAnswerFn,
   submitJigsawMissionAssemblyFn,
+  rotateJigsawMissionTileFn,
   submitJigsawProgressFn,
   submitQuizAnswerFn,
   submitQuizJigsawAnswerFn,
@@ -51,16 +72,18 @@ export const Route = createFileRoute("/play/$roomId")({
   component: StudentPlayPage,
 });
 
+const EMPTY_MISSION_PAYLOAD: Record<string, unknown> = {};
+
 function StudentPlayPage() {
   const { roomId } = Route.useParams();
   const navigate = useNavigate();
   const participant = useMemo(() => loadParticipantSession(), [roomId]);
   const reconnectToken =
     participant && participant.roomId === roomId ? participant.reconnectToken : undefined;
-  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling(
-    { roomId, reconnectToken },
-    1200,
-  );
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling({
+    roomId,
+    reconnectToken,
+  });
 
   useEffect(() => {
     if (!reconnectToken) return;
@@ -164,6 +187,18 @@ function StudentPlayPage() {
         participantId={snapshot.participantId}
         onHome={() => navigate({ to: "/" })}
       >
+        {room.mode === "jigsaw" &&
+          room.payload.mode === "jigsaw" &&
+          room.payload.jigsaw.imageUrl && (
+            <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--gamibar-border)] shadow-[var(--shadow-soft)]">
+              <img
+                src={room.payload.jigsaw.imageUrl}
+                alt="Your completed puzzle"
+                className="aspect-square w-full object-cover"
+                draggable={false}
+              />
+            </div>
+          )}
         {room.mode === "quiz_jigsaw" &&
           typeof snapshot.myAttempt?.payload?.rewardCode === "string" &&
           snapshot.myAttempt.payload.rewardCode && (
@@ -252,9 +287,10 @@ function StudentPlayPage() {
           cols={room.payload.jigsaw.cols}
           rows={room.payload.jigsaw.rows}
           correctQuestionIds={snapshot.myAnswers.map((a) => a.questionId)}
-          missionPayload={snapshot.myAttempt?.payload ?? {}}
+          missionPayload={snapshot.myAttempt?.payload ?? EMPTY_MISSION_PAYLOAD}
           endsAt={room.endsAt}
           completed={Boolean(snapshot.myAttempt?.completed)}
+          wrongCount={snapshot.myAttempt?.wrongCount ?? 0}
           instruction={room.instruction}
         />,
       );
@@ -333,7 +369,13 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TimerBar({ endsAt }: { endsAt: number | null }) {
+function TimerBar({
+  endsAt,
+  onTimedOut,
+}: {
+  endsAt: number | null;
+  onTimedOut?: (timedOut: boolean) => void;
+}) {
   const [left, setLeft] = useState<number | null>(null);
   useEffect(() => {
     if (!endsAt) return;
@@ -342,10 +384,25 @@ function TimerBar({ endsAt }: { endsAt: number | null }) {
     const id = window.setInterval(tick, 250);
     return () => clearInterval(id);
   }, [endsAt]);
+  const timedOutRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (left == null) return;
+    const next = left === 0;
+    if (timedOutRef.current === next) return;
+    timedOutRef.current = next;
+    onTimedOut?.(next);
+  }, [left, onTimedOut]);
   if (left == null) return null;
   return (
-    <span className="rounded-full bg-[var(--gamibar-brand-soft)] px-3 py-1 text-xs font-bold tabular-nums text-[var(--gamibar-brand)]">
-      {left}s
+    <span
+      className={cn(
+        "rounded-full px-3 py-1 text-xs font-bold tabular-nums",
+        left === 0
+          ? "bg-red-100 text-red-800"
+          : "bg-[var(--gamibar-brand-soft)] text-[var(--gamibar-brand)]",
+      )}
+    >
+      {left === 0 ? "Time's up" : `${left}s`}
     </span>
   );
 }
@@ -371,13 +428,14 @@ function QuizPlay({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [localAnswered, setLocalAnswered] = useState(answeredIds.size);
+  const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     setLocalAnswered(answeredIds.size);
   }, [answeredIds.size]);
 
   const submit = async () => {
-    if (!current || !selected) return;
+    if (!current || !selected || timedOut) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -423,13 +481,18 @@ function QuizPlay({
       <div className="flex items-center justify-between gap-3">
         <Logo size={32} />
         <div className="flex shrink-0 items-center gap-2">
-          <TimerBar endsAt={endsAt} />
+          <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
           <span className="text-xs font-bold text-[var(--gamibar-text-tertiary)]">
             {localAnswered + 1}/{questions.length}
           </span>
         </div>
       </div>
       <p className="mt-4 text-xs text-[var(--gamibar-text-tertiary)]">{instruction}</p>
+      {timedOut && current ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800" role="status">
+          Time&apos;s up — no more answers can be submitted.
+        </p>
+      ) : null}
       <h1
         id={`quiz-question-${current.id}`}
         className="mt-5 font-display text-[clamp(1.125rem,4.5vw,1.375rem)] font-bold leading-snug text-[#111111]"
@@ -446,6 +509,7 @@ function QuizPlay({
               key={opt}
               type="button"
               onClick={() => setSelected(opt)}
+              disabled={timedOut}
               aria-pressed={selected === opt}
               aria-label={`Option ${opt}: ${current.options[opt]}`}
               className={cn(
@@ -471,7 +535,7 @@ function QuizPlay({
       </fieldset>
       <Button
         className="mt-8 h-12 w-full touch-manipulation rounded-xl bg-[#111111] hover:bg-black sm:h-12"
-        disabled={!selected || submitting}
+        disabled={!selected || submitting || timedOut}
         onClick={() => void submit()}
       >
         {submitting ? "Saving answer…" : "Submit answer"}
@@ -513,23 +577,6 @@ function ConnectDotsPlay({
     payload?: Record<string, unknown>;
   } | null;
 }) {
-  const useMatchBoard = board.contentPairs.length > 0;
-
-  if (useMatchBoard) {
-    return (
-      <ConnectDotsMatchPlay
-        roomId={roomId}
-        reconnectToken={reconnectToken}
-        pairs={board.contentPairs}
-        shuffleSeed={board.seed}
-        instruction={instruction}
-        endsAt={endsAt}
-        title={title}
-        myAttempt={myAttempt}
-      />
-    );
-  }
-
   return (
     <ConnectDotsGridPlay
       roomId={roomId}
@@ -540,151 +587,6 @@ function ConnectDotsPlay({
       title={title}
       myAttempt={myAttempt}
     />
-  );
-}
-
-function ConnectDotsMatchPlay({
-  roomId,
-  reconnectToken,
-  pairs,
-  shuffleSeed,
-  instruction,
-  endsAt,
-  title,
-  myAttempt,
-}: {
-  roomId: string;
-  reconnectToken: string;
-  pairs: ConnectDotsBoardConfig["contentPairs"];
-  shuffleSeed: string;
-  instruction: string;
-  endsAt: number | null;
-  title: string;
-  myAttempt: {
-    completed?: boolean;
-    durationMs?: number | null;
-    payload?: Record<string, unknown>;
-  } | null;
-}) {
-  const savedPayload = (myAttempt?.payload ?? {}) as {
-    matches?: Record<string, string>;
-    routes?: Record<string, { r: number; c: number }[]>;
-  };
-  const initialMatched = Object.keys(savedPayload.matches ?? {}).length;
-  const [progress, setProgress] = useState({
-    matched: myAttempt?.completed ? pairs.length : initialMatched,
-    total: pairs.length,
-  });
-  const [done, setDone] = useState(() => Boolean(myAttempt?.completed));
-  const [durationMs, setDurationMs] = useState<number | null>(myAttempt?.durationMs ?? null);
-  const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const incorrectThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestMatches = useRef<Record<string, string>>(savedPayload.matches ?? {});
-  const skipInitialSync = useRef(initialMatched === 0 && !myAttempt?.completed);
-
-  const reportIncorrectAttempt = useCallback(() => {
-    if (done) return;
-    if (incorrectThrottleRef.current) return;
-    incorrectThrottleRef.current = setTimeout(() => {
-      incorrectThrottleRef.current = null;
-    }, 400);
-    void recordConnectDotsIncorrectAttemptFn({
-      data: { roomId, reconnectToken },
-    });
-  }, [done, reconnectToken, roomId]);
-
-  useEffect(() => {
-    if (myAttempt?.completed) {
-      setDone(true);
-      setDurationMs(myAttempt.durationMs ?? null);
-      setProgress({ matched: pairs.length, total: pairs.length });
-    }
-  }, [myAttempt?.completed, myAttempt?.durationMs, pairs.length]);
-
-  const syncProgress = useCallback(
-    async (
-      matches: Record<string, string>,
-      routes: Record<string, { r: number; c: number }> | undefined,
-      completed: boolean,
-    ) => {
-      const res = await submitConnectDotsMatchesFn({
-        data: { roomId, reconnectToken, matches, routes },
-      });
-      if (!res.ok) {
-        toast.error(friendlyGameError(res.error, "Could not submit your answer. Try again."));
-        return;
-      }
-      if (res.completed) {
-        setDone(true);
-        setDurationMs(res.durationMs ?? null);
-        setProgress({ matched: pairs.length, total: pairs.length });
-        toast.success("All pairs connected!");
-      } else if (completed) {
-        toast.error("Connect every question to its answer to finish.");
-      }
-    },
-    [pairs.length, reconnectToken, roomId],
-  );
-
-  const onMatchesChange = useCallback(
-    (matches: Record<string, string>) => {
-      if (skipInitialSync.current) {
-        skipInitialSync.current = false;
-        return;
-      }
-      latestMatches.current = matches;
-      if (throttleRef.current) clearTimeout(throttleRef.current);
-      throttleRef.current = setTimeout(() => {
-        void syncProgress(latestMatches.current, undefined, false);
-      }, 500);
-    },
-    [syncProgress],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (throttleRef.current) clearTimeout(throttleRef.current);
-      if (incorrectThrottleRef.current) clearTimeout(incorrectThrottleRef.current);
-    };
-  }, []);
-
-  return (
-    <div className="min-h-dvh-screen bg-[var(--gamibar-page)] font-sans">
-      <div className="mx-auto w-full max-w-3xl px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6">
-        <div className="sticky top-0 z-10 -mx-4 mb-4 border-b border-[var(--gamibar-border)]/80 bg-[var(--gamibar-page)]/95 px-4 py-3 backdrop-blur-sm sm:-mx-5 sm:px-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-brand)]">
-                {title}
-              </p>
-              <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">{instruction}</p>
-            </div>
-            <TimerBar endsAt={endsAt} />
-          </div>
-          <p className="mt-2 text-xs font-medium text-[var(--gamibar-text-tertiary)]">
-            {progress.matched}/{progress.total} pairs matched
-          </p>
-        </div>
-
-        <div className="rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-3 shadow-[var(--shadow-soft)] sm:rounded-[24px] sm:p-4 md:p-6">
-          <ConnectDotsMatchBoard
-            pairs={pairs}
-            shuffleSeed={shuffleSeed}
-            completed={done}
-            onProgress={(matched, total) => setProgress({ matched, total })}
-            onMatchesChange={onMatchesChange}
-            onComplete={(matches, routes) => {
-              if (done) return;
-              if (throttleRef.current) clearTimeout(throttleRef.current);
-              void syncProgress(matches, routes, true);
-            }}
-            initialMatches={savedPayload.matches}
-            initialRoutes={savedPayload.routes}
-            onIncorrectAttempt={reportIncorrectAttempt}
-          />
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -708,7 +610,11 @@ function ConnectDotsGridPlay({
     payload?: Record<string, unknown>;
   } | null;
 }) {
-  const savedPaths = (myAttempt?.payload?.paths ?? {}) as PathMap;
+  const savedPayload = (myAttempt?.payload ?? {}) as {
+    paths?: PathMap;
+    routes?: PathMap;
+  };
+  const savedPaths = (savedPayload.paths ?? savedPayload.routes ?? {}) as PathMap;
   const hasSavedPaths = Object.keys(savedPaths).length > 0;
   const [progress, setProgress] = useState({
     connected: myAttempt?.completed
@@ -719,9 +625,22 @@ function ConnectDotsGridPlay({
     total: board.pairCount,
   });
   const [done, setDone] = useState(Boolean(myAttempt?.completed));
+  const [timedOut, setTimedOut] = useState(false);
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const incorrectThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPaths = useRef<PathMap>(savedPaths);
   const skipInitialPaths = useRef(!hasSavedPaths && !myAttempt?.completed);
+
+  const reportIncorrectLink = useCallback(() => {
+    if (done) return;
+    if (incorrectThrottleRef.current) return;
+    incorrectThrottleRef.current = setTimeout(() => {
+      incorrectThrottleRef.current = null;
+    }, 400);
+    void recordConnectDotsIncorrectAttemptFn({
+      data: { roomId, reconnectToken },
+    });
+  }, [done, reconnectToken, roomId]);
 
   const publicBoard = useMemo(
     () => ({
@@ -768,6 +687,7 @@ function ConnectDotsGridPlay({
   useEffect(() => {
     return () => {
       if (throttleRef.current) clearTimeout(throttleRef.current);
+      if (incorrectThrottleRef.current) clearTimeout(incorrectThrottleRef.current);
     };
   }, []);
 
@@ -782,12 +702,17 @@ function ConnectDotsGridPlay({
               </p>
               <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">{instruction}</p>
             </div>
-            <TimerBar endsAt={endsAt} />
+            <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
           </div>
           <p className="mt-2 text-xs font-medium text-[var(--gamibar-text-tertiary)]">
             {board.difficulty.toUpperCase()} · {board.gridSize}×{board.gridSize} · {progress.connected}/
             {progress.total} pairs
           </p>
+          {timedOut && !done ? (
+            <p className="mt-2 text-xs font-semibold text-red-700" role="status">
+              Time&apos;s up — saving your progress…
+            </p>
+          ) : null}
         </div>
 
         {done ? (
@@ -798,10 +723,12 @@ function ConnectDotsGridPlay({
           <div className="rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 shadow-[var(--shadow-soft)] sm:p-6">
             <ConnectDots
               board={publicBoard}
-              disabled={done}
+              solution={board.solution}
+              disabled={done || timedOut}
               initialPaths={hasSavedPaths ? savedPaths : undefined}
               onProgress={(connected, total) => setProgress({ connected, total })}
               onPathsChange={onPathsChange}
+              onIncorrectLink={reportIncorrectLink}
               onComplete={(paths) => {
                 if (throttleRef.current) clearTimeout(throttleRef.current);
                 void syncProgress(paths, true);
@@ -825,6 +752,7 @@ function JigsawMissionPlay({
   missionPayload,
   endsAt,
   completed,
+  wrongCount,
   instruction,
 }: {
   roomId: string;
@@ -837,13 +765,50 @@ function JigsawMissionPlay({
   missionPayload: Record<string, unknown>;
   endsAt: number | null;
   completed: boolean;
+  wrongCount: number;
   instruction: string;
 }) {
   const total = questions.length;
-  const mission = readJigsawMissionPayload(missionPayload);
-  const correctSet = useMemo(() => new Set(correctQuestionIds), [correctQuestionIds]);
-  const piecesUnlocked = correctSet.size;
-  const assemblyPhase = mission.phase === "assemble" || piecesUnlocked >= total;
+  const tileCount = cols * rows;
+  const { collectionCardSize, assemblyCardSize, tapDragThreshold } = useJigsawTouchLayout();
+  const [localCorrectIds, setLocalCorrectIds] = useState(correctQuestionIds);
+  const [localMissionPayload, setLocalMissionPayload] = useState(missionPayload);
+  const correctIdsKey = correctQuestionIds.join(",");
+  const missionPayloadKey = JSON.stringify(missionPayload);
+
+  useEffect(() => {
+    setLocalCorrectIds(correctQuestionIds);
+  }, [correctIdsKey, correctQuestionIds]);
+
+  useEffect(() => {
+    setLocalMissionPayload((prev) => ({
+      ...missionPayload,
+      tileRotations: {
+        ...readTileRotations(missionPayload),
+        ...readTileRotations(prev),
+      },
+      tileLayouts: {
+        ...readTileLayouts(missionPayload),
+        ...readTileLayouts(prev),
+      },
+    }));
+  }, [missionPayloadKey, missionPayload]);
+
+  const mission = readJigsawMissionPayload(localMissionPayload);
+  const correctSet = useMemo(() => new Set(localCorrectIds), [localCorrectIds]);
+  const earnedTileIds = useMemo(
+    () => readEarnedTileIds(localMissionPayload, cols, rows, correctSet.size, total),
+    [localMissionPayload, cols, rows, correctSet.size, total],
+  );
+  const tilesUnlocked = earnedTileIds.length;
+  const tileRotations = useMemo(
+    () => readTileRotations(localMissionPayload),
+    [localMissionPayload],
+  );
+  const tileLayouts = useMemo(
+    () => readTileLayouts(localMissionPayload),
+    [localMissionPayload],
+  );
   const isRetryRound = isJigsawMissionRetryRound(mission);
   const retryRemaining = retryPoolQuestionIds(questions, correctSet).length;
   const activeQuestionId = resolveJigsawMissionQuestionId(questions, correctSet, mission);
@@ -856,21 +821,223 @@ function JigsawMissionPlay({
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showComplete, setShowComplete] = useState(completed);
-  const [localAssembly, setLocalAssembly] = useState(false);
+  const [localAssembly, setLocalAssembly] = useState(
+    () => readJigsawMissionPayload(missionPayload).phase === "assemble",
+  );
   const [assemblySubmitting, setAssemblySubmitting] = useState(false);
   const [assemblyMessage, setAssemblyMessage] = useState<string | null>(null);
-  const [completionTimeMs, setCompletionTimeMs] = useState<number | null>(null);
+  const [assemblySuccess, setAssemblySuccess] = useState<{ durationMs: number | null } | null>(
+    null,
+  );
+  const [timedOut, setTimedOut] = useState(false);
+
+  const collectionRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const flyQueueRef = useRef<string[]>([]);
+  const pendingAssemblyRef = useRef(false);
+  const postRewardTimeoutRef = useRef<number | null>(null);
+  const flyStartTimeoutRef = useRef<number | null>(null);
+
+  const [displayedTileIds, setDisplayedTileIds] = useState<string[]>(() =>
+    readEarnedTileIds(missionPayload, cols, rows, correctQuestionIds.length, total),
+  );
+  const [activeFlyTileId, setActiveFlyTileId] = useState<string | null>(null);
+  const [landedTileId, setLandedTileId] = useState<string | null>(null);
+  const [flyRects, setFlyRects] = useState<{ from: DOMRect; to: DOMRect } | null>(null);
+  const [rewardAnimating, setRewardAnimating] = useState(false);
+  const activeFlyRef = useRef<string | null>(null);
+  const rotationSaveRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    activeFlyRef.current = activeFlyTileId;
+  }, [activeFlyTileId]);
+
+  const isAnimatingReward = rewardAnimating || activeFlyTileId !== null;
+
+  const tileImageSrc =
+    imageUrl ??
+    "data:image/svg+xml," +
+      encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect fill="#e5e7eb" width="100%" height="100%"/></svg>`,
+      );
+
+  const clearPostRewardTimeout = useCallback(() => {
+    if (postRewardTimeoutRef.current != null) {
+      window.clearTimeout(postRewardTimeoutRef.current);
+      postRewardTimeoutRef.current = null;
+    }
+  }, []);
+
+  const schedulePostReward = useCallback(
+    (allPiecesUnlocked: boolean) => {
+      clearPostRewardTimeout();
+      const delay = allPiecesUnlocked ? 520 : 320;
+      postRewardTimeoutRef.current = window.setTimeout(() => {
+        setFeedback(null);
+        setSelected(null);
+        setLandedTileId(null);
+        if (allPiecesUnlocked) setLocalAssembly(true);
+      }, delay);
+    },
+    [clearPostRewardTimeout],
+  );
+
+  const beginFlySequence = useCallback(
+    (tileIds: string[], allPiecesUnlocked: boolean) => {
+      if (flyStartTimeoutRef.current != null) window.clearTimeout(flyStartTimeoutRef.current);
+      pendingAssemblyRef.current = allPiecesUnlocked;
+      flyQueueRef.current = [];
+
+      if (tileIds.length === 0) {
+        schedulePostReward(allPiecesUnlocked);
+        return;
+      }
+
+      setRewardAnimating(true);
+      const [first, ...rest] = tileIds;
+      flyQueueRef.current = rest;
+      flyStartTimeoutRef.current = window.setTimeout(() => {
+        setActiveFlyTileId(first);
+      }, 420);
+    },
+    [schedulePostReward],
+  );
+
+  const handleFlyComplete = useCallback(() => {
+    const current = activeFlyRef.current;
+    if (!current) return;
+
+    setDisplayedTileIds((prev) => (prev.includes(current) ? prev : [...prev, current]));
+    setLandedTileId(current);
+    setActiveFlyTileId(null);
+
+    const queue = flyQueueRef.current;
+    if (queue.length > 0) {
+      const [next, ...rest] = queue;
+      flyQueueRef.current = rest;
+      window.setTimeout(() => setActiveFlyTileId(next), 70);
+      return;
+    }
+
+    setRewardAnimating(false);
+    schedulePostReward(pendingAssemblyRef.current);
+  }, [schedulePostReward]);
+
+  const handleRotateTile = useCallback(
+    (tileId: string) => {
+      if (timedOut || rotationSaveRef.current.has(tileId)) return;
+      if (isAnimatingReward && !localAssembly) return;
+      if (assemblySuccess || showComplete || completed) return;
+      if (!earnedTileIds.includes(tileId)) return;
+
+      const current = tileRotations[tileId] ?? (0 as JigsawTileCardRotation);
+      const next = nextClockwiseTileCardRotation(current);
+
+      setLocalMissionPayload((prev) => ({
+        ...prev,
+        tileRotations: {
+          ...readTileRotations(prev),
+          [tileId]: next,
+        },
+      }));
+
+      rotationSaveRef.current.add(tileId);
+      void rotateJigsawMissionTileFn({
+        data: {
+          roomId,
+          reconnectToken,
+          tileId,
+          rotation: next,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) {
+            setLocalMissionPayload((prev) => ({
+              ...prev,
+              tileRotations: {
+                ...readTileRotations(prev),
+                [tileId]: current,
+              },
+            }));
+            toast.error(friendlyGameError(res.error, "Could not save the rotation. Try again."));
+            return;
+          }
+          if (res.tileRotations) {
+            setLocalMissionPayload((prev) => ({
+              ...prev,
+              tileRotations: res.tileRotations,
+            }));
+          }
+        })
+        .finally(() => {
+          rotationSaveRef.current.delete(tileId);
+        });
+    },
+    [
+      timedOut,
+      isAnimatingReward,
+      localAssembly,
+      assemblySuccess,
+      showComplete,
+      completed,
+      earnedTileIds,
+      tileRotations,
+      roomId,
+      reconnectToken,
+    ],
+  );
+
+  useEffect(() => {
+    if (rewardAnimating || activeFlyTileId) return;
+    const earned = readEarnedTileIds(localMissionPayload, cols, rows, correctSet.size, total);
+    setDisplayedTileIds(earned);
+  }, [localMissionPayload, cols, rows, correctSet.size, total, rewardAnimating, activeFlyTileId]);
+
+  useLayoutEffect(() => {
+    if (!activeFlyTileId) {
+      setFlyRects(null);
+      return;
+    }
+
+    const measure = () => {
+      const fromEl = feedbackRef.current;
+      const collectionEl = collectionRef.current;
+      if (!fromEl || !collectionEl) {
+        window.requestAnimationFrame(measure);
+        return;
+      }
+      setFlyRects({
+        from: fromEl.getBoundingClientRect(),
+        to: tileLayoutRect(
+          collectionEl,
+          tileLayouts[activeFlyTileId] ?? { x: 0.1, y: 0.1, z: 0 },
+        ),
+      });
+    };
+
+    measure();
+  }, [activeFlyTileId, tileLayouts]);
+
+  useEffect(
+    () => () => {
+      clearPostRewardTimeout();
+      if (flyStartTimeoutRef.current != null) window.clearTimeout(flyStartTimeoutRef.current);
+    },
+    [clearPostRewardTimeout],
+  );
 
   useEffect(() => {
     if (completed) setShowComplete(true);
   }, [completed]);
 
   useEffect(() => {
-    if (assemblyPhase) setLocalAssembly(true);
-  }, [assemblyPhase]);
+    if (readJigsawMissionPayload(missionPayload).phase === "assemble") {
+      setLocalAssembly(true);
+    }
+  }, [missionPayloadKey, missionPayload]);
 
   const submit = async () => {
-    if (!activeQuestion || !selected || feedback) return;
+    if (!activeQuestion || !selected || feedback || timedOut) return;
     setSubmitting(true);
     try {
       const res = await submitJigsawMissionAnswerFn({
@@ -885,21 +1052,78 @@ function JigsawMissionPlay({
         toast.error(friendlyGameError(res.error, "Could not submit your answer. Try again."));
         return;
       }
+
+      const missionState = readJigsawMissionPayload(localMissionPayload);
+      let firstRoundIndex = missionState.firstRoundIndex ?? 0;
+      let firstRoundComplete = missionState.firstRoundComplete ?? false;
+      let retryQuestionId = missionState.retryQuestionId ?? null;
+
       if (res.correct) {
-        setFeedback("correct");
-        if (res.allPiecesUnlocked) {
-          setTimeout(() => {
-            setLocalAssembly(true);
-            setFeedback(null);
-            setSelected(null);
-          }, 1200);
-        } else {
-          setTimeout(() => {
-            setFeedback(null);
-            setSelected(null);
-          }, 1500);
+        const prevEarned = readEarnedTileIds(
+          localMissionPayload,
+          cols,
+          rows,
+          correctSet.size,
+          total,
+        );
+        setLocalCorrectIds((prev) =>
+          prev.includes(activeQuestion.id) ? prev : [...prev, activeQuestion.id],
+        );
+        if (!firstRoundComplete) {
+          firstRoundIndex += 1;
+          if (firstRoundIndex >= total) firstRoundComplete = true;
         }
+        const unlocked = new Set([...correctSet, activeQuestion.id]);
+        const poolAfter = retryPoolQuestionIds(questions, unlocked);
+        retryQuestionId = firstRoundComplete ? (poolAfter[0] ?? null) : null;
+        const nextEarned =
+          res.earnedTileIds ??
+          readEarnedTileIds(localMissionPayload, cols, rows, unlocked.size, total);
+        const newTiles = newlyEarnedTileIds(prevEarned, nextEarned);
+        const nextRotations =
+          res.tileRotations ??
+          mergeTileRotationsForNewTiles(readTileRotations(localMissionPayload), newTiles);
+        const nextLayouts =
+          res.tileLayouts ??
+          mergeTileLayoutsForNewTiles(readTileLayouts(localMissionPayload), newTiles);
+        setLocalMissionPayload((prev) => ({
+          ...mergeJigsawMissionPayload(prev, {
+            phase: res.allPiecesUnlocked ? "assemble" : "quiz",
+            firstRoundIndex,
+            firstRoundComplete,
+            retryQuestionId,
+          }),
+          earnedTileIds: nextEarned,
+          tileRotations: nextRotations,
+          tileLayouts: nextLayouts,
+        }));
+        setFeedback("correct");
+        beginFlySequence(newTiles, Boolean(res.allPiecesUnlocked));
+      } else if (!firstRoundComplete) {
+        firstRoundIndex += 1;
+        if (firstRoundIndex >= total) {
+          firstRoundComplete = true;
+          retryQuestionId = retryPoolQuestionIds(questions, correctSet)[0] ?? null;
+        }
+        setLocalMissionPayload((prev) =>
+          mergeJigsawMissionPayload(prev, {
+            firstRoundIndex,
+            firstRoundComplete,
+            retryQuestionId,
+          }),
+        );
       } else {
+        const pool = retryPoolQuestionIds(questions, correctSet);
+        retryQuestionId = nextRetryQuestionId(pool, activeQuestion.id);
+        setLocalMissionPayload((prev) =>
+          mergeJigsawMissionPayload(prev, {
+            firstRoundComplete: res.firstRoundComplete,
+            retryQuestionId,
+          }),
+        );
+      }
+
+      if (!res.correct) {
         setFeedback("wrong");
         setTimeout(() => {
           setFeedback(null);
@@ -931,13 +1155,28 @@ function JigsawMissionPlay({
         setAssemblyMessage(res.message ?? "The puzzle is not complete yet.");
         return;
       }
-      setCompletionTimeMs(res.durationMs ?? null);
-      setShowComplete(true);
+      setAssemblySuccess({ durationMs: res.durationMs ?? null });
+      window.setTimeout(() => setShowComplete(true), 2800);
       toast.success("Puzzle complete!");
     } finally {
       setAssemblySubmitting(false);
     }
   };
+
+  if (assemblySuccess && imageUrl) {
+    return (
+      <div className="flex min-h-dvh-screen flex-col overflow-x-hidden bg-[#FAFAFA]">
+        <JigsawMissionSuccess
+          imageUrl={imageUrl}
+          cols={cols}
+          durationMs={assemblySuccess.durationMs}
+          questionTotal={total}
+          correctCount={correctSet.size}
+          incorrectAttempts={wrongCount}
+        />
+      </div>
+    );
+  }
 
   if (showComplete || completed) {
     return (
@@ -945,41 +1184,7 @@ function JigsawMissionPlay({
     );
   }
 
-  if ((assemblyPhase || localAssembly) && imageUrl) {
-    return (
-      <div className="mx-auto min-h-dvh-screen max-w-lg px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-8">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-brand)]">
-              Jigsaw Mission
-            </p>
-            <p className="mt-1 text-sm text-[#525252]">{instruction}</p>
-          </div>
-          <TimerBar endsAt={endsAt} />
-        </div>
-        <p className="mt-4 text-center text-sm font-semibold text-[#111111]">
-          All pieces unlocked — rebuild the image and submit
-        </p>
-        <div className="mt-4">
-          <JigsawMissionAssembly
-            imageUrl={imageUrl}
-            cols={cols}
-            rows={rows}
-            submitting={assemblySubmitting}
-            submitMessage={assemblyMessage}
-            initialPlacements={
-              Array.isArray(missionPayload.assemblyLayout)
-                ? (missionPayload.assemblyLayout as Array<number | null>)
-                : undefined
-            }
-            onSubmit={(layout) => void handleAssemblySubmit(layout)}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (!activeQuestion) {
+  if (!localAssembly && !activeQuestion) {
     return (
       <PageLoader
         message={submitting ? "Saving your answer…" : "Loading question…"}
@@ -989,40 +1194,133 @@ function JigsawMissionPlay({
   }
 
   return (
-    <div className="flex min-h-dvh-screen flex-col bg-[#FAFAFA]">
-      <SlidoProgressHeader piecesUnlocked={piecesUnlocked} totalPieces={total} endsAt={endsAt} />
+    <div className="flex min-h-dvh-screen min-w-0 flex-col overflow-x-hidden bg-[#FAFAFA]">
+      <SlidoProgressHeader
+        piecesUnlocked={tilesUnlocked}
+        totalPieces={tileCount}
+        endsAt={endsAt}
+        onTimedOut={setTimedOut}
+      />
 
-      <div className="mx-auto grid w-full max-w-5xl flex-1 gap-6 px-4 py-6 md:grid-cols-2 md:items-start md:px-6 md:py-8 lg:px-8">
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-6">
-          <p className="mb-4 text-center text-xs font-semibold uppercase tracking-wider text-[#737373]">
-            Your puzzle
-          </p>
-          <PuzzleQuestBoard revealed={piecesUnlocked} imageSrc={imageUrl} cols={cols} rows={rows} />
-          <p className="mt-4 text-center text-xs text-[#737373]">
-            {isRetryRound
-              ? `Retry round — ${retryRemaining} question${retryRemaining === 1 ? "" : "s"} left to unlock pieces`
-              : "Each correct answer unlocks one piece. Missed questions return in a retry round."}
-          </p>
-        </div>
+      {timedOut ? (
+        <p className="mx-auto max-w-5xl px-4 pt-4 text-center text-sm font-medium text-red-800 md:px-6" role="status">
+          Time&apos;s up — {localAssembly ? "assembly can no longer be submitted." : "no more answers can be submitted."}
+        </p>
+      ) : null}
 
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-6">
-          {isRetryRound && (
-            <p className="mb-3 rounded-xl bg-[var(--game-jigsaw-soft)] px-3 py-2 text-center text-xs font-semibold text-[var(--game-jigsaw-deep)]">
-              Retry round · {retryRemaining} missed question{retryRemaining === 1 ? "" : "s"}
+      <AnimatePresence mode="wait">
+        {!localAssembly && activeQuestion ? (
+          <motion.div
+            key="jigsaw-quiz"
+            initial={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto flex w-full min-w-0 max-w-5xl flex-1 flex-col gap-3 px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:grid md:grid-cols-2 md:items-start md:gap-6 md:px-6 md:py-8 lg:px-8"
+          >
+            <div className="order-1 min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-2.5 shadow-sm sm:p-3 md:p-6">
+              <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[#737373] md:mb-4 md:text-xs">
+                Your puzzle
+              </p>
+              <JigsawMissionRewardStack
+                ref={collectionRef}
+                displayedTileIds={displayedTileIds}
+                tileRotations={tileRotations}
+                tileLayouts={tileLayouts}
+                imageSrc={imageUrl}
+                cols={cols}
+                rows={rows}
+                landedTileId={landedTileId}
+                onRotateTile={handleRotateTile}
+                rotateDisabled={timedOut || isAnimatingReward}
+                cardSize={collectionCardSize}
+                tapDragThreshold={tapDragThreshold}
+              />
+              <p className="mt-2 text-center text-[10px] leading-snug text-[#737373] md:mt-4 md:text-xs">
+                {isRetryRound
+                  ? `Retry round — ${retryRemaining} question${retryRemaining === 1 ? "" : "s"} remaining`
+                  : `${tilesUnlocked}/${tileCount} tiles earned · answer questions to unlock more`}
+              </p>
+            </div>
+
+            <div className="order-2 min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-3 shadow-sm sm:p-4 md:p-6">
+              {isRetryRound && (
+                <p className="mb-3 rounded-xl bg-[var(--game-jigsaw-soft)] px-3 py-2 text-center text-xs font-semibold text-[var(--game-jigsaw-deep)]">
+                  Retry round · {retryRemaining} missed question{retryRemaining === 1 ? "" : "s"}
+                </p>
+              )}
+              <SlidoQuizPanel
+                question={activeQuestion}
+                questionIndex={isRetryRound ? total - retryRemaining : firstRoundProgress}
+                totalQuestions={total}
+                selected={selected}
+                feedback={feedback}
+                submitting={submitting}
+                disabled={timedOut || isAnimatingReward}
+                feedbackRef={feedbackRef}
+                onSelect={setSelected}
+                onSubmit={() => void submit()}
+              />
+            </div>
+
+            {activeFlyTileId && flyRects
+              ? (() => {
+                  const tile = tileMetaFromId(activeFlyTileId, cols, rows);
+                  if (!tile) return null;
+                  const visualRotation = tileRotations[activeFlyTileId] ?? (0 as JigsawTileCardRotation);
+                  return (
+                    <JigsawMissionFlyingTile
+                      key={activeFlyTileId}
+                      tileId={activeFlyTileId}
+                      col={tile.col}
+                      row={tile.row}
+                      cols={cols}
+                      rows={rows}
+                      imageUrl={tileImageSrc}
+                      visualRotation={visualRotation}
+                      from={flyRects.from}
+                      to={flyRects.to}
+                      onComplete={handleFlyComplete}
+                    />
+                  );
+                })()
+              : null}
+          </motion.div>
+        ) : localAssembly && imageUrl ? (
+          <motion.div
+            key="jigsaw-assembly"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6 md:py-8 lg:px-8"
+          >
+            <p className="mb-3 text-center text-xs font-semibold text-[#111111] md:mb-4 md:text-sm">
+              <span className="md:hidden">Tap to rotate · drag pieces onto the board</span>
+              <span className="hidden md:inline">
+                All questions complete — tap to rotate pieces, drag them onto the board
+              </span>
             </p>
-          )}
-          <SlidoQuizPanel
-            question={activeQuestion}
-            questionIndex={isRetryRound ? total - retryRemaining : firstRoundProgress}
-            totalQuestions={total}
-            selected={selected}
-            feedback={feedback}
-            submitting={submitting}
-            onSelect={setSelected}
-            onSubmit={() => void submit()}
-          />
-        </div>
-      </div>
+            <JigsawMissionAssembly
+              imageUrl={imageUrl}
+              cols={cols}
+              rows={rows}
+              earnedTileIds={earnedTileIds}
+              tileRotations={tileRotations}
+              tileLayouts={tileLayouts}
+              onRotateTile={handleRotateTile}
+              assemblyCardSize={assemblyCardSize}
+              submitting={assemblySubmitting}
+              disabled={timedOut}
+              submitMessage={assemblyMessage}
+              initialPlacements={
+                Array.isArray(localMissionPayload.assemblyLayout)
+                  ? (localMissionPayload.assemblyLayout as Array<number | null>)
+                  : undefined
+              }
+              onSubmit={(layout) => void handleAssemblySubmit(layout)}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1149,6 +1447,7 @@ function QuizJigsawPlay({
   const [submitting, setSubmitting] = useState(false);
   const [rewardCode, setRewardCode] = useState<string | null>(null);
   const [showComplete, setShowComplete] = useState(completed);
+  const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     setPiecesUnlocked(correctCount);
@@ -1162,7 +1461,7 @@ function QuizJigsawPlay({
   const current = questions[currentIndex] ?? questions[0];
 
   const submit = async () => {
-    if (!current || !selected || feedback) return;
+    if (!current || !selected || feedback || timedOut) return;
     setSubmitting(true);
     try {
       const res = await submitQuizJigsawAnswerFn({
@@ -1222,7 +1521,14 @@ function QuizJigsawPlay({
         piecesUnlocked={piecesUnlocked}
         totalPieces={total}
         endsAt={endsAt}
+        onTimedOut={setTimedOut}
       />
+
+      {timedOut ? (
+        <p className="mx-auto max-w-5xl px-4 pt-4 text-center text-sm font-medium text-red-800 md:px-6" role="status">
+          Time&apos;s up — no more answers can be submitted.
+        </p>
+      ) : null}
 
       <div className="mx-auto grid w-full max-w-5xl flex-1 gap-6 px-4 py-6 md:grid-cols-2 md:items-start md:px-6 md:py-8 lg:px-8">
         <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-6">
@@ -1243,6 +1549,7 @@ function QuizJigsawPlay({
             selected={selected}
             feedback={feedback}
             submitting={submitting}
+            disabled={timedOut}
             onSelect={setSelected}
             onSubmit={() => void submit()}
           />

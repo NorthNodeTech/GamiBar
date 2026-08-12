@@ -15,7 +15,7 @@ import type {
 import { createEntityId, hashToken, isUuid } from "@/lib/game/room-crypto";
 import { isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
 import { clampTimer, defaultTimerSeconds } from "@/lib/game/timer";
-import { supabase } from "@/lib/supabase/client";
+import { supabaseGame as supabase } from "@/lib/supabase/client";
 
 type QuizAnswer = {
   questionId: string;
@@ -70,6 +70,7 @@ function iso(msValue: number | null | undefined): string | null {
 }
 
 function readTimeLimit(mode: Room["mode"], raw: Record<string, unknown>): number | null {
+  if (!("timeLimitSeconds" in raw)) return null;
   const value = raw["timeLimitSeconds"];
   if (value === null) return null;
   if (typeof value === "number") return clampTimer(mode, value);

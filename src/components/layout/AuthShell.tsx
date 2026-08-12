@@ -69,8 +69,8 @@ export function AuthShell({
           className="relative"
         >
           <div className="inline-flex items-center gap-3">
-            <Logo size={48} tone="light" />
-            <span className="font-display text-xl font-bold text-white">
+            <Logo size={48} tone="on-dark" />
+            <span className="font-display text-xl font-bold leading-none text-white">
               Gami<span className="text-[var(--gamibar-brand)]">BAR</span>
             </span>
           </div>

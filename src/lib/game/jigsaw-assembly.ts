@@ -1,3 +1,6 @@
+import type { TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
+import { buildJigsawTiles, tileBackgroundStyleByIndex } from "@/lib/game/jigsaw-tiles";
+
 /** Returns true when every slot holds the matching piece (piece id === slot index). */
 export function validateJigsawLayout(layout: number[], totalPieces: number): boolean {
   if (layout.length !== totalPieces) return false;
@@ -7,14 +10,64 @@ export function validateJigsawLayout(layout: number[], totalPieces: number): boo
   return true;
 }
 
+/** Returns true when every earned tile is upright (0° visual rotation). */
+export function validateJigsawRotations(
+  tileRotations: Readonly<TileRotationMap>,
+  cols: number,
+  rows: number,
+): boolean {
+  for (const tile of buildJigsawTiles(cols, rows)) {
+    if ((tileRotations[tile.id] ?? 0) !== 0) return false;
+  }
+  return true;
+}
+
+export type JigsawAssemblyValidation =
+  | { ok: true }
+  | { ok: false; reason: "empty" | "layout" | "rotation" };
+
+/** Puzzle is solved only when every slot is correct and every tile is upright. */
+export function validateJigsawAssembly(
+  layout: number[],
+  tileRotations: Readonly<TileRotationMap>,
+  totalPieces: number,
+  cols: number,
+  rows: number,
+): JigsawAssemblyValidation {
+  if (layout.length !== totalPieces || layout.some((piece) => piece < 0)) {
+    return { ok: false, reason: "empty" };
+  }
+  if (!validateJigsawLayout(layout, totalPieces)) {
+    return { ok: false, reason: "layout" };
+  }
+  if (!validateJigsawRotations(tileRotations, cols, rows)) {
+    return { ok: false, reason: "rotation" };
+  }
+  return { ok: true };
+}
+
+export function jigsawAssemblyValidationMessage(reason: JigsawAssemblyValidation["reason"]): string {
+  switch (reason) {
+    case "empty":
+      return "Place every puzzle piece on the board before submitting.";
+    case "layout":
+      return "Not quite — the image is not complete yet. Keep rearranging the pieces.";
+    case "rotation":
+      return "Some pieces are rotated incorrectly. Tap each piece to turn it upright.";
+  }
+}
+
+/** Background crop for a square tile (index = piece id). */
 export function pieceSliceStyle(pieceId: number, cols: number, rows: number) {
-  const col = pieceId % cols;
-  const row = Math.floor(pieceId / cols);
-  const x = cols > 1 ? (col / (cols - 1)) * 100 : 0;
-  const y = rows > 1 ? (row / (rows - 1)) * 100 : 0;
+  const { backgroundSize, backgroundPosition } = tileBackgroundStyleByIndex(
+    pieceId,
+    cols,
+    rows,
+    "",
+  );
   return {
-    backgroundSize: `${cols * 100}% ${rows * 100}%`,
-    backgroundPosition: `${x}% ${y}%`,
+    backgroundSize,
+    backgroundPosition,
   } as const;
 }
 

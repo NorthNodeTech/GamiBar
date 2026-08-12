@@ -5,8 +5,10 @@ import {
   cellsEqual,
   countConnectedPairs,
   isOrthogonalStep,
+  validateConnectDotsPaths,
   type Cell,
   type ConnectDotsPublicBoard,
+  type ConnectDotsSolution,
   type PathMap,
 } from "@/lib/connect-dots";
 import { cn } from "@/lib/utils";
@@ -17,21 +19,34 @@ type ConnectDotsProps = {
   /** Hide Undo/Restart (e.g. author preview). */
   showControls?: boolean;
   initialPaths?: PathMap;
+  /** Pre-computed maze paths — enables dot-to-dot linking with auto routing. */
+  solution?: ConnectDotsSolution;
+  /** Force dot-link mode (defaults to true when solution is provided). */
+  linkMode?: boolean;
   onProgress?: (connectedPairs: number, total: number) => void;
   onPathsChange?: (paths: PathMap) => void;
   onComplete?: (paths: PathMap) => void;
+  /** Called when the student links two dots that are not a correct pair. */
+  onIncorrectLink?: () => void;
   className?: string;
 };
+
+type EndpointInfo = { pairId: string; side: "a" | "b"; cell: Cell };
 
 function keyOf(cell: Cell) {
   return `${cell.r},${cell.c}`;
 }
 
-function endpointPairId(board: ConnectDotsPublicBoard, cell: Cell): string | null {
+function endpointInfo(board: ConnectDotsPublicBoard, cell: Cell): EndpointInfo | null {
   for (const p of board.pairs) {
-    if (cellsEqual(p.a, cell) || cellsEqual(p.b, cell)) return p.id;
+    if (cellsEqual(p.a, cell)) return { pairId: p.id, side: "a", cell };
+    if (cellsEqual(p.b, cell)) return { pairId: p.id, side: "b", cell };
   }
   return null;
+}
+
+function endpointPairId(board: ConnectDotsPublicBoard, cell: Cell): string | null {
+  return endpointInfo(board, cell)?.pairId ?? null;
 }
 
 function truncateLabel(text: string, max = 14): string {
@@ -46,6 +61,11 @@ function endpointLabel(pair: ConnectDotsPublicBoard["pairs"][number], idx: 0 | 1
   return String(pair.label);
 }
 
+function endpointTooltip(pair: ConnectDotsPublicBoard["pairs"][number], idx: 0 | 1): string {
+  const text = idx === 0 ? pair.question : pair.answer;
+  return text?.trim() ?? "";
+}
+
 function pairById(board: ConnectDotsPublicBoard, id: string) {
   return board.pairs.find((p) => p.id === id);
 }
@@ -57,17 +77,42 @@ function labelFontSize(text: string, cellSize: number): number {
   return cellSize * 0.13;
 }
 
+function cellCenter(cell: Cell, cellSize: number) {
+  return {
+    x: cell.c * cellSize + cellSize / 2,
+    y: cell.r * cellSize + cellSize / 2,
+  };
+}
+
+function pathOverlapsOccupied(path: Cell[], occupied: Map<string, string>, pairId: string): boolean {
+  for (const cell of path) {
+    const owner = occupied.get(keyOf(cell));
+    if (owner && owner !== pairId) return true;
+  }
+  return false;
+}
+
+const UNCONNECTED_DOT = "#111111";
+const DRAFT_PATH = "#525252";
+
 export function ConnectDots({
   board,
   disabled = false,
   showControls = true,
   initialPaths,
+  solution,
+  linkMode,
   onProgress,
   onPathsChange,
   onComplete,
+  onIncorrectLink,
   className,
 }: ConnectDotsProps) {
   const n = board.gridSize;
+  const hasContent = board.pairs.some((p) => p.question?.trim() || p.answer?.trim());
+  /** Manual grid drawing — never auto-apply solution paths unless explicitly opted in. */
+  const useLinkMode = linkMode === true;
+
   const [paths, setPaths] = useState<PathMap>(() => initialPaths ?? {});
   const skipInitialEmit = useRef(Boolean(initialPaths && Object.keys(initialPaths).length > 0));
   const [draft, setDraft] = useState<Cell[]>([]);
@@ -76,6 +121,23 @@ export function ConnectDots({
   const completedRef = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const drawingRef = useRef(false);
+
+  const [linkFrom, setLinkFrom] = useState<EndpointInfo | null>(null);
+  const [pointerPreview, setPointerPreview] = useState<{ x: number; y: number } | null>(null);
+  const [rejectFlash, setRejectFlash] = useState<string | null>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<{ text: string; x: number; y: number } | null>(
+    null,
+  );
+
+  const lockedPairIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(paths)
+          .filter(([, path]) => path.length >= 2)
+          .map(([id]) => id),
+      ),
+    [paths],
+  );
 
   const occupied = useMemo(() => {
     const map = new Map<string, string>();
@@ -102,11 +164,12 @@ export function ConnectDots({
 
   useEffect(() => {
     if (disabled || completedRef.current) return;
-    if (connected === board.pairs.length && board.pairs.length > 0) {
-      completedRef.current = true;
-      onComplete?.(paths);
-    }
-  }, [connected, board.pairs.length, paths, onComplete, disabled]);
+    if (connected !== board.pairs.length || board.pairs.length === 0) return;
+    const validation = validateConnectDotsPaths(board, paths, solution);
+    if (!validation.ok) return;
+    completedRef.current = true;
+    onComplete?.(paths);
+  }, [connected, board, paths, onComplete, disabled, solution]);
 
   const pushHistory = useCallback((next: PathMap) => {
     setHistory((h) => [...h.slice(-19), next]);
@@ -128,6 +191,16 @@ export function ConnectDots({
     [n],
   );
 
+  const pointerToViewBox = useCallback((clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100,
+    };
+  }, []);
+
   const canEnter = useCallback(
     (pairId: string, cell: Cell, pathSoFar: Cell[]): boolean => {
       const k = keyOf(cell);
@@ -137,7 +210,6 @@ export function ConnectDots({
       const ep = endpointPairId(board, cell);
       if (ep && ep !== pairId) return false;
 
-      // Allow revisiting own draft by truncating (handled by caller).
       if (pathSoFar.some((c) => cellsEqual(c, cell))) return true;
 
       return true;
@@ -150,10 +222,10 @@ export function ConnectDots({
       if (disabled) return;
       const pairId = endpointPairId(board, cell);
       if (!pairId) return;
+      if (lockedPairIds.has(pairId)) return;
 
       drawingRef.current = true;
       setActivePairId(pairId);
-      // Redrawing clears existing path for that pair.
       setPaths((prev) => {
         if (!prev[pairId]) return prev;
         const next = { ...prev };
@@ -163,7 +235,7 @@ export function ConnectDots({
       });
       setDraft([cell]);
     },
-    [board, disabled, pushHistory],
+    [board, disabled, lockedPairIds, pushHistory],
   );
 
   const extendTo = useCallback(
@@ -174,7 +246,6 @@ export function ConnectDots({
         const last = prev[prev.length - 1]!;
         if (cellsEqual(last, cell)) return prev;
 
-        // Truncate if revisiting own draft.
         const idx = prev.findIndex((c) => cellsEqual(c, cell));
         if (idx >= 0) return prev.slice(0, idx + 1);
 
@@ -184,14 +255,12 @@ export function ConnectDots({
         const pair = pairById(board, activePairId);
         if (!pair) return prev;
 
-        // Don't continue past the matching endpoint.
         const isMatchEnd =
           (cellsEqual(prev[0]!, pair.a) && cellsEqual(cell, pair.b)) ||
           (cellsEqual(prev[0]!, pair.b) && cellsEqual(cell, pair.a));
 
         const next = [...prev, cell];
         if (isMatchEnd) {
-          // Commit on reaching endpoint (also handled on pointer up).
           return next;
         }
         return next;
@@ -231,7 +300,92 @@ export function ConnectDots({
     setDraft([]);
   }, [activePairId, board, draft, pushHistory]);
 
+  const flashReject = useCallback(
+    (pairId: string) => {
+      setRejectFlash(pairId);
+      onIncorrectLink?.();
+      window.setTimeout(() => setRejectFlash(null), 500);
+    },
+    [onIncorrectLink],
+  );
+
+  const tryCompleteLink = useCallback(
+    (target: EndpointInfo) => {
+      if (!linkFrom) return;
+
+      const from = linkFrom;
+      setLinkFrom(null);
+      setPointerPreview(null);
+
+      if (cellsEqual(from.cell, target.cell)) return;
+
+      if (from.pairId === target.pairId && from.side !== target.side) {
+        if (lockedPairIds.has(from.pairId)) return;
+
+        const solutionPath = solution?.[from.pairId];
+        if (!solutionPath || solutionPath.length < 2) {
+          flashReject(from.pairId);
+          return;
+        }
+
+        if (pathOverlapsOccupied(solutionPath, occupied, from.pairId)) {
+          flashReject(from.pairId);
+          return;
+        }
+
+        setPaths((prev) => {
+          pushHistory(prev);
+          return { ...prev, [from.pairId]: solutionPath };
+        });
+        return;
+      }
+
+      flashReject(from.pairId);
+    },
+    [flashReject, linkFrom, lockedPairIds, occupied, pushHistory, solution],
+  );
+
+  const onLinkPointerDown = (e: React.PointerEvent) => {
+    if (disabled) return;
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    const cell = cellFromPointer(e.clientX, e.clientY);
+    if (!cell) return;
+    const ep = endpointInfo(board, cell);
+    if (!ep || lockedPairIds.has(ep.pairId)) return;
+
+    setLinkFrom(ep);
+    const center = cellCenter(cell, cellSize);
+    setPointerPreview(center);
+  };
+
+  const onLinkPointerMove = (e: React.PointerEvent) => {
+    if (!linkFrom) return;
+    const pt = pointerToViewBox(e.clientX, e.clientY);
+    if (pt) setPointerPreview(pt);
+  };
+
+  const onLinkPointerUp = (e: React.PointerEvent) => {
+    if (!linkFrom) return;
+    const cell = cellFromPointer(e.clientX, e.clientY);
+    if (cell) {
+      const target = endpointInfo(board, cell);
+      if (target) tryCompleteLink(target);
+      else {
+        setLinkFrom(null);
+        setPointerPreview(null);
+      }
+    } else {
+      setLinkFrom(null);
+      setPointerPreview(null);
+    }
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
+    if (useLinkMode) {
+      onLinkPointerDown(e);
+      return;
+    }
     if (disabled) return;
     e.preventDefault();
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -240,9 +394,21 @@ export function ConnectDots({
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (useLinkMode) {
+      onLinkPointerMove(e);
+      return;
+    }
     if (!drawingRef.current) return;
     const cell = cellFromPointer(e.clientX, e.clientY);
     if (cell) extendTo(cell);
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (useLinkMode) {
+      onLinkPointerUp(e);
+      return;
+    }
+    endStroke();
   };
 
   const undo = () => {
@@ -253,6 +419,8 @@ export function ConnectDots({
     setPaths(prev);
     setDraft([]);
     setActivePairId(null);
+    setLinkFrom(null);
+    setPointerPreview(null);
   };
 
   const restart = () => {
@@ -262,10 +430,13 @@ export function ConnectDots({
     setPaths({});
     setDraft([]);
     setActivePairId(null);
+    setLinkFrom(null);
+    setPointerPreview(null);
   };
 
   const cellSize = 100 / n;
   const activeColor = activePairId ? pairById(board, activePairId)?.color : undefined;
+  const linkColor = linkFrom ? pairById(board, linkFrom.pairId)?.color : undefined;
 
   return (
     <div className={cn("w-full", className)}>
@@ -299,7 +470,17 @@ export function ConnectDots({
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-[min(100%,100vw-2rem)] touch-none select-none sm:max-w-[min(100%,520px)]">
+      <div className="relative mx-auto w-full max-w-[min(100%,100vw-2rem)] touch-none select-none sm:max-w-[min(100%,520px)]">
+        {hoverTooltip ? (
+          <div
+            role="tooltip"
+            className="pointer-events-none absolute z-20 max-w-[min(240px,80vw)] -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-lg border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-2.5 py-1.5 text-xs font-medium leading-snug text-[var(--foreground)] shadow-[var(--shadow-soft)]"
+            style={{ left: `${hoverTooltip.x}%`, top: `${hoverTooltip.y}%` }}
+          >
+            {hoverTooltip.text}
+          </div>
+        ) : null}
+
         <svg
           ref={svgRef}
           viewBox={`0 0 100 100`}
@@ -309,11 +490,10 @@ export function ConnectDots({
           tabIndex={disabled ? -1 : 0}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={endStroke}
-          onPointerCancel={endStroke}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           style={{ touchAction: "none" }}
         >
-          {/* Grid */}
           {Array.from({ length: n + 1 }, (_, i) => (
             <g key={`g-${i}`}>
               <line
@@ -335,61 +515,39 @@ export function ConnectDots({
             </g>
           ))}
 
-          {/* Completed paths */}
           {Object.entries(paths).map(([pairId, path]) => {
             const pair = pairById(board, pairId);
             if (!pair || path.length < 2) return null;
             const d = path
               .map((cell, i) => {
-                const x = cell.c * cellSize + cellSize / 2;
-                const y = cell.r * cellSize + cellSize / 2;
+                const { x, y } = cellCenter(cell, cellSize);
                 return `${i === 0 ? "M" : "L"} ${x} ${y}`;
               })
               .join(" ");
-            const mid = path[Math.floor(path.length / 2)]!;
-            const mx = mid.c * cellSize + cellSize / 2;
-            const my = mid.r * cellSize + cellSize / 2;
-            const endpointLabel = pair.question?.trim() || pair.answer?.trim() || `Pair ${pair.label}`;
             return (
-              <g key={pairId} role="img" aria-label={`Connected: ${endpointLabel}. Verified with check mark.`}>
-                <path
-                  d={d}
-                  fill="none"
-                  stroke={pair.color}
-                  strokeWidth={cellSize * 0.42}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={0.9}
-                />
-                <circle cx={mx} cy={my} r={cellSize * 0.22} fill="#FFFFFF" stroke="var(--game-connect-dots-deep)" strokeWidth={0.35} />
-                <text
-                  x={mx}
-                  y={my}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={cellSize * 0.28}
-                  fontWeight={700}
-                  fill="var(--game-connect-dots-deep)"
-                  aria-hidden="true"
-                >
-                  ✓
-                </text>
-              </g>
+              <path
+                key={pairId}
+                d={d}
+                fill="none"
+                stroke={pair.color}
+                strokeWidth={cellSize * 0.42}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.92}
+              />
             );
           })}
 
-          {/* Draft path */}
-          {draft.length >= 2 && activeColor && (
+          {draft.length >= 2 && !useLinkMode && (
             <path
               d={draft
                 .map((cell, i) => {
-                  const x = cell.c * cellSize + cellSize / 2;
-                  const y = cell.r * cellSize + cellSize / 2;
+                  const { x, y } = cellCenter(cell, cellSize);
                   return `${i === 0 ? "M" : "L"} ${x} ${y}`;
                 })
                 .join(" ")}
               fill="none"
-              stroke={activeColor}
+              stroke={hasContent ? DRAFT_PATH : (activeColor ?? DRAFT_PATH)}
               strokeWidth={cellSize * 0.42}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -397,36 +555,84 @@ export function ConnectDots({
             />
           )}
 
-          {/* Endpoints */}
+          {useLinkMode && linkFrom && pointerPreview && linkColor && (
+            <line
+              x1={cellCenter(linkFrom.cell, cellSize).x}
+              y1={cellCenter(linkFrom.cell, cellSize).y}
+              x2={pointerPreview.x}
+              y2={pointerPreview.y}
+              stroke={linkColor}
+              strokeWidth={cellSize * 0.12}
+              strokeLinecap="round"
+              opacity={0.45}
+              strokeDasharray={`${cellSize * 0.2} ${cellSize * 0.15}`}
+            />
+          )}
+
           {board.pairs.map((pair) =>
             [pair.a, pair.b].map((cell, idx) => {
-              const cx = cell.c * cellSize + cellSize / 2;
-              const cy = cell.r * cellSize + cellSize / 2;
+              const { x: cx, y: cy } = cellCenter(cell, cellSize);
               const r = cellSize * 0.28;
+              const tooltip = endpointTooltip(pair, idx as 0 | 1);
+              const showLabels = !hasContent && !useLinkMode;
               const label = endpointLabel(pair, idx as 0 | 1);
               const fontSize = labelFontSize(label, cellSize);
-              const title = idx === 0 ? pair.question?.trim() : pair.answer?.trim();
+              const isLocked = lockedPairIds.has(pair.id);
+              const isReject = rejectFlash === pair.id;
+              const isLinkSource = linkFrom?.pairId === pair.id && linkFrom.side === (idx === 0 ? "a" : "b");
+
               return (
-                <g key={`${pair.id}-${idx}`}>
-                  {title && <title>{title}</title>}
-                  <circle cx={cx} cy={cy} r={r} fill={pair.color} />
-                  <text
-                    x={cx}
-                    y={cy}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize={fontSize}
-                    fontWeight={700}
-                    fill="#fff"
-                    style={{ pointerEvents: "none", userSelect: "none" }}
-                  >
-                    {label}
-                  </text>
+                <g
+                  key={`${pair.id}-${idx}`}
+                  onPointerEnter={() => {
+                    if (!tooltip) return;
+                    setHoverTooltip({ text: tooltip, x: (cx / 100) * 100, y: (cy / 100) * 100 });
+                  }}
+                  onPointerLeave={() => setHoverTooltip(null)}
+                >
+                  {tooltip ? <title>{tooltip}</title> : null}
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r * 1.15}
+                    fill="transparent"
+                    style={{ pointerEvents: disabled ? "none" : "all" }}
+                  />
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r}
+                    fill={hasContent && !isLocked ? UNCONNECTED_DOT : pair.color}
+                    stroke={isReject ? "#DC2626" : isLinkSource ? "#111111" : "transparent"}
+                    strokeWidth={isReject || isLinkSource ? 0.35 : 0}
+                    opacity={isLocked ? 1 : 0.95}
+                    className={cn(isReject && "animate-pulse")}
+                  />
+                  {showLabels ? (
+                    <text
+                      x={cx}
+                      y={cy}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={fontSize}
+                      fontWeight={700}
+                      fill="#fff"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {label}
+                    </text>
+                  ) : null}
                 </g>
               );
             }),
           )}
         </svg>
+
+        {hasContent && !disabled ? (
+          <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
+            Hover a dot to read its text, then draw a path between the matching question and answer.
+          </p>
+        ) : null}
       </div>
     </div>
   );

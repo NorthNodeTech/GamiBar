@@ -40,13 +40,20 @@ function AuthorRoomPage() {
   const { roomId } = Route.useParams();
   const author = useMemo(() => loadAuthorRoom(), [roomId]);
   const authorToken = author?.roomId === roomId ? author.authorToken : undefined;
-  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling(
-    { roomId, authorToken },
-    1200,
-  );
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry, refresh } =
+    useRoomPolling({ roomId, authorToken });
   const [busy, setBusy] = useState(false);
   const [leaderboardBusy, setLeaderboardBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const connectDotsSolvability = useMemo(() => {
+    if (!snapshot?.ok) return null;
+    const room = snapshot.room;
+    if (room.mode !== "connect_dots" || room.payload.mode !== "connect_dots") return null;
+    const pairs = room.payload.connectDots.contentPairs;
+    if (pairs.length === 0) return null;
+    return assessConnectDotsContentSolvability(pairs, room.payload.connectDots.seed);
+  }, [snapshot]);
 
   if (!authorToken) {
     return (
@@ -131,13 +138,6 @@ function AuthorRoomPage() {
   const isLive = room.status === "LIVE" || room.status === "COUNTDOWN";
   const canStart = (room.status === "LOBBY" || room.status === "READY") && room.participantCount >= 1;
 
-  const connectDotsSolvability = useMemo(() => {
-    if (room.mode !== "connect_dots" || room.payload.mode !== "connect_dots") return null;
-    const pairs = room.payload.connectDots.contentPairs;
-    if (pairs.length === 0) return null;
-    return assessConnectDotsContentSolvability(pairs, room.payload.connectDots.seed);
-  }, [room]);
-
   const handleStart = async () => {
     let confirmMessage = "Start the game for all students in the lobby?";
     if (connectDotsSolvability?.warning) {
@@ -152,7 +152,10 @@ function AuthorRoomPage() {
         const message = friendlyGameError(res.error, "Could not start the game. Try again.");
         setActionError(message);
         toast.error(message);
-      } else toast.success("Game started");
+      } else {
+        toast.success("Game started");
+        void refresh();
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not start the game.";
       setActionError(message);
@@ -172,7 +175,10 @@ function AuthorRoomPage() {
         const message = friendlyGameError(res.error, "Could not end the game. Try again.");
         setActionError(message);
         toast.error(message);
-      } else toast.success("Game finished - leaderboard ready");
+      } else {
+        toast.success("Game finished - leaderboard ready");
+        void refresh();
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not stop the game.";
       setActionError(message);
@@ -193,7 +199,10 @@ function AuthorRoomPage() {
         const message = friendlyGameError(res.error, "Could not update leaderboard visibility.");
         setActionError(message);
         toast.error(message);
-      } else toast.success(enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students");
+      } else {
+        toast.success(enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students");
+        void refresh();
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not update leaderboard visibility.";
       setActionError(message);

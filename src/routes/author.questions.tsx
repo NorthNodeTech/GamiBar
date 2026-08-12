@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Check, Copy, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Check, ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
@@ -79,6 +79,18 @@ function QuestionBankPage() {
 
   const q = questions[activeQ]!;
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
+  const isQuestionComplete = (item: QuizQuestionDraft) =>
+    Boolean(
+      item.prompt.trim() &&
+        item.correctOption &&
+        item.options.A.trim() &&
+        item.options.B.trim() &&
+        item.options.C.trim() &&
+        item.options.D.trim(),
+    );
+  const currentComplete = isQuestionComplete(q);
+  const hasNext = activeQ < questions.length - 1;
+  const hasPrev = activeQ > 0;
 
   const update = (patch: Partial<QuizQuestionDraft>) => {
     setQuestions((prev) => prev.map((item, i) => (i === activeQ ? { ...item, ...patch } : item)));
@@ -168,14 +180,7 @@ function QuestionBankPage() {
 
             <div className="mt-4 flex flex-wrap gap-1.5">
               {questions.map((item, i) => {
-                const done = Boolean(
-                  item.prompt.trim() &&
-                    item.correctOption &&
-                    item.options.A.trim() &&
-                    item.options.B.trim() &&
-                    item.options.C.trim() &&
-                    item.options.D.trim(),
-                );
+                const done = isQuestionComplete(item);
                 return (
                   <button
                     key={item.id}
@@ -259,6 +264,32 @@ function QuestionBankPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E7EB] pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 rounded-xl"
+                  disabled={!hasPrev}
+                  onClick={() => setActiveQ(activeQ - 1)}
+                >
+                  <ChevronLeft className="mr-1 size-4" />
+                  Previous
+                </Button>
+                <p className="text-center text-xs text-[#737373]">
+                  Question {activeQ + 1} of {questions.length}
+                  {currentComplete ? " · Ready" : ""}
+                </p>
+                <Button
+                  type="button"
+                  className="h-11 rounded-xl bg-[#111111] hover:bg-black"
+                  disabled={!hasNext}
+                  onClick={() => setActiveQ(activeQ + 1)}
+                >
+                  Next question
+                  <ChevronRight className="ml-1 size-4" />
+                </Button>
               </div>
             </div>
 
