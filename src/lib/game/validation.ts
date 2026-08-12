@@ -1,9 +1,16 @@
 import { CONNECT_DOTS_CONFIG, type ConnectDotsDifficulty } from "@/lib/connect-dots";
 import { GAME_CONFIG, type GameMode } from "@/lib/game/config";
 import {
+  DEFAULT_JIGSAW_TEMPLATE_ID,
+  defaultQuestionCountForTemplate,
+  jigsawTemplateById,
+  minQuestionCountForTemplate,
+} from "@/lib/game/jigsaw-grid";
+import {
   connectDotsPairsProgress,
   isConnectDotsPairComplete,
 } from "@/lib/game/connect-dots-content";
+import { validatePieceUnlockAt, resolvePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
 import type { GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
 import { isTimerValid } from "@/lib/game/timer";
 
@@ -11,18 +18,24 @@ const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 
 export function questionCountForMode(mode: GameMode): number {
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.questionCount;
-  if (mode === "jigsaw") return GAME_CONFIG.jigsaw.defaultQuestionCount;
+  if (mode === "jigsaw") {
+    return defaultQuestionCountForTemplate(jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID));
+  }
   return GAME_CONFIG.quiz.defaultQuestionCount;
 }
 
-export function emptyQuizQuestions(mode: GameMode = "quiz"): QuizQuestionDraft[] {
-  const count = questionCountForMode(mode);
-  return Array.from({ length: count }, (_, i) => ({
+export function emptyQuizQuestionsWithCount(count: number): QuizQuestionDraft[] {
+  const safeCount = Math.max(1, count);
+  return Array.from({ length: safeCount }, (_, i) => ({
     id: `q-${i + 1}`,
     prompt: "",
     options: { A: "", B: "", C: "", D: "" },
     correctOption: null,
   }));
+}
+
+export function emptyQuizQuestions(mode: GameMode = "quiz"): QuizQuestionDraft[] {
+  return emptyQuizQuestionsWithCount(questionCountForMode(mode));
 }
 
 export function isQuizQuestionComplete(q: QuizQuestionDraft): boolean {
@@ -109,8 +122,13 @@ export function validateGamePayload(
     return { ok: true };
   }
   if (mode === "jigsaw" && payload.mode === "jigsaw") {
-    if (payload.questions.length < GAME_CONFIG.jigsaw.minQuestions) {
-      return { ok: false, error: "Add at least one question." };
+    const tileCount = payload.jigsaw.cols * payload.jigsaw.rows;
+    const minQuestions = minQuestionCountForTemplate(payload.jigsaw);
+    if (payload.questions.length < minQuestions) {
+      return {
+        ok: false,
+        error: `Add at least ${minQuestions} questions for a ${payload.jigsaw.cols}×${payload.jigsaw.rows} puzzle (${tileCount} pieces).`,
+      };
     }
     if (payload.questions.length > GAME_CONFIG.jigsaw.maxQuestions) {
       return {
@@ -127,6 +145,14 @@ export function validateGamePayload(
     }
     if (!payload.jigsaw.imageUrl) {
       return { ok: false, error: "Upload one puzzle image for students to reconstruct." };
+    }
+    const unlockValidation = validatePieceUnlockAt(
+      resolvePieceUnlockAt(payload.questions.length, tileCount, payload.jigsaw.pieceUnlockAt),
+      payload.questions.length,
+      tileCount,
+    );
+    if (!unlockValidation.ok) {
+      return unlockValidation;
     }
     if (!isTimerValid("jigsaw", payload.timeLimitSeconds)) {
       return { ok: false, error: "Choose a jigsaw timer between 30 seconds and 5 minutes, or no limit." };

@@ -58,9 +58,11 @@ import {
   readEarnedTileIds,
   readTileRotations,
   readTileLayouts,
+  resolvePieceUnlockAt,
 } from "@/lib/game/jigsaw-tile-rewards";
 import type {
   GamePayload,
+  JigsawConfig,
   LeaderboardRow,
   Participant,
   QuizOptionId,
@@ -163,6 +165,11 @@ function ensureAttemptRecord(stored: StoredRoom, participantId: string) {
 function incrementWrongCount(stored: StoredRoom, participantId: string, by = 1) {
   const attempt = ensureAttemptRecord(stored, participantId);
   attempt.wrongCount += by;
+}
+
+function jigsawUnlockSchedule(jigsaw: JigsawConfig, questionCount: number): number[] {
+  const tileCount = Math.max(1, jigsaw.cols * jigsaw.rows);
+  return resolvePieceUnlockAt(questionCount, tileCount, jigsaw.pieceUnlockAt);
 }
 
 function displayNameKey(displayName: string): string {
@@ -414,14 +421,25 @@ function backfillJigsawMissionTilePresentation(stored: StoredRoom, participantId
 
   const { questions, jigsaw } = stored.room.payload;
   const total = questions.length;
+  const pieceUnlockAt = jigsawUnlockSchedule(jigsaw, total);
   const earnedTileIds = readEarnedTileIds(
     attempt.payload,
     jigsaw.cols,
     jigsaw.rows,
     attempt.correctCount ?? 0,
     total,
+    pieceUnlockAt,
   );
-  if (earnedTileIds.length === 0) return false;
+
+  const storedEarned = attempt.payload?.earnedTileIds;
+  const storedList = Array.isArray(storedEarned)
+    ? storedEarned.filter((id): id is string => typeof id === "string")
+    : [];
+  const earnedChanged =
+    earnedTileIds.length !== storedList.length ||
+    earnedTileIds.some((id) => !storedList.includes(id));
+
+  if (earnedTileIds.length === 0 && !earnedChanged) return false;
 
   const { tileRotations, changed: rotationsChanged } = ensureTileRotationsForEarned(
     earnedTileIds,
@@ -431,9 +449,9 @@ function backfillJigsawMissionTilePresentation(stored: StoredRoom, participantId
     earnedTileIds,
     readTileLayouts(attempt.payload),
   );
-  if (!rotationsChanged && !layoutsChanged) return false;
+  if (!earnedChanged && !rotationsChanged && !layoutsChanged) return false;
 
-  attempt.payload = { ...attempt.payload, tileRotations, tileLayouts };
+  attempt.payload = { ...attempt.payload, earnedTileIds, tileRotations, tileLayouts };
   return true;
 }
 
@@ -471,13 +489,21 @@ export async function getRoomSnapshot(input: {
   const leaderboard = computeLeaderboard(stored);
   const gameFinished =
     stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
+  const myRank =
+    participantId != null
+      ? (leaderboard.find((row) => row.participantId === participantId)?.rank ?? null)
+      : null;
   const hideQuizLiveLeaderboard =
     !isAuthor &&
     !gameFinished &&
     stored.room.mode === "quiz" &&
     stored.room.status === "LIVE" &&
     !stored.room.showLeaderboardToStudents;
-  const visibleLeaderboard = hideQuizLiveLeaderboard ? [] : leaderboard;
+  const visibleLeaderboard = hideQuizLiveLeaderboard
+    ? participantId
+      ? leaderboard.filter((row) => row.participantId === participantId)
+      : []
+    : leaderboard;
   const revealOwnAnswerCorrectness =
     stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
   const myAnswers =
@@ -501,6 +527,7 @@ export async function getRoomSnapshot(input: {
     room: publicRoom(stored, { includeSecrets: isAuthor }),
     isAuthor,
     participantId,
+    myRank,
     leaderboard: visibleLeaderboard,
     liveProgress: isAuthor && stored.room.status === "LIVE"
       ? computeLiveParticipantProgress(stored)
@@ -919,8 +946,10 @@ export async function submitJigsawMissionAnswer(input: {
   }
 
   const total = questions.length;
-  const { cols, rows } = stored.room.payload.jigsaw;
+  const jigsaw = stored.room.payload.jigsaw;
+  const { cols, rows } = jigsaw;
   const tileCount = Math.max(1, cols * rows);
+  const pieceUnlockAt = jigsawUnlockSchedule(jigsaw, total);
   let mission = readJigsawMissionPayload(attempt.payload);
   if (mission.phase === undefined) {
     mission = initialJigsawMissionPayload();
@@ -975,6 +1004,7 @@ export async function submitJigsawMissionAnswer(input: {
       rows,
       correctIds.size,
       total,
+      pieceUnlockAt,
     );
 
     return {
@@ -1007,13 +1037,21 @@ export async function submitJigsawMissionAnswer(input: {
   attempt.correctCount = correctQuestionCount;
   attempt.progress = correctQuestionCount / total;
 
-  const existingEarned = readEarnedTileIds(attempt.payload, cols, rows, correctIds.size, total);
+  const existingEarned = readEarnedTileIds(
+    attempt.payload,
+    cols,
+    rows,
+    correctIds.size,
+    total,
+    pieceUnlockAt,
+  );
   const earnedTileIds = mergeEarnedTileIds(
     existingEarned,
     correctQuestionCount,
     total,
     tileCount,
     cols,
+    pieceUnlockAt,
   );
 
   if (!firstRoundComplete) {
@@ -1124,12 +1162,14 @@ export async function rotateJigsawMissionTile(input: {
 
   const { questions, jigsaw } = stored.room.payload;
   const total = questions.length;
+  const pieceUnlockAt = jigsawUnlockSchedule(jigsaw, total);
   const earnedTileIds = readEarnedTileIds(
     attempt.payload,
     jigsaw.cols,
     jigsaw.rows,
     attempt.correctCount ?? 0,
     total,
+    pieceUnlockAt,
   );
 
   if (!earnedTileIds.includes(input.tileId)) {
@@ -1232,6 +1272,7 @@ export async function submitJigsawMissionAssembly(input: {
   reconnectToken: string;
   layout: number[];
   totalPieces: number;
+  tileRotations?: Record<string, number>;
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
@@ -1266,6 +1307,7 @@ export async function submitJigsawMissionAssembly(input: {
     jigsaw.rows,
     attempt.correctCount ?? 0,
     questionTotal,
+    jigsawUnlockSchedule(jigsaw, questionTotal),
   );
   if (!allTilesEarned(earnedTileIds, gridTotal)) {
     return {
@@ -1275,13 +1317,29 @@ export async function submitJigsawMissionAssembly(input: {
   }
 
   const layout = input.layout.slice(0, gridTotal);
+  if (input.tileRotations && typeof input.tileRotations === "object") {
+    const merged: Record<string, number> = { ...readTileRotations(attempt.payload) };
+    for (const [tileId, rotation] of Object.entries(input.tileRotations)) {
+      if (isTileCardRotation(rotation)) {
+        merged[tileId] = rotation;
+      }
+    }
+    attempt.payload = { ...attempt.payload, tileRotations: merged };
+  }
   const tileRotations = readTileRotations(attempt.payload);
   attempt.payload = {
     ...mergeJigsawMissionPayload(attempt.payload, { phase: "assemble" }),
     assemblyLayout: layout,
   };
 
-  const validation = validateJigsawAssembly(layout, tileRotations, gridTotal, jigsaw.cols, jigsaw.rows);
+  const validation = validateJigsawAssembly(
+    layout,
+    tileRotations,
+    gridTotal,
+    jigsaw.cols,
+    jigsaw.rows,
+    earnedTileIds,
+  );
   if (!validation.ok) {
     await persist(stored);
     return {

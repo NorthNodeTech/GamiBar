@@ -36,8 +36,55 @@ type BuildCompletionInput = {
   totalPairs?: number;
   leaderboard: LeaderboardRow[];
   participantId: string | null;
+  myRank?: number | null;
   durationMsOverride?: number | null;
 };
+
+function isQuizSessionFinished(input: {
+  mode: GameMode;
+  myAttempt: BuildCompletionInput["myAttempt"];
+  myAnswers: BuildCompletionInput["myAnswers"];
+  totalQuestions: number;
+}): boolean {
+  if (input.mode !== "quiz") return Boolean(input.myAttempt?.completed);
+  return (
+    Boolean(input.myAttempt?.completed) ||
+    (input.totalQuestions > 0 && input.myAnswers.length >= input.totalQuestions)
+  );
+}
+
+function resolveCompletionRank(input: {
+  mode: GameMode;
+  participantId: string | null;
+  leaderboard: LeaderboardRow[];
+  myRank?: number | null;
+  myAttempt: BuildCompletionInput["myAttempt"];
+  myAnswers: BuildCompletionInput["myAnswers"];
+  totalQuestions: number;
+}): number | null {
+  const fromSnapshot =
+    input.myRank ??
+    (input.participantId
+      ? input.leaderboard.find((row) => row.participantId === input.participantId)?.rank
+      : undefined);
+  if (fromSnapshot != null) return fromSnapshot;
+
+  if (input.mode !== "quiz") return null;
+  if (!isQuizSessionFinished(input)) return null;
+
+  // Completed quiz — always show a rank (solo player → 1st)
+  if (input.leaderboard.length === 0) return 1;
+
+  const completedRows = input.leaderboard.filter((row) => row.status === "completed");
+  if (completedRows.length === 0) return 1;
+
+  if (input.participantId) {
+    const selfIndex = completedRows.findIndex((row) => row.participantId === input.participantId);
+    if (selfIndex >= 0) return selfIndex + 1;
+  }
+
+  return 1;
+}
 
 export function buildGameCompletionViewModel(input: BuildCompletionInput): GameCompletionViewModel {
   const {
@@ -50,13 +97,22 @@ export function buildGameCompletionViewModel(input: BuildCompletionInput): GameC
     totalPairs = 0,
     leaderboard,
     participantId,
+    myRank,
     durationMsOverride,
   } = input;
 
   const myRow = participantId
     ? leaderboard.find((row) => row.participantId === participantId)
     : undefined;
-  const rank = myRow?.rank ?? null;
+  const rank = resolveCompletionRank({
+    mode,
+    participantId,
+    leaderboard,
+    myRank,
+    myAttempt,
+    myAnswers,
+    totalQuestions,
+  });
   const durationMs = durationMsOverride ?? myAttempt?.durationMs ?? myRow?.secondaryMetric ?? null;
   const correctCount = myAttempt?.correctCount ?? 0;
 

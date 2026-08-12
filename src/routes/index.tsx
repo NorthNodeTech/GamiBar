@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +50,6 @@ function Landing() {
 
       <LandingSection id="why">
         <SectionHeading
-          eyebrow={HOMEPAGE_INFRASTRUCTURE_SECTION.eyebrow}
           title={HOMEPAGE_INFRASTRUCTURE_SECTION.title}
           description={HOMEPAGE_INFRASTRUCTURE_SECTION.description}
           className="mb-10 text-center md:mb-14"
@@ -73,7 +72,6 @@ function Landing() {
 
       <LandingSection id="testimonials">
         <SectionHeading
-          eyebrow={HOMEPAGE_TESTIMONIALS_SECTION.eyebrow}
           title={HOMEPAGE_TESTIMONIALS_SECTION.title}
           description={HOMEPAGE_TESTIMONIALS_SECTION.description}
           className="mb-10 text-center md:mb-14"
@@ -115,7 +113,6 @@ function Landing() {
 
       <section id="faq" className="mx-auto max-w-4xl scroll-mt-20 px-5 py-16 md:py-20">
         <SectionHeading
-          eyebrow={HOMEPAGE_FAQ_SECTION.eyebrow}
           title={HOMEPAGE_FAQ_SECTION.title}
           className="mb-10 text-center md:mb-12"
           titleClassName="text-[clamp(1.75rem,4.5vw,2.25rem)]"
@@ -146,20 +143,17 @@ function Landing() {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.06),transparent_70%)]" />
 
           <FadeUp>
-            <Sparkles className="mx-auto size-8 text-[var(--background)]/70 dark:text-[var(--foreground)]/70" />
-          </FadeUp>
-          <FadeUp delay={0.08}>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-[var(--background)] md:text-4xl dark:text-[var(--foreground)]">
+            <h2 className="text-3xl font-extrabold tracking-tight text-[var(--background)] md:text-4xl dark:text-[var(--foreground)]">
               {HOMEPAGE_CTA.title}
             </h2>
           </FadeUp>
-          <FadeUp delay={0.14}>
+          <FadeUp delay={0.08}>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--background)]/60 dark:text-[var(--muted-foreground)]">
               {HOMEPAGE_CTA.description}
             </p>
           </FadeUp>
 
-          <FadeUp delay={0.2} className="mt-8 flex flex-wrap justify-center gap-4 md:mt-9">
+          <FadeUp delay={0.14} className="mt-8 flex flex-wrap justify-center gap-4 md:mt-9">
             <MagneticButton>
               <Button
                 asChild

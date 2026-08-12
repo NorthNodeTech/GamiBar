@@ -199,6 +199,7 @@ export async function submitJigsawMissionAssemblyFn({
     reconnectToken: string;
     layout: number[];
     totalPieces: number;
+    tileRotations?: Record<string, number>;
   };
 }) {
   return submitJigsawMissionAssembly(data);

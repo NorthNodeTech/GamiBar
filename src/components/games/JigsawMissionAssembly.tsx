@@ -77,6 +77,7 @@ export function JigsawMissionAssembly({
   assemblyCardSize = ASSEMBLY_PILE_CARD_SIZE,
   submitMessage,
   initialPlacements,
+  onClearSubmitMessage,
 }: {
   imageUrl: string;
   cols: number;
@@ -86,6 +87,7 @@ export function JigsawMissionAssembly({
   tileLayouts: Readonly<TileLayoutMap>;
   onSubmit: (layout: number[]) => void;
   onRotateTile?: (tileId: string) => void;
+  onClearSubmitMessage?: () => void;
   submitting?: boolean;
   disabled?: boolean;
   locked?: boolean;
@@ -147,8 +149,11 @@ export function JigsawMissionAssembly({
   const puzzleComplete = useMemo(() => {
     if (!allSlotsFilled(placements)) return false;
     const layout = layoutFromPlacements(placements);
-    return validateJigsawAssembly(layout, tileRotations, total, cols, rows).ok;
-  }, [placements, tileRotations, total, cols, rows]);
+    return validateJigsawAssembly(layout, tileRotations, total, cols, rows, earnedTileIds).ok;
+  }, [placements, tileRotations, total, cols, rows, earnedTileIds]);
+
+  const displaySubmitMessage = submitMessage ?? localSubmitMessage;
+  const showCelebration = puzzleComplete && !displaySubmitMessage;
 
   const slotSnapAt = useCallback(
     (clientX: number, clientY: number) =>
@@ -157,6 +162,8 @@ export function JigsawMissionAssembly({
   );
 
   const placePiece = useCallback((pieceId: number, slotIndex: number) => {
+    onClearSubmitMessage?.();
+    setLocalSubmitMessage(null);
     setPlacements((prev) => {
       const next = [...prev];
       const fromSlot = next.findIndex((p) => p === pieceId);
@@ -173,9 +180,11 @@ export function JigsawMissionAssembly({
     });
     setLandedSlot(slotIndex);
     window.setTimeout(() => setLandedSlot((current) => (current === slotIndex ? null : current)), 280);
-  }, []);
+  }, [onClearSubmitMessage]);
 
   const removeFromSlot = useCallback((slotIndex: number) => {
+    onClearSubmitMessage?.();
+    setLocalSubmitMessage(null);
     setPlacements((prev) => {
       const next = [...prev];
       next[slotIndex] = null;
@@ -330,6 +339,7 @@ export function JigsawMissionAssembly({
   useEffect(() => {
     if (locked || interactionsDisabled || drag || pendingDragRef.current) return;
     if (!puzzleComplete) return;
+    if (submitMessage) return;
 
     const layout = layoutFromPlacements(placements);
     const submitKey = JSON.stringify({ layout, tileRotations });
@@ -337,21 +347,20 @@ export function JigsawMissionAssembly({
 
     lastAutoSubmitKeyRef.current = submitKey;
     onSubmit(layout);
-  }, [puzzleComplete, locked, interactionsDisabled, drag, placements, tileRotations, onSubmit]);
+  }, [puzzleComplete, locked, interactionsDisabled, drag, placements, tileRotations, onSubmit, submitMessage]);
 
   const handleSubmit = () => {
     if (locked || interactionsDisabled) return;
     const layout = layoutFromPlacements(placements);
-    const validation = validateJigsawAssembly(layout, tileRotations, total, cols, rows);
+    const validation = validateJigsawAssembly(layout, tileRotations, total, cols, rows, earnedTileIds);
     if (!validation.ok) {
       setLocalSubmitMessage(jigsawAssemblyValidationMessage(validation.reason));
       return;
     }
     setLocalSubmitMessage(null);
+    lastAutoSubmitKeyRef.current = null;
     onSubmit(layout);
   };
-
-  const displaySubmitMessage = submitMessage ?? localSubmitMessage;
 
   const renderPieceFace = (pieceId: number, className?: string) => {
     const tile = tiles[pieceId];
@@ -402,7 +411,7 @@ export function JigsawMissionAssembly({
         {liveMessage}
       </p>
 
-      {puzzleComplete ? (
+      {showCelebration ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -469,7 +478,7 @@ export function JigsawMissionAssembly({
         />
       )}
 
-      {!puzzleComplete ? (
+      {!showCelebration ? (
         <>
           <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[#F3F4F6] p-2.5 sm:p-4">
         <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] sm:text-xs">

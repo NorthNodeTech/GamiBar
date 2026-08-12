@@ -1,4 +1,6 @@
-/** Balanced square grids for Jigsaw Mission — not tied 1:1 to question count. */
+/** Square puzzle templates for Jigsaw Mission — chosen first; questions follow. */
+
+import { GAME_CONFIG } from "@/lib/game/config";
 
 export type JigsawGridLayout = {
   cols: number;
@@ -6,25 +8,77 @@ export type JigsawGridLayout = {
   tileCount: number;
 };
 
-const SQUARE_GRID_SIDE = [2, 3, 4] as const;
+export type JigsawTemplateId = "2x2" | "3x3" | "4x4";
+
+export type JigsawTemplate = JigsawGridLayout & {
+  id: JigsawTemplateId;
+  label: string;
+};
+
+export const JIGSAW_TEMPLATES: readonly JigsawTemplate[] = [
+  { id: "2x2", label: "2×2", cols: 2, rows: 2, tileCount: 4 },
+  { id: "3x3", label: "3×3", cols: 3, rows: 3, tileCount: 9 },
+  { id: "4x4", label: "4×4", cols: 4, rows: 4, tileCount: 16 },
+] as const;
+
+export const DEFAULT_JIGSAW_TEMPLATE_ID: JigsawTemplateId = "2x2";
+
+export function jigsawTemplateById(id: JigsawTemplateId): JigsawTemplate {
+  return JIGSAW_TEMPLATES.find((template) => template.id === id) ?? JIGSAW_TEMPLATES[1]!;
+}
+
+export function jigsawTemplateFromGrid(cols: number, rows: number): JigsawTemplate | null {
+  return JIGSAW_TEMPLATES.find((template) => template.cols === cols && template.rows === rows) ?? null;
+}
+
+export function layoutFromTemplate(template: JigsawGridLayout): JigsawGridLayout {
+  return {
+    cols: template.cols,
+    rows: template.rows,
+    tileCount: template.cols * template.rows,
+  };
+}
+
+/** Minimum questions = one per puzzle piece. */
+export function minQuestionCountForTemplate(template: JigsawGridLayout): number {
+  return Math.max(1, template.cols * template.rows);
+}
+
+/** Suggested question count when a template is picked (e.g. 2×2 → 10 questions). */
+export function defaultQuestionCountForTemplate(template: JigsawGridLayout): number {
+  const tileCount = template.cols * template.rows;
+  return Math.min(
+    GAME_CONFIG.jigsaw.maxQuestions,
+    Math.max(tileCount, tileCount * 2 + 2),
+  );
+}
 
 /**
- * Pick a square tile grid from question count:
- * - 1–4 questions → 2×2 (4 tiles)
- * - 5–9 questions → 3×3 (9 tiles)
- * - 10–16 questions → 4×4 (16 tiles)
+ * @deprecated Legacy rooms derived grid from question count. Prefer explicit templates.
+ * 1–4 questions → 2×2 · 5–9 → 3×3 · 10–16 → 4×4
  */
 export function jigsawTileCountForQuestions(questionCount: number): number {
-  const q = Math.max(1, Math.min(16, questionCount));
+  const q = Math.max(1, Math.min(GAME_CONFIG.jigsaw.maxQuestions, questionCount));
   if (q <= 4) return 4;
   if (q <= 9) return 9;
   return 16;
 }
 
+/** @deprecated Use `layoutFromTemplate(jigsawTemplateById(...))` for new rooms. */
 export function computeJigsawGrid(questionCount: number): JigsawGridLayout {
   const tileCount = jigsawTileCountForQuestions(questionCount);
-  const side = Math.sqrt(tileCount) as (typeof SQUARE_GRID_SIDE)[number];
+  const side = Math.sqrt(tileCount) as 2 | 3 | 4;
   return { cols: side, rows: side, tileCount };
+}
+
+export function resolveJigsawGrid(
+  cols: number | undefined,
+  rows: number | undefined,
+  questionCount: number,
+): JigsawGridLayout {
+  const fromPayload = jigsawTemplateFromGrid(cols ?? 0, rows ?? 0);
+  if (fromPayload) return layoutFromTemplate(fromPayload);
+  return computeJigsawGrid(questionCount);
 }
 
 export function jigsawPieceCount(cols: number, rows: number): number {

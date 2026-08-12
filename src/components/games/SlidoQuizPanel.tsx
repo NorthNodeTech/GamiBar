@@ -111,17 +111,26 @@ export function SlidoQuizPanel({
               className={cn(
                 "flex min-h-14 w-full touch-manipulation items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-semibold text-white transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 sm:min-h-14 sm:py-3",
                 OPTION_COLORS[opt],
-                selected === opt && "scale-[1.02] ring-4 ring-white/40",
+                selected === opt && "scale-[1.02] ring-4 ring-white/40 shadow-md",
                 feedback !== null && selected !== opt && "opacity-50",
               )}
             >
               <span
-                className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/15 text-xs font-bold sm:size-8"
+                className={cn(
+                  "grid size-9 shrink-0 place-items-center rounded-lg text-xs font-bold sm:size-8",
+                  selected === opt ? "bg-white text-[#111111]" : "bg-black/15",
+                )}
                 aria-hidden="true"
               >
-                {OPTION_LABELS[opt]}
+                {selected === opt ? <Check className="size-4" strokeWidth={3} /> : OPTION_LABELS[opt]}
               </span>
               <span className="min-w-0 flex-1">{question.options[opt]}</span>
+              {selected === opt && feedback === null && (
+                <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+                  <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+                  Selected
+                </span>
+              )}
             </button>
           ))}
         </div>

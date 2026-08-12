@@ -81,7 +81,9 @@ export function SectionHeading({
         viewport={viewport}
         transition={{ duration: 0.6, delay: 0.07, ease: MOTION_EASE }}
         className={cn(
-          "mt-2 font-display font-bold tracking-tight text-[var(--foreground)]",
+          "font-display font-bold tracking-tight text-[var(--foreground)]",
+          !eyebrow && "mt-0",
+          eyebrow && "mt-2",
           align === "center"
             ? "mx-auto text-[clamp(1.75rem,4.5vw,3rem)]"
             : "text-[clamp(1.5rem,4.5vw,1.875rem)]",

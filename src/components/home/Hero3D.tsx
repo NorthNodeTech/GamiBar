@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import heroImage from "@/assets/hero.webp";
@@ -42,23 +42,12 @@ export function Hero3D() {
         <div className="hero-section__grid grid lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] lg:gap-8 xl:gap-10">
           <div className="hero-section__copy min-w-0 text-left">
             <div className="hero-section__intro">
-              <motion.div
+              <motion.h1
                 custom={0}
                 variants={fadeUp}
                 initial="hidden"
                 animate="show"
-                className="hero-section__badge inline-flex items-center gap-1.5 rounded-full border border-[var(--gamibar-brand)]/15 bg-[var(--gamibar-brand-soft)] px-3 py-1.5 text-[11px] font-semibold text-[var(--gamibar-brand)] shadow-[var(--shadow-soft)] backdrop-blur-md"
-              >
-                <Sparkles className="size-3.5 shrink-0" />
-                {HOMEPAGE_HERO.badge}
-              </motion.div>
-
-              <motion.h1
-                custom={0.07}
-                variants={fadeUp}
-                initial="hidden"
-                animate="show"
-                className="hero-section__headline mt-2.5 font-display text-[clamp(1.875rem,5.5vw,3.25rem)] font-extrabold leading-[1.1] tracking-tight text-[var(--foreground)] sm:mt-5"
+                className="hero-section__headline font-display text-[clamp(1.875rem,5.5vw,3.25rem)] font-extrabold leading-[1.1] tracking-tight text-[var(--foreground)]"
               >
                 <AnimatedWords text={HOMEPAGE_HERO.headlinePrefix} delay={0.1} />
                 <span className="sm:whitespace-nowrap">

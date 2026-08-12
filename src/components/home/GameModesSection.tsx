@@ -18,8 +18,6 @@ export function GameModesSection() {
   return (
     <LandingSection id="games" width="5xl" className="!py-12 md:!py-16">
       <SectionHeading
-        eyebrow={HOMEPAGE_GAME_MODES_SECTION.eyebrow}
-        eyebrowClassName="tracking-wider text-[var(--gamibar-brand)]"
         title={HOMEPAGE_GAME_MODES_SECTION.title}
         description={HOMEPAGE_GAME_MODES_SECTION.description}
         align="center"

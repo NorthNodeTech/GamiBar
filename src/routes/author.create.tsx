@@ -24,6 +24,13 @@ import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
 import { saveAuthorRoom } from "@/lib/game/client-session";
 import {
@@ -34,18 +41,34 @@ import {
   reorderConnectDotsPairs,
 } from "@/lib/game/connect-dots-content";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
-import { computeJigsawGrid } from "@/lib/game/jigsaw-grid";
+import {
+  DEFAULT_JIGSAW_TEMPLATE_ID,
+  JIGSAW_TEMPLATES,
+  defaultQuestionCountForTemplate,
+  jigsawTemplateById,
+  layoutFromTemplate,
+  minQuestionCountForTemplate,
+  type JigsawTemplateId,
+} from "@/lib/game/jigsaw-grid";
+import {
+  defaultPieceUnlockAt,
+  describeTileUnlockSchedule,
+  normalizePieceUnlockAt,
+  pieceUnlockAtOptions,
+  tileUnlockScheduleEntries,
+} from "@/lib/game/jigsaw-tile-rewards";
 import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
 import { getModeCatalog, type GameModeCatalogItem } from "@/lib/game/mode-catalog";
 import { modeUsesQuestions } from "@/lib/game/mode-registry";
 import { createRoomFn } from "@/lib/game/room.functions";
 import { formatTimerLong, gameInstruction } from "@/lib/game/timer";
 import type { ConnectDotsBoardConfig, ConnectDotsContentPair, GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
+import { prepareJigsawImage } from "@/lib/game/jigsaw-image";
 import {
   emptyQuizQuestions,
+  emptyQuizQuestionsWithCount,
   quizCompletionCount,
   validateGamePayload,
-  validateJigsawFile,
 } from "@/lib/game/validation";
 import { listQuestionSets } from "@/lib/question-bank";
 import { cn } from "@/lib/utils";
@@ -90,6 +113,13 @@ function CreateRoomWizard() {
   const [connectDotsSeed, setConnectDotsSeed] = useState(() => `cd-${Date.now()}`);
   const [jigsawUrl, setJigsawUrl] = useState<string | null>(null);
   const [jigsawMime, setJigsawMime] = useState<string | null>(null);
+  const [jigsawTemplateId, setJigsawTemplateId] = useState<JigsawTemplateId>(DEFAULT_JIGSAW_TEMPLATE_ID);
+  const [jigsawPieceUnlockAt, setJigsawPieceUnlockAt] = useState<number[]>(() => {
+    const template = jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID);
+    const questionCount = defaultQuestionCountForTemplate(template);
+    const tileCount = layoutFromTemplate(template).tileCount;
+    return defaultPieceUnlockAt(questionCount, tileCount);
+  });
   const [timerSeconds, setTimerSeconds] = useState<number | null>(null);
   const [activeQ, setActiveQ] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -145,7 +175,7 @@ function CreateRoomWizard() {
       };
     }
     if (mode === "jigsaw") {
-      const grid = computeJigsawGrid(questions.length);
+      const grid = layoutFromTemplate(jigsawTemplateById(jigsawTemplateId));
       return {
         mode: "jigsaw",
         questions,
@@ -154,6 +184,7 @@ function CreateRoomWizard() {
           imageMime: jigsawMime,
           cols: grid.cols,
           rows: grid.rows,
+          pieceUnlockAt: jigsawPieceUnlockAt,
         },
         timeLimitSeconds: timerSeconds,
       };
@@ -164,7 +195,7 @@ function CreateRoomWizard() {
       connectDots: connectDotsBoard,
       timeLimitSeconds: timerSeconds,
     };
-  }, [mode, questions, connectDotsBoard, jigsawUrl, jigsawMime, timerSeconds, rewardCode]);
+  }, [mode, questions, connectDotsBoard, jigsawUrl, jigsawMime, jigsawTemplateId, jigsawPieceUnlockAt, timerSeconds, rewardCode]);
 
   const configValid = payload && mode ? validateGamePayload(mode, payload).ok : false;
 
@@ -231,6 +262,44 @@ function CreateRoomWizard() {
       setConnectDotsSeed(`cd-${Date.now()}`);
       setActiveQ(0);
     }
+    if (next === "jigsaw") {
+      const template = jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID);
+      setJigsawTemplateId(DEFAULT_JIGSAW_TEMPLATE_ID);
+      setJigsawPieceUnlockAt(
+        defaultPieceUnlockAt(
+          defaultQuestionCountForTemplate(template),
+          layoutFromTemplate(template).tileCount,
+        ),
+      );
+    }
+  };
+
+  const handleJigsawTemplateChange = (nextTemplateId: JigsawTemplateId) => {
+    const template = jigsawTemplateById(nextTemplateId);
+    setJigsawTemplateId(nextTemplateId);
+    const minQuestions = minQuestionCountForTemplate(template);
+    const tileCount = layoutFromTemplate(template).tileCount;
+    setQuestions((prev) => {
+      if (prev.length >= minQuestions) return prev;
+      const next = [...prev];
+      while (next.length < minQuestions) {
+        next.push({
+          id: `q-${next.length + 1}`,
+          prompt: "",
+          options: { A: "", B: "", C: "", D: "" },
+          correctOption: null,
+        });
+      }
+      return next;
+    });
+    setJigsawPieceUnlockAt((prev) => {
+      const questionCount = Math.max(questions.length, minQuestions);
+      if (prev.length === tileCount) {
+        return normalizePieceUnlockAt(prev, questionCount, tileCount);
+      }
+      return defaultPieceUnlockAt(questionCount, tileCount);
+    });
+    setActiveQ(0);
   };
 
   useEffect(() => {
@@ -244,25 +313,21 @@ function CreateRoomWizard() {
   const handleImage = async (file: File | undefined) => {
     if (!file) return;
     setImageUploadError(null);
-    const v = validateJigsawFile(file);
-    if (!v.ok) {
-      setImageUploadError(v.error);
-      toast.error(v.error);
-      return;
-    }
     setImageUploading(true);
     try {
-      await new Promise<void>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setJigsawUrl(String(reader.result));
-          setJigsawMime(file.type);
-          resolve();
-        };
-        reader.onerror = () => reject(new Error("Could not read that image. Try a different file."));
-        reader.readAsDataURL(file);
-      });
-      toast.success("Puzzle image locked in.");
+      const result = await prepareJigsawImage(file);
+      if (!result.ok) {
+        setImageUploadError(result.error);
+        toast.error(result.error);
+        return;
+      }
+      setJigsawUrl(result.dataUrl);
+      setJigsawMime(result.mime);
+      toast.success(
+        result.cropped
+          ? "Image cropped to a square so pieces fit the puzzle grid."
+          : "Square puzzle image locked in.",
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : "Upload failed.";
       setImageUploadError(message);
@@ -298,8 +363,10 @@ function CreateRoomWizard() {
     setActiveQ((i) => Math.min(i, questions.length - 2));
   };
 
-  const addJigsawQuestion = () => addQuestion(GAME_CONFIG.jigsaw);
-  const removeJigsawQuestion = () => removeQuestion(GAME_CONFIG.jigsaw);
+  const addJigsawQuestion = () =>
+    addQuestion({ minQuestions: jigsawMinQuestions, maxQuestions: GAME_CONFIG.jigsaw.maxQuestions });
+  const removeJigsawQuestion = () =>
+    removeQuestion({ minQuestions: jigsawMinQuestions, maxQuestions: GAME_CONFIG.jigsaw.maxQuestions });
   const addQuizQuestion = () => addQuestion(GAME_CONFIG.quiz);
   const removeQuizQuestion = () => removeQuestion(GAME_CONFIG.quiz);
 
@@ -329,10 +396,40 @@ function CreateRoomWizard() {
     setActiveQ(toIndex);
   };
 
-  const jigsawGrid = useMemo(
-    () => computeJigsawGrid(questions.length),
-    [questions.length],
+  const jigsawTemplate = useMemo(
+    () => jigsawTemplateById(jigsawTemplateId),
+    [jigsawTemplateId],
   );
+  const jigsawGrid = useMemo(() => layoutFromTemplate(jigsawTemplate), [jigsawTemplate]);
+  const jigsawMinQuestions = useMemo(
+    () => minQuestionCountForTemplate(jigsawTemplate),
+    [jigsawTemplate],
+  );
+  const jigsawUnlockHint = useMemo(
+    () => describeTileUnlockSchedule(questions.length, jigsawGrid.tileCount, jigsawPieceUnlockAt),
+    [questions.length, jigsawGrid.tileCount, jigsawPieceUnlockAt],
+  );
+  const jigsawUnlockSchedule = useMemo(
+    () => tileUnlockScheduleEntries(questions.length, jigsawGrid.tileCount, jigsawPieceUnlockAt),
+    [questions.length, jigsawGrid.tileCount, jigsawPieceUnlockAt],
+  );
+
+  useEffect(() => {
+    if (mode !== "jigsaw") return;
+    setJigsawPieceUnlockAt((prev) =>
+      normalizePieceUnlockAt(prev, questions.length, jigsawGrid.tileCount),
+    );
+  }, [mode, questions.length, jigsawGrid.tileCount]);
+
+  const handlePieceUnlockChange = (pieceIndex: number, value: string) => {
+    const nextValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(nextValue)) return;
+    setJigsawPieceUnlockAt((prev) => {
+      const next = [...prev];
+      next[pieceIndex] = nextValue;
+      return normalizePieceUnlockAt(next, questions.length, jigsawGrid.tileCount);
+    });
+  };
 
   const handleCreate = async () => {
     if (!mode || !payload || !user || !isAuthorAuthenticated(user)) return;
@@ -395,7 +492,7 @@ function CreateRoomWizard() {
 
         <div
           className={cn(
-            "author-card relative mt-3 overflow-hidden",
+            "author-card relative mt-3 flex flex-col overflow-visible",
             step === "mode" && !skipModeStep.current && "md:overflow-visible",
           )}
         >
@@ -433,7 +530,7 @@ function CreateRoomWizard() {
                 {mode === "quiz_jigsaw" &&
                   `Add ${GAME_CONFIG.quiz_jigsaw.questionCount} questions, upload a puzzle image, and set a reward code.`}
                 {mode === "jigsaw" &&
-                  "Add questions, upload the final puzzle image, and mark one correct answer per question."}
+                  "In Puzzle setup, choose 2×2, 3×3, or 4×4 first, then add questions and upload the image."}
                 {mode === "connect_dots" &&
                   "Add matching question/answer pairs. Each pair becomes two dots students connect on the grid."}
               </p>
@@ -443,7 +540,7 @@ function CreateRoomWizard() {
 
           <div
             className={cn(
-              "px-4 py-4 sm:px-5 sm:py-5",
+              "wizard-sticky-content px-4 py-4 sm:px-5 sm:py-5",
               step === "mode" && !skipModeStep.current && "md:overflow-visible",
             )}
           >
@@ -601,6 +698,8 @@ function CreateRoomWizard() {
                       uploading={imageUploading}
                       uploadError={imageUploadError}
                       onDismissUploadError={() => setImageUploadError(null)}
+                      gridCols={GAME_CONFIG.quiz_jigsaw.cols}
+                      gridRows={GAME_CONFIG.quiz_jigsaw.rows}
                       label="Puzzle image"
                       hint="Students reveal this image piece by piece as they answer correctly."
                     />
@@ -623,38 +722,123 @@ function CreateRoomWizard() {
 
                 {mode === "jigsaw" && (
                   <>
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[#111111]">
-                          {questions.length} question{questions.length === 1 ? "" : "s"} ·{" "}
-                          {jigsawGrid.tileCount} square tile{jigsawGrid.tileCount === 1 ? "" : "s"}
-                        </p>
-                        <p className="text-xs text-[#737373]">
-                          Image splits into a {jigsawGrid.cols}×{jigsawGrid.rows} grid · wrong answers retry at
-                          the end
-                        </p>
+                    <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-4 sm:p-5">
+                      <p className="text-sm font-semibold text-[#111111]">Puzzle setup</p>
+                      <p className="mt-1 text-xs text-[#737373]">
+                        Choose the grid first, then set questions and when each piece unlocks.
+                      </p>
+
+                      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--game-jigsaw-deep)]">
+                        Step 1 · Grid template
+                      </p>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {JIGSAW_TEMPLATES.map((template) => {
+                          const active = template.id === jigsawTemplateId;
+                          return (
+                            <button
+                              key={template.id}
+                              type="button"
+                              onClick={() => handleJigsawTemplateChange(template.id)}
+                              className={cn(
+                                "rounded-xl border px-3 py-3 text-center transition-colors",
+                                active
+                                  ? "border-[var(--game-jigsaw)] bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw-deep)] ring-2 ring-[var(--game-jigsaw)]/25"
+                                  : "border-[var(--gamibar-border)] bg-white text-[#525252] hover:border-[var(--game-jigsaw)]/40",
+                              )}
+                            >
+                              <span className="block font-display text-lg font-bold">{template.label}</span>
+                              <span className="mt-0.5 block text-[11px] font-medium">
+                                {template.tileCount} piece{template.tileCount === 1 ? "" : "s"}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={questions.length <= GAME_CONFIG.jigsaw.minQuestions}
-                          onClick={removeJigsawQuestion}
-                        >
-                          Remove
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={questions.length >= GAME_CONFIG.jigsaw.maxQuestions}
-                          onClick={addJigsawQuestion}
-                        >
-                          Add question
-                        </Button>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--game-jigsaw-deep)]">
+                            Step 2 · Questions
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-[#111111]">
+                            {questions.length} question{questions.length === 1 ? "" : "s"} ·{" "}
+                            {jigsawGrid.cols}×{jigsawGrid.rows} grid ({jigsawGrid.tileCount} pieces)
+                          </p>
+                          <p className="mt-0.5 text-xs text-[#737373]">
+                            Minimum {jigsawMinQuestions} questions for this grid · wrong answers retry at
+                            the end
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl"
+                            disabled={questions.length <= jigsawMinQuestions}
+                            onClick={removeJigsawQuestion}
+                          >
+                            Remove
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl"
+                            disabled={questions.length >= GAME_CONFIG.jigsaw.maxQuestions}
+                            onClick={addJigsawQuestion}
+                          >
+                            Add question
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 rounded-xl border border-[var(--gamibar-border)] bg-white px-3 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">
+                          Piece reward schedule
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-[var(--game-jigsaw-deep)]">
+                          {jigsawUnlockHint}
+                        </p>
+                        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                          {jigsawUnlockSchedule.map((entry, index) => {
+                            const options = pieceUnlockAtOptions(
+                              index,
+                              questions.length,
+                              jigsawGrid.tileCount,
+                              jigsawPieceUnlockAt,
+                            );
+                            return (
+                              <li
+                                key={entry.piece}
+                                className="flex items-center justify-between gap-2 rounded-lg bg-[var(--gamibar-page)] px-2.5 py-1.5 text-xs"
+                              >
+                                <span className="shrink-0 font-semibold text-[#111111]">
+                                  Piece {entry.piece}
+                                </span>
+                                <div className="flex min-w-0 items-center gap-1.5 text-[#525252]">
+                                  <span className="shrink-0">after</span>
+                                  <Select
+                                    value={String(entry.afterCorrect)}
+                                    onValueChange={(value) => handlePieceUnlockChange(index, value)}
+                                  >
+                                    <SelectTrigger className="h-7 w-[4.5rem] rounded-lg border-[var(--gamibar-border)] bg-white px-2 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {options.map((option) => (
+                                        <SelectItem key={option} value={String(option)}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <span className="shrink-0">correct</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
                     </div>
                     <QuizEditor
@@ -672,9 +856,11 @@ function CreateRoomWizard() {
                       uploading={imageUploading}
                       uploadError={imageUploadError}
                       onDismissUploadError={() => setImageUploadError(null)}
-                      pieceCount={questions.length}
+                      pieceCount={jigsawGrid.tileCount}
+                      gridCols={jigsawGrid.cols}
+                      gridRows={jigsawGrid.rows}
                       label="Final puzzle image"
-                      hint={`Students reconstruct this image · ${questions.length} pieces · ${formatTimerLong(timerSeconds)} timer`}
+                      hint={`Students reconstruct this ${jigsawGrid.cols}×${jigsawGrid.rows} image · ${jigsawGrid.tileCount} pieces · ${formatTimerLong(timerSeconds)} timer`}
                     />
                   </>
                 )}
@@ -724,7 +910,7 @@ function CreateRoomWizard() {
             )}
           </div>
 
-          <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 rounded-b-[1.25rem] border-t border-[var(--gamibar-border)] bg-[var(--gamibar-surface)]/95 px-4 py-3 backdrop-blur-md sm:px-5 md:bottom-0">
+          <div className="wizard-sticky-footer rounded-b-[1.25rem] px-4 py-3 sm:px-5">
             {createError ? (
               <InlineErrorBanner
                 className="mb-3"
@@ -739,11 +925,11 @@ function CreateRoomWizard() {
                 {configureHint}
               </p>
             )}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 min-w-[5.5rem] rounded-xl sm:h-9 sm:min-w-0 sm:px-3 sm:text-sm"
+                className="h-11 min-h-[2.75rem] min-w-[5.5rem] flex-1 rounded-xl sm:h-9 sm:min-w-0 sm:flex-none sm:px-3 sm:text-sm"
                 disabled={step === "mode" || submitting}
                 onClick={goBack}
               >
@@ -753,7 +939,7 @@ function CreateRoomWizard() {
               {step !== "review" ? (
                 <Button
                   type="button"
-                  className="h-11 rounded-xl bg-[#111111] px-5 hover:bg-black sm:h-9 sm:px-4 sm:text-sm"
+                  className="h-11 min-h-[2.75rem] flex-1 rounded-xl bg-[#111111] px-5 hover:bg-black sm:h-9 sm:flex-none sm:px-4 sm:text-sm"
                   disabled={!canContinue}
                   onClick={goNext}
                 >
@@ -763,7 +949,7 @@ function CreateRoomWizard() {
               ) : (
                 <Button
                   type="button"
-                  className="h-11 rounded-xl bg-[#111111] px-5 hover:bg-black sm:h-9 sm:px-4 sm:text-sm"
+                  className="h-11 min-h-[2.75rem] flex-1 rounded-xl bg-[#111111] px-5 hover:bg-black sm:h-9 sm:flex-none sm:px-4 sm:text-sm"
                   disabled={!configValid || submitting}
                   onClick={() => void handleCreate()}
                 >
@@ -983,30 +1169,32 @@ function QuizEditor({
           })}
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--gamibar-border)] pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 rounded-xl"
-            disabled={!hasPrev}
-            onClick={() => setActiveQ(activeQ - 1)}
-          >
-            <ChevronLeft className="mr-1 size-4" />
-            Previous
-          </Button>
+        <div className="mt-5 space-y-3 border-t border-[var(--gamibar-border)] pt-4">
           <p className="text-center text-xs text-[#737373]">
             Question {activeQ + 1} of {questions.length}
             {currentComplete ? " · Ready" : ""}
           </p>
-          <Button
-            type="button"
-            className="h-11 rounded-xl bg-[#111111] hover:bg-black"
-            disabled={!hasNext}
-            onClick={() => setActiveQ(activeQ + 1)}
-          >
-            Next question
-            <ChevronRight className="ml-1 size-4" />
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 min-h-[2.75rem] w-full rounded-xl"
+              disabled={!hasPrev}
+              onClick={() => setActiveQ(activeQ - 1)}
+            >
+              <ChevronLeft className="mr-1 size-4" />
+              Previous
+            </Button>
+            <Button
+              type="button"
+              className="h-11 min-h-[2.75rem] w-full rounded-xl bg-[#111111] hover:bg-black"
+              disabled={!hasNext}
+              onClick={() => setActiveQ(activeQ + 1)}
+            >
+              Next question
+              <ChevronRight className="ml-1 size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -1023,6 +1211,8 @@ function JigsawUploader({
   label = "Upload your puzzle image",
   hint,
   pieceCount,
+  gridCols = 3,
+  gridRows = 3,
 }: {
   jigsawUrl: string | null;
   timerLabel: string;
@@ -1033,52 +1223,73 @@ function JigsawUploader({
   label?: string;
   hint?: string;
   pieceCount?: number;
+  gridCols?: number;
+  gridRows?: number;
 }) {
   const pieces =
     pieceCount ??
     (hint ? GAME_CONFIG.quiz_jigsaw.questionCount : GAME_CONFIG.jigsaw.defaultQuestionCount);
+  const gridLineStyle = {
+    backgroundImage: [
+      "linear-gradient(rgba(255,255,255,0.22) 1px, transparent 1px)",
+      "linear-gradient(90deg, rgba(255,255,255,0.22) 1px, transparent 1px)",
+    ].join(", "),
+    backgroundSize: `${100 / gridCols}% ${100 / gridRows}%`,
+  };
+
   return (
     <div className="grid gap-4">
-      <label
-        className={cn(
-          "group relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center transition-colors hover:border-[var(--game-jigsaw)] sm:min-h-[200px]",
-          uploading && "pointer-events-none opacity-80",
-        )}
-      >
-        {uploading ? (
-          <div className="relative z-10 flex flex-col items-center">
-            <Loader2 className="size-8 animate-spin text-[var(--game-jigsaw)]" aria-hidden="true" />
-            <p className="mt-4 text-sm font-semibold text-[#111111]">Uploading image…</p>
-            <p className="mt-1 text-xs text-[#737373]">Preparing your puzzle preview</p>
-          </div>
-        ) : jigsawUrl ? (
-          <>
-            <img src={jigsawUrl} alt="Puzzle source" className="absolute inset-0 size-full object-cover opacity-90" />
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.15)_1px,transparent_1px)] bg-[size:20%_20%]" />
-            <div className="relative rounded-2xl bg-black/50 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
-              Tap to replace image
+      <div className="mx-auto w-full max-w-[320px]">
+        <label
+          className={cn(
+            "group relative block aspect-square w-full cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[#111111] transition-colors hover:border-[var(--game-jigsaw)]",
+            uploading && "pointer-events-none opacity-80",
+          )}
+        >
+          {uploading ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--gamibar-page)] px-6 text-center">
+              <Loader2 className="size-8 animate-spin text-[var(--game-jigsaw)]" aria-hidden="true" />
+              <p className="mt-4 text-sm font-semibold text-[#111111]">Preparing image…</p>
+              <p className="mt-1 text-xs text-[#737373]">Cropping to a square puzzle canvas</p>
             </div>
-          </>
-        ) : (
-          <>
-            <span className="grid size-14 place-items-center rounded-2xl bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw)]">
-              <Upload className="size-6" />
-            </span>
-            <p className="mt-4 font-display text-lg font-bold text-[#111111]">{label}</p>
-            <p className="mt-1 text-sm text-[#525252]">JPG, PNG, or WEBP · max 8 MB</p>
-            <p className="mt-3 text-xs font-medium text-[#737373]">
-              {hint ?? `Auto-splits into ${pieces} pieces · ${timerLabel} timer`}
-            </p>
-          </>
-        )}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          disabled={uploading}
-          onChange={(e) => void onFile(e.target.files?.[0])}
-        />
-      </label>
+          ) : jigsawUrl ? (
+            <>
+              <img
+                src={jigsawUrl}
+                alt="Puzzle source"
+                className="absolute inset-0 size-full object-cover"
+              />
+              <div className="absolute inset-0" style={gridLineStyle} aria-hidden />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-4 pt-10 text-center">
+                <span className="inline-block rounded-full bg-black/55 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+                  Tap to replace · {gridCols}×{gridRows} square
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--gamibar-page)] px-6 text-center">
+              <span className="grid size-14 place-items-center rounded-2xl bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw)]">
+                <Upload className="size-6" />
+              </span>
+              <p className="mt-4 font-display text-lg font-bold text-[#111111]">{label}</p>
+              <p className="mt-1 text-sm text-[#525252]">JPG, PNG, or WEBP · max 8 MB</p>
+              <p className="mt-2 text-xs font-semibold text-[var(--game-jigsaw-deep)]">
+                Square 1:1 · center-cropped to fit {gridCols}×{gridRows}
+              </p>
+              <p className="mt-3 text-xs font-medium text-[#737373]">
+                {hint ?? `Splits into ${pieces} pieces · ${timerLabel} timer`}
+              </p>
+            </div>
+          )}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={uploading}
+            onChange={(e) => void onFile(e.target.files?.[0])}
+          />
+        </label>
+      </div>
       {uploadError ? (
         <InlineErrorBanner message={uploadError} onDismiss={onDismissUploadError} />
       ) : null}

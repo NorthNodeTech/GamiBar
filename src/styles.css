@@ -909,8 +909,31 @@
     }
   }
 
+  /* Sticky wizard footers — keep page actions visible without covering content */
+  .wizard-sticky-content {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .wizard-sticky-content {
+      padding-bottom: 1.25rem;
+    }
+  }
+
+  .wizard-sticky-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    border-top: 1px solid var(--gamibar-border);
+    background: color-mix(in srgb, var(--gamibar-surface) 95%, transparent);
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    backdrop-filter: blur(12px);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
+  }
+
   .author-shell main {
     min-width: 0;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Landscape phones: tighter vertical rhythm */

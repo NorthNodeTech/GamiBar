@@ -26,6 +26,8 @@ export type JigsawConfig = {
   imageMime: string | null;
   cols: number;
   rows: number;
+  /** Correct-answer counts at which each puzzle piece unlocks (length = cols × rows). */
+  pieceUnlockAt?: number[];
 };
 
 export type ConnectDotsDifficulty = "easy" | "medium" | "hard";

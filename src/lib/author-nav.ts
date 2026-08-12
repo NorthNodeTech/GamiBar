@@ -24,6 +24,7 @@ export const authorNavItems: AuthorNavItem[] = [
   {
     to: "/author/sessions",
     label: "My Games",
+    mobileLabel: "My Games",
     icon: Gamepad2,
     match: (pathname) => pathname.startsWith("/author/sessions"),
   },

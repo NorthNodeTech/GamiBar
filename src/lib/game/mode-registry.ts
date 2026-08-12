@@ -1,6 +1,7 @@
 import { buildConnectDotsFromContentPairs } from "@/lib/game/connect-dots-content";
 import { GAME_CONFIG, type GameMode } from "@/lib/game/config";
-import { computeJigsawGrid } from "@/lib/game/jigsaw-grid";
+import { resolveJigsawGrid } from "@/lib/game/jigsaw-grid";
+import { normalizePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
 import { rankConnectDots, rankJigsaw, rankQuiz } from "@/lib/game/ranking";
 import type { ConnectDotsBoardConfig, GamePayload, LeaderboardRow, Room } from "@/lib/game/types";
 import { toPublicQuizQuestions } from "@/lib/game/validation";
@@ -146,16 +147,24 @@ const JIGSAW_MODE: LiveModeDefinition = {
   persistQuizAnswers: true,
   normalizeCreatePayload: (payload) => {
     if (payload.mode !== "jigsaw") return payload;
-    const grid =
-      payload.questions.length > 0
-        ? computeJigsawGrid(payload.questions.length)
-        : { cols: GAME_CONFIG.jigsaw.cols, rows: GAME_CONFIG.jigsaw.rows };
+    const grid = resolveJigsawGrid(
+      payload.jigsaw.cols,
+      payload.jigsaw.rows,
+      payload.questions.length,
+    );
+    const tileCount = grid.cols * grid.rows;
+    const pieceUnlockAt = normalizePieceUnlockAt(
+      payload.jigsaw.pieceUnlockAt ?? [],
+      payload.questions.length,
+      tileCount,
+    );
     return {
       ...payload,
       jigsaw: {
         ...payload.jigsaw,
         cols: grid.cols,
         rows: grid.rows,
+        pieceUnlockAt,
       },
       timeLimitSeconds: payload.timeLimitSeconds ?? null,
     };
@@ -168,6 +177,7 @@ const JIGSAW_MODE: LiveModeDefinition = {
       imageMime: payload.jigsaw.imageMime,
       cols: grid.cols,
       rows: grid.rows,
+      pieceUnlockAt: payload.jigsaw.pieceUnlockAt,
     };
     if (opts?.includeSecrets) {
       return { mode: "jigsaw", questions: payload.questions, jigsaw, timeLimitSeconds: payload.timeLimitSeconds };

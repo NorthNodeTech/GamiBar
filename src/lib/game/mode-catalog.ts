@@ -53,7 +53,7 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     icon: Blocks,
     tagline: "Answer questions to unlock pieces, then rebuild the image",
     specs: [
-      "1–16 questions = puzzle pieces",
+      "Pick a puzzle grid, add questions, upload the image",
       "Retry wrong answers until correct",
       "Upload any classroom image",
     ],

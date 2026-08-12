@@ -15,9 +15,13 @@ export function validateJigsawRotations(
   tileRotations: Readonly<TileRotationMap>,
   cols: number,
   rows: number,
+  tileIds?: readonly string[],
 ): boolean {
-  for (const tile of buildJigsawTiles(cols, rows)) {
-    if ((tileRotations[tile.id] ?? 0) !== 0) return false;
+  const ids =
+    tileIds ??
+    buildJigsawTiles(cols, rows).map((tile) => tile.id);
+  for (const id of ids) {
+    if ((tileRotations[id] ?? 0) !== 0) return false;
   }
   return true;
 }
@@ -33,6 +37,7 @@ export function validateJigsawAssembly(
   totalPieces: number,
   cols: number,
   rows: number,
+  earnedTileIds?: readonly string[],
 ): JigsawAssemblyValidation {
   if (layout.length !== totalPieces || layout.some((piece) => piece < 0)) {
     return { ok: false, reason: "empty" };
@@ -40,7 +45,7 @@ export function validateJigsawAssembly(
   if (!validateJigsawLayout(layout, totalPieces)) {
     return { ok: false, reason: "layout" };
   }
-  if (!validateJigsawRotations(tileRotations, cols, rows)) {
+  if (!validateJigsawRotations(tileRotations, cols, rows, earnedTileIds)) {
     return { ok: false, reason: "rotation" };
   }
   return { ok: true };

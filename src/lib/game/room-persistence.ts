@@ -1,5 +1,6 @@
 import { GAME_CONFIG } from "@/lib/game/config";
-import { computeJigsawGrid } from "@/lib/game/jigsaw-grid";
+import { resolveJigsawGrid } from "@/lib/game/jigsaw-grid";
+import { normalizePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
 import {
   modeNeedsJigsawUpload,
   modePersistsQuizAnswers,
@@ -98,6 +99,15 @@ function parseConnectDotsConfig(raw: Record<string, unknown>): ConnectDotsBoardC
   return board;
 }
 
+function readPieceUnlockAt(raw: unknown): number[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const values = raw.filter(
+    (value): value is number =>
+      typeof value === "number" && Number.isInteger(value) && value > 0,
+  );
+  return values.length > 0 ? values : undefined;
+}
+
 function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload {
   const raw = (config ?? {}) as Record<string, unknown>;
   // Legacy maze rooms are unsupported after Connect Dots replacement.
@@ -133,18 +143,23 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
       ? (raw["questions"] as QuizQuestionDraft[])
       : [];
     const jigsaw = (raw["jigsaw"] ?? {}) as Record<string, unknown>;
-    const grid =
-      questions.length > 0
-        ? computeJigsawGrid(questions.length)
-        : { cols: GAME_CONFIG.jigsaw.cols, rows: GAME_CONFIG.jigsaw.rows };
+    const cols = typeof jigsaw["cols"] === "number" ? jigsaw["cols"] : undefined;
+    const rows = typeof jigsaw["rows"] === "number" ? jigsaw["rows"] : undefined;
+    const grid = resolveJigsawGrid(cols, rows, questions.length);
+    const tileCount = grid.cols * grid.rows;
+    const pieceUnlockAtRaw = readPieceUnlockAt(jigsaw["pieceUnlockAt"]);
+    const pieceUnlockAt = pieceUnlockAtRaw
+      ? normalizePieceUnlockAt(pieceUnlockAtRaw, questions.length, tileCount)
+      : undefined;
     return {
       mode: "jigsaw",
       questions,
       jigsaw: {
         imageUrl: typeof jigsaw["imageUrl"] === "string" ? jigsaw["imageUrl"] : null,
         imageMime: typeof jigsaw["imageMime"] === "string" ? jigsaw["imageMime"] : null,
-        cols: typeof jigsaw["cols"] === "number" ? jigsaw["cols"] : grid.cols,
-        rows: typeof jigsaw["rows"] === "number" ? jigsaw["rows"] : grid.rows,
+        cols: grid.cols,
+        rows: grid.rows,
+        ...(pieceUnlockAt ? { pieceUnlockAt } : {}),
       },
       timeLimitSeconds,
     };
@@ -284,11 +299,13 @@ async function hydrateJigsawPayload(roomId: string, payload: GamePayload): Promi
   if (!asset) return payload;
 
   const imageUrl = await jigsawPublicUrl(asset.storage_path);
+  const storedJigsaw = payload.mode === "jigsaw" ? payload.jigsaw : null;
   const jigsaw = {
     imageUrl,
     imageMime: asset.mime_type,
     cols: asset.cols,
     rows: asset.rows,
+    ...(storedJigsaw?.pieceUnlockAt ? { pieceUnlockAt: storedJigsaw.pieceUnlockAt } : {}),
   };
   if (payload.mode === "quiz_jigsaw") {
     return { ...payload, jigsaw };
@@ -705,8 +722,30 @@ export async function findParticipantByReconnectToken(
     .eq("reconnect_token_hash", tokenHash)
     .maybeSingle();
   if (!data?.id) return undefined;
-  const participant = stored.participants.get(data.id);
-  if (participant) participant.reconnectToken = token;
+  let participant = stored.participants.get(data.id);
+  if (participant) {
+    participant.reconnectToken = token;
+    return participant;
+  }
+
+  const { data: row } = await supabase
+    .from("gamibar_participants")
+    .select("id, room_id, display_name, status, joined_at, user_id")
+    .eq("id", data.id)
+    .maybeSingle();
+  if (!row) return undefined;
+
+  participant = {
+    id: row.id,
+    roomId: row.room_id,
+    displayName: row.display_name,
+    status: row.status as Participant["status"],
+    joinedAt: ms(row.joined_at) ?? Date.now(),
+    reconnectToken: token,
+    connectionId: null,
+    userId: row.user_id,
+  };
+  stored.participants.set(participant.id, participant);
   return participant;
 }
 

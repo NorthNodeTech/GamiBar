@@ -24,7 +24,6 @@ export function JourneyTimeline() {
     <LandingSection id="journey" width="5xl" innerClassName="relative" className="!py-16 md:!py-24">
       <div ref={containerRef}>
         <SectionHeading
-          eyebrow={HOMEPAGE_JOURNEY_SECTION.eyebrow}
           title={HOMEPAGE_JOURNEY_SECTION.title}
           description={HOMEPAGE_JOURNEY_SECTION.description}
           className="mb-10 text-center md:mb-14"

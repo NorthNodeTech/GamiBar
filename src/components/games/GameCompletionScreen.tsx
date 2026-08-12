@@ -51,6 +51,8 @@ export function GameCompletionScreen({
 }) {
   const accent = MODE_ACCENT[model.mode];
   const completionTime = formatDuration(model.durationMs);
+  const isQuiz = model.mode === "quiz";
+  const rankDisplay = model.rank != null ? `#${model.rank}` : isQuiz ? "#1" : "—";
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[var(--gamibar-page)] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -77,41 +79,72 @@ export function GameCompletionScreen({
           </p>
         </header>
 
-        <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
-          <div
-            className={cn(
-              "rounded-2xl border bg-[var(--gamibar-surface)] px-3 py-2.5 text-center",
-              accent.ring,
-            )}
-          >
-            <p className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
-              <Trophy className={cn("size-3", accent.metric)} />
-              Your rank
-            </p>
-            <p className={cn("mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none", accent.metric)}>
-              {model.rank != null ? `#${model.rank}` : "—"}
-            </p>
-          </div>
+        {isQuiz ? (
+          <>
+            <div className="mt-3 shrink-0 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
+                Completion time
+              </p>
+              <p className="mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none text-[var(--foreground)]">
+                {completionTime}
+              </p>
+            </div>
 
-          <div
-            className={cn(
-              "rounded-2xl border bg-[var(--gamibar-surface)] px-3 py-2.5 text-center",
-              accent.ring,
-            )}
-          >
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
-              Completion time
-            </p>
-            <p className="mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none text-[var(--foreground)]">
-              {completionTime}
-            </p>
-          </div>
-        </div>
-
-        {children ? (
-          <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-4">
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--gamibar-text-tertiary)]">
+                <Trophy className={cn("size-4", accent.metric)} aria-hidden />
+                Your rank
+              </p>
+              <p
+                className={cn(
+                  "mt-2 font-display text-[clamp(4.5rem,22vw,7rem)] font-extrabold tabular-nums leading-none tracking-tight",
+                  accent.metric,
+                )}
+                aria-live="polite"
+              >
+                {rankDisplay}
+              </p>
+            </div>
+          </>
         ) : (
-          <div className="mt-3 min-h-0 flex-1" />
+          <>
+            <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
+              <div
+                className={cn(
+                  "rounded-2xl border bg-[var(--gamibar-surface)] px-3 py-2.5 text-center",
+                  accent.ring,
+                )}
+              >
+                <p className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
+                  <Trophy className={cn("size-3", accent.metric)} />
+                  Your rank
+                </p>
+                <p className={cn("mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none", accent.metric)}>
+                  {model.rank != null ? `#${model.rank}` : "—"}
+                </p>
+              </div>
+
+              <div
+                className={cn(
+                  "rounded-2xl border bg-[var(--gamibar-surface)] px-3 py-2.5 text-center",
+                  accent.ring,
+                )}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
+                  Completion time
+                </p>
+                <p className="mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none text-[var(--foreground)]">
+                  {completionTime}
+                </p>
+              </div>
+            </div>
+
+            {children ? (
+              <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
+            ) : (
+              <div className="mt-3 min-h-0 flex-1" />
+            )}
+          </>
         )}
 
         {!gameFinished && (

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight, Check, Circle } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ import {
   readEarnedTileIds,
   readTileLayouts,
   readTileRotations,
+  resolvePieceUnlockAt,
 } from "@/lib/game/jigsaw-tile-rewards";
 import type { JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
 import { isStudentSessionFinished } from "@/lib/game/mode-registry";
@@ -177,6 +179,7 @@ function StudentPlayPage() {
       totalPairs,
       leaderboard: snapshot.leaderboard,
       participantId: snapshot.participantId,
+      myRank: snapshot.myRank,
     });
 
     return playShell(
@@ -264,6 +267,7 @@ function StudentPlayPage() {
         reconnectToken={reconnectToken}
         questions={room.payload.questions}
         answeredIds={new Set(snapshot.myAnswers.map((a) => a.questionId))}
+        myAnswers={snapshot.myAnswers}
         instruction={room.instruction}
         endsAt={room.endsAt}
       />,
@@ -299,6 +303,7 @@ function StudentPlayPage() {
           imageUrl={room.payload.jigsaw.imageUrl}
           cols={room.payload.jigsaw.cols}
           rows={room.payload.jigsaw.rows}
+          pieceUnlockAt={room.payload.jigsaw.pieceUnlockAt}
           correctQuestionIds={snapshot.myAnswers.map((a) => a.questionId)}
           missionPayload={snapshot.myAttempt?.payload ?? EMPTY_MISSION_PAYLOAD}
           endsAt={room.endsAt}
@@ -425,6 +430,7 @@ function QuizPlay({
   reconnectToken,
   questions,
   answeredIds,
+  myAnswers,
   instruction,
   endsAt,
 }: {
@@ -432,23 +438,62 @@ function QuizPlay({
   reconnectToken: string;
   questions: Array<{ id: string; prompt: string; options: Record<QuizOptionId, string>; order: number }>;
   answeredIds: Set<string>;
+  myAnswers: Array<{ questionId: string; selectedOption: QuizOptionId }>;
   instruction: string;
   endsAt: number | null;
 }) {
-  const unanswered = questions.filter((q) => !answeredIds.has(q.id));
-  const current = unanswered[0] ?? null;
+  const answerByQuestion = useMemo(
+    () => new Map(myAnswers.map((a) => [a.questionId, a.selectedOption])),
+    [myAnswers],
+  );
+
+  const [localAnsweredIds, setLocalAnsweredIds] = useState(() => new Set(answeredIds));
+  const [localSelections, setLocalSelections] = useState<Map<string, QuizOptionId>>(
+    () => new Map(answerByQuestion),
+  );
+
+  useEffect(() => {
+    setLocalAnsweredIds(new Set(answeredIds));
+  }, [answeredIds]);
+
+  useEffect(() => {
+    setLocalSelections(new Map(answerByQuestion));
+  }, [answerByQuestion]);
+
+  const answeredCount = localAnsweredIds.size;
+  const firstUnansweredIndex = questions.findIndex((q) => !localAnsweredIds.has(q.id));
+  const maxViewIndex =
+    firstUnansweredIndex >= 0 ? firstUnansweredIndex : Math.max(0, questions.length - 1);
+
+  const [viewIndex, setViewIndex] = useState(() => maxViewIndex);
+  const prevAnsweredCountRef = useRef(answeredCount);
+
+  useEffect(() => {
+    if (answeredCount > prevAnsweredCountRef.current) {
+      const activeIndex =
+        firstUnansweredIndex >= 0 ? firstUnansweredIndex : Math.max(0, questions.length - 1);
+      setViewIndex(activeIndex);
+    }
+    prevAnsweredCountRef.current = answeredCount;
+  }, [answeredCount, firstUnansweredIndex, questions.length]);
+
+  const current = questions[viewIndex] ?? null;
+  const isAnswered = current ? localAnsweredIds.has(current.id) : false;
+  const isActive = viewIndex === firstUnansweredIndex && firstUnansweredIndex >= 0;
+  const storedAnswer = current ? localSelections.get(current.id) ?? null : null;
+
   const [selected, setSelected] = useState<QuizOptionId | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [localAnswered, setLocalAnswered] = useState(answeredIds.size);
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    setLocalAnswered(answeredIds.size);
-  }, [answeredIds.size]);
+    setSelected(storedAnswer);
+    setSubmitError(null);
+  }, [current?.id, storedAnswer]);
 
   const submit = async () => {
-    if (!current || !selected || timedOut) return;
+    if (!current || !selected || timedOut || !isActive || isAnswered) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -466,8 +511,9 @@ function QuizPlay({
         toast.error(message);
         return;
       }
+      setLocalAnsweredIds((prev) => new Set([...prev, current.id]));
+      setLocalSelections((prev) => new Map(prev).set(current.id, selected));
       setSelected(null);
-      setLocalAnswered(res.answeredCount);
       if (res.completed) toast.success("Quiz complete!");
     } catch {
       const message = "Could not save your answer. Check your connection and try again.";
@@ -488,83 +534,255 @@ function QuizPlay({
   }
 
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
+  const canGoBack = viewIndex > 0;
+  const canGoForward = viewIndex < maxViewIndex;
+
+  const goToQuestion = (index: number) => {
+    if (index <= maxViewIndex) setViewIndex(index);
+  };
 
   return (
-    <div className="mx-auto flex min-h-dvh-screen max-w-lg flex-col px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-8">
-      <div className="flex items-center justify-between gap-3">
-        <Logo size={32} />
-        <div className="flex shrink-0 items-center gap-2">
+    <div className="mx-auto flex min-h-dvh-screen w-full max-w-6xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:flex-row lg:items-stretch lg:gap-0 lg:px-8 lg:py-8">
+      {/* Main question area — ~75% on desktop */}
+      <div className="flex min-w-0 flex-1 flex-col lg:w-[75%] lg:max-w-[75%] lg:pr-8">
+        <div className="flex items-center justify-between gap-3">
+          <Logo size={32} />
           <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
-          <span className="text-xs font-bold text-[var(--gamibar-text-tertiary)]">
-            {localAnswered + 1}/{questions.length}
-          </span>
         </div>
-      </div>
-      <p className="mt-4 text-xs text-[var(--gamibar-text-tertiary)]">{instruction}</p>
-      {timedOut && current ? (
-        <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800" role="status">
-          Time&apos;s up — no more answers can be submitted.
+
+        {/* Mobile: compact progress above question */}
+        <div className="mt-4 lg:hidden" aria-label={`Question ${viewIndex + 1} of ${questions.length}`}>
+          <p className="text-center font-display text-lg font-bold tabular-nums text-[var(--foreground)]">
+            {viewIndex + 1} / {questions.length}
+          </p>
+          <div
+            className="mt-2.5 flex flex-wrap items-center justify-center gap-2.5"
+            role="tablist"
+            aria-label="Question progress"
+          >
+            {questions.map((q, i) => {
+              const completed = localAnsweredIds.has(q.id);
+              const isCurrent = firstUnansweredIndex >= 0 && i === firstUnansweredIndex;
+              const reachable = i <= maxViewIndex;
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === viewIndex}
+                  aria-label={`Question ${i + 1}${completed ? ", completed" : isCurrent ? ", current" : ""}`}
+                  disabled={!reachable}
+                  onClick={() => goToQuestion(i)}
+                  className={cn(
+                    "tap-target grid size-9 place-items-center rounded-full text-base leading-none transition-transform active:scale-95",
+                    !reachable && "cursor-not-allowed opacity-35",
+                    completed && "text-[var(--gamibar-brand)]",
+                    isCurrent && !completed && "text-[var(--foreground)]",
+                    !completed && !isCurrent && "text-[var(--gamibar-border)]",
+                  )}
+                >
+                  {completed ? (
+                    <span aria-hidden className="size-2.5 rounded-full bg-current" />
+                  ) : isCurrent ? (
+                    <span aria-hidden className="relative grid size-3.5 place-items-center">
+                      <Circle className="size-3.5 fill-current stroke-current" strokeWidth={2.5} />
+                      <span className="absolute size-1.5 rounded-full bg-[var(--gamibar-page)]" />
+                    </span>
+                  ) : (
+                    <Circle className="size-3 stroke-current" strokeWidth={2} aria-hidden />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs leading-relaxed text-[var(--gamibar-text-tertiary)] lg:mt-5">
+          {instruction}
         </p>
-      ) : null}
-      <h1
-        id={`quiz-question-${current.id}`}
-        className="mt-5 font-display text-[clamp(1.125rem,4.5vw,1.375rem)] font-bold leading-snug text-[#111111]"
-      >
-        {current.prompt}
-      </h1>
-      <fieldset className="mt-6 border-0 p-0">
-        <legend className="sr-only">
-          Answer choices for question {localAnswered + 1} of {questions.length}
-        </legend>
-        <div className="grid gap-3 sm:gap-2.5">
-          {options.map((opt) => (
-            <button
-              key={opt}
+
+        {timedOut && isActive ? (
+          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800" role="status">
+            Time&apos;s up — no more answers can be submitted.
+          </p>
+        ) : null}
+
+        <div className="mt-4 space-y-2 lg:mt-5">
+          <p className="text-center text-xs font-semibold text-[var(--muted-foreground)]">
+            {isAnswered ? "Reviewing your answer" : isActive ? "Your turn" : ""}
+          </p>
+          <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-between">
+            <Button
               type="button"
-              onClick={() => setSelected(opt)}
-              disabled={timedOut}
-              aria-pressed={selected === opt}
-              aria-label={`Option ${opt}: ${current.options[opt]}`}
-              className={cn(
-                "flex min-h-[3.25rem] w-full touch-manipulation items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-medium transition-colors active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 sm:min-h-12 sm:py-3",
-                selected === opt
-                  ? "border-[#111111] bg-[#111111] text-white"
-                  : "border-[var(--gamibar-border)] bg-white text-[#111111] hover:border-[#D1D5DB]",
-              )}
+              variant="outline"
+              size="sm"
+              disabled={!canGoBack}
+              onClick={() => setViewIndex((i) => Math.max(0, i - 1))}
+              className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
             >
-              <span
-                className={cn(
-                  "grid size-10 shrink-0 place-items-center rounded-lg text-xs font-bold sm:size-8",
-                  selected === opt ? "bg-white/15" : "bg-[var(--gamibar-page)] text-[#111111]",
-                )}
-                aria-hidden="true"
-              >
-                {opt}
-              </span>
-              <span className="min-w-0 flex-1">{current.options[opt]}</span>
-            </button>
-          ))}
+              <ChevronLeft className="mr-1 size-4" />
+              Back
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!canGoForward}
+              onClick={() => setViewIndex((i) => Math.min(maxViewIndex, i + 1))}
+              className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
+            >
+              Next
+              <ChevronRight className="ml-1 size-4" />
+            </Button>
+          </div>
         </div>
-      </fieldset>
-      <Button
-        className="mt-8 h-12 w-full touch-manipulation rounded-xl bg-[#111111] hover:bg-black sm:h-12"
-        disabled={!selected || submitting || timedOut}
-        onClick={() => void submit()}
+
+        <h1
+          id={`quiz-question-${current.id}`}
+          className="mt-5 font-display text-[clamp(1.25rem,4.5vw,1.75rem)] font-bold leading-snug text-[#111111] lg:mt-6"
+        >
+          {current.prompt}
+        </h1>
+
+        <fieldset className="mt-5 border-0 p-0 lg:mt-6">
+          <legend className="sr-only">
+            Answer choices for question {viewIndex + 1} of {questions.length}
+          </legend>
+          <div className="grid gap-3 lg:max-w-3xl lg:gap-2.5">
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  if (!isAnswered && isActive && !timedOut) setSelected(opt);
+                }}
+                disabled={isAnswered || !isActive || timedOut}
+                aria-pressed={selected === opt}
+                aria-label={`Option ${opt}: ${current.options[opt]}`}
+                className={cn(
+                  "flex min-h-[3.25rem] w-full touch-manipulation items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-medium transition-colors active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 lg:min-h-12 lg:py-3",
+                  selected === opt
+                    ? "border-[#111111] bg-[#111111] text-white shadow-md ring-2 ring-[#111111]/20 ring-offset-2"
+                    : "border-[var(--gamibar-border)] bg-white text-[#111111] hover:border-[#D1D5DB]",
+                  (isAnswered || !isActive || timedOut) && "cursor-default",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-10 shrink-0 place-items-center rounded-lg text-xs font-bold lg:size-9",
+                    selected === opt ? "bg-white text-[#111111]" : "bg-[var(--gamibar-page)] text-[#111111]",
+                  )}
+                  aria-hidden="true"
+                >
+                  {selected === opt ? <Check className="size-4" strokeWidth={3} /> : opt}
+                </span>
+                <span className="min-w-0 flex-1">{current.options[opt]}</span>
+                {selected === opt && !isAnswered && isActive && !timedOut && (
+                  <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-white/90">
+                    <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+                    Selected
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        {isAnswered ? (
+          <p className="mt-6 text-center text-sm font-medium text-[var(--muted-foreground)] lg:max-w-3xl">
+            You already answered this question. Use Back or Next to continue.
+          </p>
+        ) : isActive ? (
+          <>
+            <Button
+              className="mt-6 h-12 w-full touch-manipulation rounded-xl bg-[#111111] hover:bg-black lg:max-w-3xl lg:h-12"
+              disabled={!selected || submitting || timedOut}
+              onClick={() => void submit()}
+            >
+              {submitting ? "Saving answer…" : "Submit answer"}
+            </Button>
+            {submitError ? (
+              <InlineErrorBanner
+                className="mt-4 text-left lg:max-w-3xl"
+                message={submitError}
+                onRetry={() => void submit()}
+                retrying={submitting}
+                onDismiss={() => setSubmitError(null)}
+              />
+            ) : null}
+            <p className="mt-3 text-center text-xs text-[var(--gamibar-text-tertiary)] lg:max-w-3xl">
+              One attempt — you cannot change this answer.
+            </p>
+          </>
+        ) : null}
+      </div>
+
+      {/* Desktop: progress sidebar — ~25% */}
+      <aside
+        className="hidden min-h-0 lg:flex lg:w-[25%] lg:max-w-[25%] lg:flex-col lg:border-l lg:border-[var(--gamibar-border)] lg:pl-8"
+        aria-label="Your progress"
       >
-        {submitting ? "Saving answer…" : "Submit answer"}
-      </Button>
-      {submitError ? (
-        <InlineErrorBanner
-          className="mt-4 text-left"
-          message={submitError}
-          onRetry={() => void submit()}
-          retrying={submitting}
-          onDismiss={() => setSubmitError(null)}
-        />
-      ) : null}
-      <p className="mt-3 text-center text-xs text-[var(--gamibar-text-tertiary)]">
-        One attempt - you cannot change this answer.
-      </p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+          Your progress
+        </p>
+        <ol className="mt-5 flex flex-1 flex-col gap-4">
+          {questions.map((q, i) => {
+            const completed = localAnsweredIds.has(q.id);
+            const isCurrent = firstUnansweredIndex >= 0 && i === firstUnansweredIndex;
+            const reachable = i <= maxViewIndex;
+            const isViewing = i === viewIndex;
+
+            return (
+              <li key={q.id}>
+                <button
+                  type="button"
+                  disabled={!reachable}
+                  onClick={() => goToQuestion(i)}
+                  aria-current={isViewing ? "step" : undefined}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg py-1.5 text-left transition-colors",
+                    reachable && "hover:opacity-80",
+                    !reachable && "cursor-not-allowed opacity-40",
+                    isViewing && "opacity-100",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid size-6 shrink-0 place-items-center",
+                      completed && "text-[var(--gamibar-brand)]",
+                      isCurrent && !completed && "text-[var(--foreground)]",
+                      !completed && !isCurrent && "text-[var(--muted-foreground)]/45",
+                    )}
+                    aria-hidden
+                  >
+                    {completed ? (
+                      <Check className="size-4 stroke-[2.5]" />
+                    ) : isCurrent ? (
+                      <span className="relative grid size-4 place-items-center">
+                        <Circle className="size-4 fill-current stroke-current" strokeWidth={2.5} />
+                        <span className="absolute size-1.5 rounded-full bg-[var(--gamibar-page)]" />
+                      </span>
+                    ) : (
+                      <Circle className="size-4 stroke-current" strokeWidth={2} />
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      completed && "text-[var(--muted-foreground)]",
+                      isCurrent && !completed && "text-[var(--foreground)]",
+                      !completed && !isCurrent && "text-[var(--muted-foreground)]/50",
+                      isViewing && !completed && isCurrent && "underline decoration-[var(--gamibar-brand)] decoration-2 underline-offset-4",
+                    )}
+                  >
+                    Question {i + 1}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </aside>
     </div>
   );
 }
@@ -816,6 +1034,7 @@ function JigsawMissionPlay({
   imageUrl,
   cols,
   rows,
+  pieceUnlockAt,
   correctQuestionIds,
   missionPayload,
   endsAt,
@@ -829,6 +1048,7 @@ function JigsawMissionPlay({
   imageUrl: string | null;
   cols: number;
   rows: number;
+  pieceUnlockAt?: number[];
   correctQuestionIds: string[];
   missionPayload: Record<string, unknown>;
   endsAt: number | null;
@@ -838,6 +1058,10 @@ function JigsawMissionPlay({
 }) {
   const total = questions.length;
   const tileCount = cols * rows;
+  const unlockSchedule = useMemo(
+    () => resolvePieceUnlockAt(total, tileCount, pieceUnlockAt),
+    [total, tileCount, pieceUnlockAt],
+  );
   const { collectionCardSize, assemblyCardSize, tapDragThreshold } = useJigsawTouchLayout();
   const [localCorrectIds, setLocalCorrectIds] = useState(correctQuestionIds);
   const [localMissionPayload, setLocalMissionPayload] = useState(missionPayload);
@@ -865,8 +1089,16 @@ function JigsawMissionPlay({
   const mission = readJigsawMissionPayload(localMissionPayload);
   const correctSet = useMemo(() => new Set(localCorrectIds), [localCorrectIds]);
   const earnedTileIds = useMemo(
-    () => readEarnedTileIds(localMissionPayload, cols, rows, correctSet.size, total),
-    [localMissionPayload, cols, rows, correctSet.size, total],
+    () =>
+      readEarnedTileIds(
+        localMissionPayload,
+        cols,
+        rows,
+        correctSet.size,
+        total,
+        unlockSchedule,
+      ),
+    [localMissionPayload, cols, rows, correctSet.size, total, unlockSchedule],
   );
   const tilesUnlocked = earnedTileIds.length;
   const tileRotations = useMemo(
@@ -905,9 +1137,17 @@ function JigsawMissionPlay({
   const pendingAssemblyRef = useRef(false);
   const postRewardTimeoutRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<number | null>(null);
+  const assemblySubmitInFlightRef = useRef(false);
 
   const [displayedTileIds, setDisplayedTileIds] = useState<string[]>(() =>
-    readEarnedTileIds(missionPayload, cols, rows, correctQuestionIds.length, total),
+    readEarnedTileIds(
+      missionPayload,
+      cols,
+      rows,
+      correctQuestionIds.length,
+      total,
+      resolvePieceUnlockAt(total, tileCount, pieceUnlockAt),
+    ),
   );
   const [activeFlyTileId, setActiveFlyTileId] = useState<string | null>(null);
   const [landedTileId, setLandedTileId] = useState<string | null>(null);
@@ -1007,6 +1247,7 @@ function JigsawMissionPlay({
           [tileId]: next,
         },
       }));
+      setAssemblyMessage(null);
 
       void rotateJigsawMissionTileFn({
         data: {
@@ -1055,9 +1296,16 @@ function JigsawMissionPlay({
 
   useEffect(() => {
     if (rewardAnimating || activeFlyTileId) return;
-    const earned = readEarnedTileIds(localMissionPayload, cols, rows, correctSet.size, total);
+    const earned = readEarnedTileIds(
+      localMissionPayload,
+      cols,
+      rows,
+      correctSet.size,
+      total,
+      unlockSchedule,
+    );
     setDisplayedTileIds(earned);
-  }, [localMissionPayload, cols, rows, correctSet.size, total, rewardAnimating, activeFlyTileId]);
+  }, [localMissionPayload, cols, rows, correctSet.size, total, unlockSchedule, rewardAnimating, activeFlyTileId]);
 
   useLayoutEffect(() => {
     if (!activeFlyTileId) {
@@ -1135,6 +1383,7 @@ function JigsawMissionPlay({
           rows,
           correctSet.size,
           total,
+          unlockSchedule,
         );
         setLocalCorrectIds((prev) =>
           prev.includes(activeQuestion.id) ? prev : [...prev, activeQuestion.id],
@@ -1148,7 +1397,7 @@ function JigsawMissionPlay({
         retryQuestionId = firstRoundComplete ? (poolAfter[0] ?? null) : null;
         const nextEarned =
           res.earnedTileIds ??
-          readEarnedTileIds(localMissionPayload, cols, rows, unlocked.size, total);
+          readEarnedTileIds(localMissionPayload, cols, rows, unlocked.size, total, unlockSchedule);
         const newTiles = newlyEarnedTileIds(prevEarned, nextEarned);
         const nextRotations =
           res.tileRotations ??
@@ -1206,6 +1455,8 @@ function JigsawMissionPlay({
   };
 
   const handleAssemblySubmit = async (layout: number[]) => {
+    if (assemblySubmitInFlightRef.current) return;
+    assemblySubmitInFlightRef.current = true;
     setAssemblySubmitting(true);
     setAssemblyMessage(null);
     try {
@@ -1215,6 +1466,7 @@ function JigsawMissionPlay({
           reconnectToken,
           layout,
           totalPieces: cols * rows,
+          tileRotations: { ...tileRotations },
         },
       });
       if (!res.ok) {
@@ -1229,6 +1481,7 @@ function JigsawMissionPlay({
       window.setTimeout(() => setShowComplete(true), 1200);
       toast.success("Puzzle complete!");
     } finally {
+      assemblySubmitInFlightRef.current = false;
       setAssemblySubmitting(false);
     }
   };
@@ -1387,6 +1640,7 @@ function JigsawMissionPlay({
                   : undefined
               }
               onSubmit={(layout) => void handleAssemblySubmit(layout)}
+              onClearSubmitMessage={() => setAssemblyMessage(null)}
             />
           </motion.div>
         ) : null}
