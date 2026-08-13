@@ -1,14 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-
 import {
-  requestPasswordReset,
-  resendAuthorSignupConfirmation,
-  resolveAuthUserFromSession,
-  signInWithPassword,
-  signOutSupabase,
-  signUpAuthor,
-} from "@/lib/supabase/auth";
-import { supabase } from "@/lib/supabase/client";
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type UserRole = "student" | "author";
 
@@ -58,7 +56,10 @@ export function isAuthorAuthenticated(auth: AuthUser | null): auth is AuthUser {
 const PUBLIC_AUTHOR_PATHS = new Set(["/author/login", "/author/register"]);
 
 /** Normalize post-login redirect targets and block prerender/crawl loops. */
-export function sanitizeAuthorRedirect(redirectTo: string | undefined, fallback = "/author/create"): string {
+export function sanitizeAuthorRedirect(
+  redirectTo: string | undefined,
+  fallback = "/author/create",
+): string {
   if (!redirectTo?.startsWith("/")) return fallback;
   const hashSplit = redirectTo.split("#")[0] ?? redirectTo;
   const [pathOnly, query] = hashSplit.split("?");
@@ -85,7 +86,9 @@ type AuthCtx = {
     email: string,
     password: string,
     expectedRole?: UserRole,
-  ) => Promise<{ ok: true; role: UserRole } | { ok: false; error: string; needsEmailConfirmation?: boolean }>;
+  ) => Promise<
+    { ok: true; role: UserRole } | { ok: false; error: string; needsEmailConfirmation?: boolean }
+  >;
   registerAuthor: (
     name: string,
     email: string,
@@ -107,42 +110,73 @@ type AuthCtx = {
 
 const AuthContext = createContext<AuthCtx | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  syncRemote = true,
+}: {
+  children: ReactNode;
+  syncRemote?: boolean;
+}) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe = () => {};
 
-    const syncSession = async () => {
-      try {
-        const resolved = await resolveAuthUserFromSession();
-        if (!mounted) return;
-        setUser(resolved);
-        persistAuthUser(resolved);
-      } catch {
-        if (!mounted) return;
-        setUser(getStoredAuth());
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    if (!syncRemote) {
+      setUser(getStoredAuth());
+      setLoading(false);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    setLoading(true);
+
+    const initializeAuth = async () => {
+      const [{ supabase }, { resolveAuthUserFromSession }] = await Promise.all([
+        import("@/lib/supabase/client"),
+        import("@/lib/supabase/auth"),
+      ]);
+
+      if (!mounted) return;
+
+      const syncSession = async () => {
+        try {
+          const resolved = await resolveAuthUserFromSession();
+          if (!mounted) return;
+          setUser(resolved);
+          persistAuthUser(resolved);
+        } catch {
+          if (!mounted) return;
+          setUser(getStoredAuth());
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      };
+
+      await syncSession();
+      if (!mounted) return;
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(() => {
+        void syncSession();
+      });
+      unsubscribe = () => subscription.unsubscribe();
     };
 
-    void syncSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      void syncSession();
-    });
+    void initializeAuth();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [syncRemote]);
 
   const login = useCallback(async (email: string, password: string, expectedRole?: UserRole) => {
+    const { signInWithPassword } = await import("@/lib/supabase/auth");
     const result = await signInWithPassword(email, password, expectedRole);
     if (!result.ok) return result;
     setUser(result.user);
@@ -152,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerAuthor = useCallback(
     async (name: string, email: string, password: string, redirectPath?: string) => {
+      const { signUpAuthor } = await import("@/lib/supabase/auth");
       const result = await signUpAuthor(name, email, password, redirectPath);
       if (!result.ok) return result;
 
@@ -172,14 +207,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const resetPassword = useCallback(async (email: string) => {
+    const { requestPasswordReset } = await import("@/lib/supabase/auth");
     return requestPasswordReset(email);
   }, []);
 
   const resendSignupConfirmation = useCallback(async (email: string, redirectPath?: string) => {
+    const { resendAuthorSignupConfirmation } = await import("@/lib/supabase/auth");
     return resendAuthorSignupConfirmation(email, redirectPath);
   }, []);
 
   const logout = useCallback(async () => {
+    const { signOutSupabase } = await import("@/lib/supabase/auth");
     await signOutSupabase();
     setUser(null);
     persistAuthUser(null);
@@ -207,7 +245,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       enterAsGuest,
     }),
-    [user, loading, login, registerAuthor, resetPassword, resendSignupConfirmation, logout, enterAsGuest],
+    [
+      user,
+      loading,
+      login,
+      registerAuthor,
+      resetPassword,
+      resendSignupConfirmation,
+      logout,
+      enterAsGuest,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

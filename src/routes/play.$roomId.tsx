@@ -1,6 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Check, Circle } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -64,7 +72,7 @@ import {
   submitQuizJigsawAnswerFn,
 } from "@/lib/game/room.functions";
 import type { ConnectDotsBoardConfig, QuizOptionId } from "@/lib/game/types";
-import { useRoomPolling } from "@/lib/game/useRoomPolling";
+import { useRoomSync } from "@/lib/game/useRoomSync";
 import type { PathMap } from "@/lib/connect-dots";
 import { cn } from "@/lib/utils";
 
@@ -80,10 +88,10 @@ const EMPTY_MISSION_PAYLOAD: Record<string, unknown> = {};
 function StudentPlayPage() {
   const { roomId } = Route.useParams();
   const navigate = useNavigate();
-  const participant = useMemo(() => loadParticipantSession(), [roomId]);
+  const [participant] = useState(() => loadParticipantSession());
   const reconnectToken =
     participant && participant.roomId === roomId ? participant.reconnectToken : undefined;
-  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling({
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomSync({
     roomId,
     reconnectToken,
   });
@@ -112,7 +120,10 @@ function StudentPlayPage() {
     return (
       <PageErrorState
         title="Connection problem"
-        message={friendlyGameError(error, "Could not connect to the game. Check your network and try again.")}
+        message={friendlyGameError(
+          error,
+          "Could not connect to the game. Check your network and try again.",
+        )}
         onRetry={retry}
         retrying={retrying}
       />
@@ -123,7 +134,10 @@ function StudentPlayPage() {
     return (
       <PageErrorState
         title="Could not load game"
-        message={friendlyGameError(snapshot.error, "This game may have ended or the link is invalid.")}
+        message={friendlyGameError(
+          snapshot.error,
+          "This game may have ended or the link is invalid.",
+        )}
         onRetry={retry}
         retrying={retrying}
       >
@@ -165,8 +179,7 @@ function StudentPlayPage() {
     room.payload.mode === "jigsaw"
       ? room.payload.questions.length
       : 0;
-  const totalPairs =
-    room.payload.mode === "connect_dots" ? room.payload.connectDots.pairCount : 0;
+  const totalPairs = room.payload.mode === "connect_dots" ? room.payload.connectDots.pairCount : 0;
 
   if (studentFinished || gameFinished) {
     const model = buildGameCompletionViewModel({
@@ -208,13 +221,12 @@ function StudentPlayPage() {
               </div>
             </div>
           )}
-        {room.mode === "connect_dots" &&
-          room.payload.mode === "connect_dots" && (
-            <ConnectDotsCompletionCard
-              board={room.payload.connectDots}
-              attemptPayload={snapshot.myAttempt?.payload}
-            />
-          )}
+        {room.mode === "connect_dots" && room.payload.mode === "connect_dots" && (
+          <ConnectDotsCompletionCard
+            board={room.payload.connectDots}
+            attemptPayload={snapshot.myAttempt?.payload}
+          />
+        )}
         {room.mode === "quiz_jigsaw" &&
           typeof snapshot.myAttempt?.payload?.rewardCode === "string" &&
           snapshot.myAttempt.payload.rewardCode && (
@@ -355,8 +367,8 @@ function RejoinPrompt({ roomId }: { roomId: string }) {
   return (
     <Centered>
       <p className="text-sm text-[#525252]">
-        Your session was not found in this browser. Rejoin with the same room code and name to restore
-        your progress.
+        Your session was not found in this browser. Rejoin with the same room code and name to
+        restore your progress.
       </p>
       {roomCode && (
         <p className="mt-2 font-display text-2xl font-extrabold tracking-widest text-[#111111]">
@@ -436,7 +448,12 @@ function QuizPlay({
 }: {
   roomId: string;
   reconnectToken: string;
-  questions: Array<{ id: string; prompt: string; options: Record<QuizOptionId, string>; order: number }>;
+  questions: Array<{
+    id: string;
+    prompt: string;
+    options: Record<QuizOptionId, string>;
+    order: number;
+  }>;
   answeredIds: Set<string>;
   myAnswers: Array<{ questionId: string; selectedOption: QuizOptionId }>;
   instruction: string;
@@ -480,7 +497,7 @@ function QuizPlay({
   const current = questions[viewIndex] ?? null;
   const isAnswered = current ? localAnsweredIds.has(current.id) : false;
   const isActive = viewIndex === firstUnansweredIndex && firstUnansweredIndex >= 0;
-  const storedAnswer = current ? localSelections.get(current.id) ?? null : null;
+  const storedAnswer = current ? (localSelections.get(current.id) ?? null) : null;
 
   const [selected, setSelected] = useState<QuizOptionId | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -551,7 +568,10 @@ function QuizPlay({
         </div>
 
         {/* Mobile: compact progress above question */}
-        <div className="mt-4 lg:hidden" aria-label={`Question ${viewIndex + 1} of ${questions.length}`}>
+        <div
+          className="mt-4 lg:hidden"
+          aria-label={`Question ${viewIndex + 1} of ${questions.length}`}
+        >
           <p className="text-center font-display text-lg font-bold tabular-nums text-[var(--foreground)]">
             {viewIndex + 1} / {questions.length}
           </p>
@@ -602,7 +622,10 @@ function QuizPlay({
         </p>
 
         {timedOut && isActive ? (
-          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800" role="status">
+          <p
+            className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800"
+            role="status"
+          >
             Time&apos;s up — no more answers can be submitted.
           </p>
         ) : null}
@@ -670,7 +693,9 @@ function QuizPlay({
                 <span
                   className={cn(
                     "grid size-10 shrink-0 place-items-center rounded-lg text-xs font-bold lg:size-9",
-                    selected === opt ? "bg-white text-[#111111]" : "bg-[var(--gamibar-page)] text-[#111111]",
+                    selected === opt
+                      ? "bg-white text-[#111111]"
+                      : "bg-[var(--gamibar-page)] text-[#111111]",
                   )}
                   aria-hidden="true"
                 >
@@ -772,7 +797,10 @@ function QuizPlay({
                       completed && "text-[var(--muted-foreground)]",
                       isCurrent && !completed && "text-[var(--foreground)]",
                       !completed && !isCurrent && "text-[var(--muted-foreground)]/50",
-                      isViewing && !completed && isCurrent && "underline decoration-[var(--gamibar-brand)] decoration-2 underline-offset-4",
+                      isViewing &&
+                        !completed &&
+                        isCurrent &&
+                        "underline decoration-[var(--gamibar-brand)] decoration-2 underline-offset-4",
                     )}
                   >
                     Question {i + 1}
@@ -955,6 +983,12 @@ function ConnectDotsGridPlay({
     [reconnectToken, roomId],
   );
 
+  const handleProgress = useCallback((connected: number, total: number) => {
+    setProgress((prev) =>
+      prev.connected === connected && prev.total === total ? prev : { connected, total },
+    );
+  }, []);
+
   const onPathsChange = useCallback(
     (paths: PathMap) => {
       if (skipInitialPaths.current) {
@@ -986,13 +1020,15 @@ function ConnectDotsGridPlay({
               <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-brand)]">
                 {title}
               </p>
-              <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">{instruction}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">
+                {instruction}
+              </p>
             </div>
             <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
           </div>
           <p className="mt-2 text-xs font-medium text-[var(--gamibar-text-tertiary)]">
-            {board.difficulty.toUpperCase()} · {board.gridSize}×{board.gridSize} · {progress.connected}/
-            {progress.total} pairs
+            {board.difficulty.toUpperCase()} · {board.gridSize}×{board.gridSize} ·{" "}
+            {progress.connected}/{progress.total} pairs
           </p>
           {timedOut && !done ? (
             <p className="mt-2 text-xs font-semibold text-red-700" role="status">
@@ -1012,7 +1048,7 @@ function ConnectDotsGridPlay({
               solution={board.solution}
               disabled={done || timedOut}
               initialPaths={hasSavedPaths ? savedPaths : undefined}
-              onProgress={(connected, total) => setProgress({ connected, total })}
+              onProgress={handleProgress}
               onPathsChange={onPathsChange}
               onIncorrectLink={reportIncorrectLink}
               onComplete={(paths) => {
@@ -1044,7 +1080,12 @@ function JigsawMissionPlay({
 }: {
   roomId: string;
   reconnectToken: string;
-  questions: Array<{ id: string; prompt: string; options: Record<QuizOptionId, string>; order: number }>;
+  questions: Array<{
+    id: string;
+    prompt: string;
+    options: Record<QuizOptionId, string>;
+    order: number;
+  }>;
   imageUrl: string | null;
   cols: number;
   rows: number;
@@ -1090,14 +1131,7 @@ function JigsawMissionPlay({
   const correctSet = useMemo(() => new Set(localCorrectIds), [localCorrectIds]);
   const earnedTileIds = useMemo(
     () =>
-      readEarnedTileIds(
-        localMissionPayload,
-        cols,
-        rows,
-        correctSet.size,
-        total,
-        unlockSchedule,
-      ),
+      readEarnedTileIds(localMissionPayload, cols, rows, correctSet.size, total, unlockSchedule),
     [localMissionPayload, cols, rows, correctSet.size, total, unlockSchedule],
   );
   const tilesUnlocked = earnedTileIds.length;
@@ -1105,10 +1139,7 @@ function JigsawMissionPlay({
     () => readTileRotations(localMissionPayload),
     [localMissionPayload],
   );
-  const tileLayouts = useMemo(
-    () => readTileLayouts(localMissionPayload),
-    [localMissionPayload],
-  );
+  const tileLayouts = useMemo(() => readTileLayouts(localMissionPayload), [localMissionPayload]);
   const isRetryRound = isJigsawMissionRetryRound(mission);
   const retryRemaining = retryPoolQuestionIds(questions, correctSet).length;
   const activeQuestionId = resolveJigsawMissionQuestionId(questions, correctSet, mission);
@@ -1305,7 +1336,16 @@ function JigsawMissionPlay({
       unlockSchedule,
     );
     setDisplayedTileIds(earned);
-  }, [localMissionPayload, cols, rows, correctSet.size, total, unlockSchedule, rewardAnimating, activeFlyTileId]);
+  }, [
+    localMissionPayload,
+    cols,
+    rows,
+    correctSet.size,
+    total,
+    unlockSchedule,
+    rewardAnimating,
+    activeFlyTileId,
+  ]);
 
   useLayoutEffect(() => {
     if (!activeFlyTileId) {
@@ -1526,8 +1566,14 @@ function JigsawMissionPlay({
       />
 
       {timedOut ? (
-        <p className="mx-auto max-w-5xl px-4 pt-4 text-center text-sm font-medium text-red-800 md:px-6" role="status">
-          Time&apos;s up — {localAssembly ? "assembly can no longer be submitted." : "no more answers can be submitted."}
+        <p
+          className="mx-auto max-w-5xl px-4 pt-4 text-center text-sm font-medium text-red-800 md:px-6"
+          role="status"
+        >
+          Time&apos;s up —{" "}
+          {localAssembly
+            ? "assembly can no longer be submitted."
+            : "no more answers can be submitted."}
         </p>
       ) : null}
 
@@ -1589,7 +1635,8 @@ function JigsawMissionPlay({
               ? (() => {
                   const tile = tileMetaFromId(activeFlyTileId, cols, rows);
                   if (!tile) return null;
-                  const visualRotation = tileRotations[activeFlyTileId] ?? (0 as JigsawTileCardRotation);
+                  const visualRotation =
+                    tileRotations[activeFlyTileId] ?? (0 as JigsawTileCardRotation);
                   return (
                     <JigsawMissionFlyingTile
                       key={activeFlyTileId}
@@ -1693,7 +1740,8 @@ function JigsawPlay({
             layout: slots,
           },
         });
-        if (!res.ok) toast.error(friendlyGameError(res.error, "Could not record your attempt. Try again."));
+        if (!res.ok)
+          toast.error(friendlyGameError(res.error, "Could not record your attempt. Try again."));
         else if (res.completed) toast.success("Puzzle complete!");
       } finally {
         setBusy(false);
@@ -1758,7 +1806,12 @@ function QuizJigsawPlay({
 }: {
   roomId: string;
   reconnectToken: string;
-  questions: Array<{ id: string; prompt: string; options: Record<QuizOptionId, string>; order: number }>;
+  questions: Array<{
+    id: string;
+    prompt: string;
+    options: Record<QuizOptionId, string>;
+    order: number;
+  }>;
   imageUrl: string | null;
   correctCount: number;
   endsAt: number | null;
@@ -1849,7 +1902,10 @@ function QuizJigsawPlay({
       />
 
       {timedOut ? (
-        <p className="mx-auto max-w-5xl px-4 pt-4 text-center text-sm font-medium text-red-800 md:px-6" role="status">
+        <p
+          className="mx-auto max-w-5xl px-4 pt-4 text-center text-sm font-medium text-red-800 md:px-6"
+          role="status"
+        >
           Time&apos;s up — no more answers can be submitted.
         </p>
       ) : null}
@@ -1882,4 +1938,3 @@ function QuizJigsawPlay({
     </div>
   );
 }
-

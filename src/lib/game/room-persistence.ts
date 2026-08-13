@@ -18,6 +18,9 @@ import { isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
 import { clampTimer, defaultTimerSeconds } from "@/lib/game/timer";
 import { supabaseGame as supabase } from "@/lib/supabase/client";
 
+const SHOULD_MIRROR_LEGACY_ROOMS =
+  import.meta.env.VITE_GAMIBAR_MIRROR_LEGACY_ROOMS === "true";
+
 type QuizAnswer = {
   questionId: string;
   selectedOption: "A" | "B" | "C" | "D";
@@ -232,6 +235,9 @@ async function uploadJigsawAsset(roomId: string, payload: GamePayload): Promise<
 
   const mime = payload.jigsaw.imageMime ?? "image/png";
   const response = await fetch(payload.jigsaw.imageUrl!);
+  if (!response.ok) {
+    throw new Error("Could not read jigsaw image data.");
+  }
   const blob = await response.blob();
   const ext = mime === "image/jpeg" ? "jpg" : mime === "image/webp" ? "webp" : "png";
   const storagePath = `${roomId}/source.${ext}`;
@@ -595,6 +601,8 @@ async function loadLegacyByReconnectToken(token: string): Promise<StoredRoom | n
 }
 
 async function mirrorLegacyRoom(stored: StoredRoom) {
+  if (!SHOULD_MIRROR_LEGACY_ROOMS) return;
+
   const { error } = await supabase.from("gamibar_live_rooms").upsert(
     {
       id: stored.room.id,

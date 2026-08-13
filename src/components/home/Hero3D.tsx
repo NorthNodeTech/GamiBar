@@ -3,14 +3,15 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import heroImage from "@/assets/hero.webp";
+import heroMobileImage from "@/assets/hero-mobile.webp";
+import heroTabletImage from "@/assets/hero-tablet.webp";
 import heroDarkImage from "@/assets/herodark.webp";
+import heroDarkMobileImage from "@/assets/herodark-mobile.webp";
+import heroDarkTabletImage from "@/assets/herodark-tablet.webp";
 import { Button } from "@/components/ui/button";
 import { AnimatedAccent, AnimatedWords, MOTION_EASE } from "@/components/ui/text-motion";
 import { AnimatedNumber } from "@/components/ui/animated-number";
-import {
-  HOMEPAGE_HERO,
-  HOMEPAGE_HERO_STATS,
-} from "@/content/homepage";
+import { HOMEPAGE_HERO, HOMEPAGE_HERO_STATS } from "@/content/homepage";
 import { cn } from "@/lib/utils";
 
 const fadeUp = {
@@ -83,7 +84,7 @@ export function Hero3D() {
                 <Button
                   asChild
                   size="lg"
-                  className="hero-section__primary-btn h-11 rounded-full bg-[var(--gamibar-brand)] px-6 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)] hover:bg-[var(--gamibar-brand-hover)] sm:h-12 sm:px-7 sm:text-base"
+                  className="hero-section__primary-btn h-11 rounded-full bg-[#dc2626] px-6 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)] hover:bg-[#b91c1c] sm:h-12 sm:px-7 sm:text-base"
                 >
                   <Link to="/author/create">
                     {HOMEPAGE_HERO.primaryCta} <ArrowRight className="ml-2 size-4" />
@@ -156,6 +157,8 @@ function HeroIllustration() {
       >
         <img
           src={heroImage}
+          srcSet={`${heroMobileImage} 480w, ${heroTabletImage} 960w, ${heroImage} 1536w`}
+          sizes="(max-width: 639px) calc(100vw - 34px), (max-width: 1023px) 640px, 560px"
           alt={HOMEPAGE_HERO.imageAlt}
           width={1536}
           height={1024}
@@ -166,6 +169,8 @@ function HeroIllustration() {
         />
         <img
           src={heroDarkImage}
+          srcSet={`${heroDarkMobileImage} 480w, ${heroDarkTabletImage} 960w, ${heroDarkImage} 1536w`}
+          sizes="(max-width: 639px) calc(100vw - 34px), (max-width: 1023px) 640px, 560px"
           alt={HOMEPAGE_HERO.imageAlt}
           width={1536}
           height={1024}

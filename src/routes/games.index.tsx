@@ -3,22 +3,28 @@ import { ArrowRight, Blocks, CircleDot, Flame, Sparkles, Timer, Trophy, Zap } fr
 
 import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
+import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
+
+const gamesTitle = "Interactive Classroom Game Modes | GamiBar";
+const gamesDescription =
+  "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, and Connect Dots for logic and speed.";
 
 export const Route = createFileRoute("/games/")({
-  head: () => ({
-    meta: [
-      { title: "Games - GamiBar" },
-      {
-        name: "description",
-        content: "Play Quiz Challenge, Jigsaw Mission and Connect Dots on GamiBar.",
-      },
-      { property: "og:title", content: "Games - GamiBar" },
-      {
-        name: "og:description",
-        content: "Three gamified learning modes: timed quizzes, jigsaw missions and connect-the-dots puzzles.",
-      },
-    ],
-  }),
+  head: () =>
+    createSeoHead({
+      title: gamesTitle,
+      description: gamesDescription,
+      path: "/games/",
+      jsonLd: createWebPageJsonLd({
+        title: gamesTitle,
+        description: gamesDescription,
+        path: "/games/",
+        breadcrumbs: [
+          { name: "Home", path: "/" },
+          { name: "Game Modes", path: "/games/" },
+        ],
+      }),
+    }),
   component: GamesIndex,
 });
 
@@ -97,7 +103,9 @@ function GamesIndex() {
             <div key={s.label} className="flex items-center gap-3">
               <s.icon className="size-4 text-muted-foreground" />
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {s.label}
+                </p>
                 <p className="text-sm font-bold">{s.value}</p>
               </div>
             </div>
@@ -136,9 +144,15 @@ function GamesIndex() {
                   <p className="mt-2 flex-1 text-sm text-muted-foreground">{g.copy}</p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">{g.meta}</span>
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold">{g.xp}</span>
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">{g.difficulty}</span>
+                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
+                      {g.meta}
+                    </span>
+                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold">
+                      {g.xp}
+                    </span>
+                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
+                      {g.difficulty}
+                    </span>
                   </div>
 
                   <Link

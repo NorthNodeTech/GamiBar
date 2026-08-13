@@ -45,7 +45,7 @@ export function RoomJoinShare({ code, className, prominent = false }: RoomJoinSh
     }
   };
 
-  const displayUrl = joinUrl.replace(/^https?:\/\//, "");
+  const displayUrl = joinUrl.replace(/^https?:\/\//, "").replace(/\?code=.*/, "");
 
   return (
     <div

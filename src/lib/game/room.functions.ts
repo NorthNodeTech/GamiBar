@@ -50,7 +50,6 @@ export async function joinRoomFn({
 }: {
   data: { code: string; displayName: string; userId?: string | null };
 }) {
-  await ensureDemoRoom();
   return joinRoom(data);
 }
 
@@ -72,7 +71,6 @@ export async function getRoomSnapshotFn({
     reconnectToken?: string;
   };
 }) {
-  if (data.code) await ensureDemoRoom();
   return getRoomSnapshot(data);
 }
 

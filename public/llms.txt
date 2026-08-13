@@ -1,0 +1,23 @@
+# GamiBar
+
+GamiBar is a web-based live gamified learning platform for classrooms, universities, and training sessions. Educators and session authors create an activity, share a six-digit room code or QR link, and control when all participants begin.
+
+## Product
+
+- Quiz Challenge: live multiple-choice questions ranked by accuracy and completion speed.
+- Jigsaw Mission: participants reconstruct an uploaded image as a timed visual puzzle.
+- Connect Dots: participants connect matching color pairs on the same path-finding board.
+- Live sessions: participants can join from a modern phone, tablet, or desktop browser without creating an account.
+- Real-time results: authors can monitor participation and live rankings during a session.
+
+## Important pages
+
+- Homepage: https://gamibar.com/
+- Game modes: https://gamibar.com/games/
+- Quiz Challenge: https://gamibar.com/games/quiz
+- Jigsaw Mission: https://gamibar.com/games/jigsaw
+- Connect Dots: https://gamibar.com/games/connect-dots
+- Join a live game: https://gamibar.com/join/
+
+GamiBar is powered by NorthNode: https://northnode.live/
+

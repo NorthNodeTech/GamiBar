@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Logo } from "@/components/layout/Logo";
@@ -9,8 +9,12 @@ function shouldShowIntro(): boolean {
   return sessionStorage.getItem("gb_intro_seen") !== "true";
 }
 
+const subscribeToIntroState = () => () => {};
+
 export function SignatureIntroLoader() {
-  const [visible, setVisible] = useState(shouldShowIntro);
+  const shouldShow = useSyncExternalStore(subscribeToIntroState, shouldShowIntro, () => false);
+  const [dismissed, setDismissed] = useState(false);
+  const visible = shouldShow && !dismissed;
 
   useLayoutEffect(() => {
     if (!visible) return;
@@ -24,7 +28,7 @@ export function SignatureIntroLoader() {
     document.body.style.overflow = "hidden";
 
     const timer = window.setTimeout(() => {
-      setVisible(false);
+      setDismissed(true);
       sessionStorage.setItem("gb_intro_seen", "true");
     }, 3200);
 

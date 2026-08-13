@@ -2,6 +2,38 @@
 @source "../src";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/figtree-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Figtree";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/figtree-italic-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src: url("/fonts/outfit-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format("woff2");
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -209,63 +241,63 @@
 
 :root {
   --radius: 0.75rem;
-  --background: #FFFFFF;
+  --background: #ffffff;
   --foreground: #111111;
-  --surface: #F5F5F5;
-  --elevated: #FFFFFF;
-  --card: #FFFFFF;
+  --surface: #f5f5f5;
+  --elevated: #ffffff;
+  --card: #ffffff;
   --card-foreground: #111111;
-  --popover: #FFFFFF;
+  --popover: #ffffff;
   --popover-foreground: #111111;
   --primary: #111111;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F5F5F5;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
   --secondary-foreground: #111111;
-  --muted: #F5F5F5;
+  --muted: #f5f5f5;
   --muted-foreground: #525252;
-  --accent: #F3F4F6;
+  --accent: #f3f4f6;
   --accent-foreground: #111111;
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
-  --success: #22C55E;
-  --warning: #F59E0B;
-  --info: #3B82F6;
-  --border: #E5E7EB;
-  --divider: #E5E7EB;
-  --input: #E5E7EB;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --border: #e5e7eb;
+  --divider: #e5e7eb;
+  --input: #e5e7eb;
   --ring: #111111;
-  --sidebar: #FFFFFF;
+  --sidebar: #ffffff;
   --sidebar-foreground: #111111;
   --shadow-soft: 0 4px 16px rgba(16, 24, 40, 0.06);
   --shadow-lift: 0 8px 32px rgba(16, 24, 40, 0.08);
   --gradient-veil: radial-gradient(120% 100% at 50% 0%, rgba(0, 0, 0, 0.03) 0%, transparent 60%);
 
   /* GamiBAR brand tokens */
-  --gamibar-brand: #EF4444;
-  --gamibar-brand-hover: #DC2626;
-  --gamibar-brand-soft: #FEF2F2;
-  --gamibar-text-tertiary: #6B7280;
-  --gamibar-page: #FAFAFA;
-  --gamibar-surface: #FFFFFF;
-  --gamibar-border: #E5E7EB;
+  --gamibar-brand: #ef4444;
+  --gamibar-brand-hover: #dc2626;
+  --gamibar-brand-soft: #fef2f2;
+  --gamibar-text-tertiary: #6b7280;
+  --gamibar-page: #fafafa;
+  --gamibar-surface: #ffffff;
+  --gamibar-border: #e5e7eb;
 
   /* Game accents */
-  --game-quiz: #EF4444;
-  --game-quiz-deep: #DC2626;
-  --game-quiz-soft: #FEF2F2;
-  --game-jigsaw: #3B82F6;
-  --game-jigsaw-deep: #2563EB;
-  --game-jigsaw-soft: #EFF6FF;
-  --game-connect-dots: #10B981;
+  --game-quiz: #ef4444;
+  --game-quiz-deep: #dc2626;
+  --game-quiz-soft: #fef2f2;
+  --game-jigsaw: #3b82f6;
+  --game-jigsaw-deep: #2563eb;
+  --game-jigsaw-soft: #eff6ff;
+  --game-connect-dots: #10b981;
   --game-connect-dots-deep: #059669;
-  --game-connect-dots-soft: #ECFDF5;
+  --game-connect-dots-soft: #ecfdf5;
   /* Legacy aliases (removed Maze Connect) */
   --game-maze: var(--game-connect-dots);
   --game-maze-deep: var(--game-connect-dots-deep);
   --game-maze-soft: var(--game-connect-dots-soft);
 
-  --gamibar-gold: #F59E0B;
-  --gamibar-purple: #7C3AED;
+  --gamibar-gold: #f59e0b;
+  --gamibar-purple: #7c3aed;
 
   --site-header-height: 3.5rem;
 }
@@ -308,12 +340,16 @@
   --sidebar-foreground: #f5f5f5;
   --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.45);
   --shadow-lift: 0 8px 40px rgba(0, 0, 0, 0.55);
-  --gradient-veil: radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
+  --gradient-veil: radial-gradient(
+    120% 100% at 50% 0%,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 60%
+  );
 
   --gamibar-brand: #ef4444;
   --gamibar-brand-hover: #f87171;
   --gamibar-brand-soft: rgba(239, 68, 68, 0.14);
-  --gamibar-text-tertiary: #9CA3AF;
+  --gamibar-text-tertiary: #9ca3af;
   --gamibar-page: #0a0a0a;
   --gamibar-surface: #1a1a1a;
   --gamibar-border: #333333;
@@ -349,7 +385,10 @@
     font-size: 0.9375rem;
     line-height: 1.65;
     letter-spacing: 0.01em;
-    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    font-feature-settings:
+      "kern" 1,
+      "liga" 1,
+      "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -623,8 +662,12 @@
       max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--site-header-height));
       flex-direction: column;
       overflow: hidden;
-      background:
-        linear-gradient(180deg, var(--gamibar-page) 0%, var(--gamibar-surface) 52%, var(--gamibar-page) 100%);
+      background: linear-gradient(
+        180deg,
+        var(--gamibar-page) 0%,
+        var(--gamibar-surface) 52%,
+        var(--gamibar-page) 100%
+      );
     }
 
     .hero-section__inner {

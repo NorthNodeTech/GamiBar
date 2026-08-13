@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRoomSnapshotFn } from "@/lib/game/room.functions";
-import {
-  subscribeRoomSyncSignals,
-  type RealtimeConnectionStatus,
-} from "@/lib/game/room-realtime";
+import { subscribeRoomSyncSignals, type RealtimeConnectionStatus } from "@/lib/game/room-realtime";
 
 type Snapshot = Awaited<ReturnType<typeof getRoomSnapshotFn>>;
 
@@ -15,42 +12,33 @@ type RoomSyncArgs = {
   reconnectToken?: string;
 };
 
-type RoomSyncOptions = {
-  /** Heartbeat poll while Realtime is connected (ms). */
-  connectedPollMs?: number;
-  /** Poll interval when Realtime is unavailable (ms). */
-  fallbackPollMs?: number;
-};
+const REFETCH_DEBOUNCE_MS = 500;
 
-const DEFAULT_CONNECTED_POLL_MS = 30_000;
-const DEFAULT_FALLBACK_POLL_MS = 3_000;
-const REFETCH_DEBOUNCE_MS = 200;
-
-export function useRoomSync(
-  args: RoomSyncArgs,
-  options: RoomSyncOptions = {},
-) {
-  const connectedPollMs = options.connectedPollMs ?? DEFAULT_CONNECTED_POLL_MS;
-  const fallbackPollMs = options.fallbackPollMs ?? DEFAULT_FALLBACK_POLL_MS;
-
+export function useRoomSync(args: RoomSyncArgs) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
-  const [realtimeStatus, setRealtimeStatus] =
-    useState<RealtimeConnectionStatus>("connecting");
-  const [pollGeneration, setPollGeneration] = useState(0);
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeConnectionStatus>("connecting");
+  const [refreshGeneration, setRefreshGeneration] = useState(0);
 
   const argsRef = useRef(args);
   argsRef.current = args;
+  const realtimeStatusRef = useRef<RealtimeConnectionStatus>("connecting");
+  const fetchGenerationRef = useRef(0);
 
   const fetchSnapshot = useCallback(async () => {
+    const generation = ++fetchGenerationRef.current;
     try {
       const next = await getRoomSnapshotFn({ data: argsRef.current });
-      setSnapshot(next);
-      setError(next.ok ? null : next.error);
+      if (generation === fetchGenerationRef.current) {
+        setSnapshot(next);
+        setError(next.ok ? null : next.error);
+      }
       return next;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Connection lost");
+      if (generation === fetchGenerationRef.current) {
+        setError(e instanceof Error ? e.message : "Connection lost");
+      }
       return null;
     }
   }, []);
@@ -65,10 +53,10 @@ export function useRoomSync(
   }, [fetchSnapshot]);
 
   const retry = useCallback(() => {
-    setPollGeneration((n) => n + 1);
+    setRefreshGeneration((n) => n + 1);
   }, []);
 
-  // Initial load + manual retry
+  // Initial load + manual retry.
   useEffect(() => {
     let cancelled = false;
     setRetrying(true);
@@ -84,14 +72,13 @@ export function useRoomSync(
     args.code,
     args.authorToken,
     args.reconnectToken,
-    pollGeneration,
+    refreshGeneration,
     fetchSnapshot,
   ]);
 
   const resolvedRoomId = snapshot?.ok ? snapshot.room.id : args.roomId;
   const resolvedCode = snapshot?.ok ? snapshot.room.code : args.code;
 
-  // Realtime: refetch when room row changes in Supabase
   useEffect(() => {
     if (!resolvedRoomId && !resolvedCode) return;
 
@@ -105,7 +92,15 @@ export function useRoomSync(
             void fetchSnapshot();
           }, REFETCH_DEBOUNCE_MS);
         },
-        onStatus: setRealtimeStatus,
+        onStatus: (status) => {
+          const previous = realtimeStatusRef.current;
+          if (previous === status) return;
+          realtimeStatusRef.current = status;
+          setRealtimeStatus(status);
+          if (status === "connected" && previous === "disconnected") {
+            void fetchSnapshot();
+          }
+        },
       },
     );
 
@@ -115,17 +110,7 @@ export function useRoomSync(
     };
   }, [resolvedRoomId, resolvedCode, fetchSnapshot]);
 
-  // Adaptive fallback polling (slow when Realtime works, fast when it does not)
-  useEffect(() => {
-    const intervalMs =
-      realtimeStatus === "connected" ? connectedPollMs : fallbackPollMs;
-    const timer = window.setInterval(() => {
-      void fetchSnapshot();
-    }, intervalMs);
-    return () => window.clearInterval(timer);
-  }, [realtimeStatus, connectedPollMs, fallbackPollMs, fetchSnapshot]);
-
-  // Refetch when tab becomes visible or browser comes back online
+  // Re-sync after browser-level interruptions that can drop websocket events.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible") void fetchSnapshot();
@@ -153,6 +138,3 @@ export function useRoomSync(
     realtimeStatus,
   };
 }
-
-/** @deprecated Prefer `useRoomSync` — kept for existing imports. */
-export const useRoomPolling = useRoomSync;

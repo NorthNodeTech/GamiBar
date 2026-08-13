@@ -26,16 +26,100 @@ import {
   HOMEPAGE_TESTIMONIALS,
   HOMEPAGE_TESTIMONIALS_SECTION,
 } from "@/content/homepage";
+import { createSeoHead, DEFAULT_SOCIAL_IMAGE, SITE_URL } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: HOMEPAGE_SEO.title },
-      { name: "description", content: HOMEPAGE_SEO.description },
-      { property: "og:title", content: HOMEPAGE_SEO.ogTitle },
-      { property: "og:description", content: HOMEPAGE_SEO.ogDescription },
-    ],
-  }),
+  head: () =>
+    createSeoHead({
+      title: HOMEPAGE_SEO.title,
+      description: HOMEPAGE_SEO.description,
+      path: "/",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": `${SITE_URL}/#organization`,
+            name: "GamiBar",
+            url: SITE_URL,
+            logo: `${SITE_URL}/icon-512.png`,
+            image: DEFAULT_SOCIAL_IMAGE,
+            description:
+              "GamiBar creates live gamified learning experiences for classrooms and training sessions.",
+            parentOrganization: {
+              "@type": "Organization",
+              name: "NorthNode",
+              url: "https://northnode.live/",
+            },
+          },
+          {
+            "@type": "WebSite",
+            "@id": `${SITE_URL}/#website`,
+            url: SITE_URL,
+            name: "GamiBar",
+            description: HOMEPAGE_SEO.description,
+            publisher: { "@id": `${SITE_URL}/#organization` },
+            inLanguage: "en-US",
+          },
+          {
+            "@type": "WebPage",
+            "@id": `${SITE_URL}/#webpage`,
+            url: `${SITE_URL}/`,
+            name: HOMEPAGE_SEO.title,
+            description: HOMEPAGE_SEO.description,
+            isPartOf: { "@id": `${SITE_URL}/#website` },
+            about: { "@id": `${SITE_URL}/#software` },
+            primaryImageOfPage: { "@type": "ImageObject", url: DEFAULT_SOCIAL_IMAGE },
+            inLanguage: "en-US",
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": `${SITE_URL}/#software`,
+            name: "GamiBar",
+            url: SITE_URL,
+            applicationCategory: "EducationalApplication",
+            applicationSubCategory: "Audience response and classroom game platform",
+            operatingSystem: "Any device with a modern web browser",
+            browserRequirements: "Requires JavaScript and a modern web browser",
+            description: HOMEPAGE_SEO.description,
+            image: DEFAULT_SOCIAL_IMAGE,
+            publisher: { "@id": `${SITE_URL}/#organization` },
+            featureList: [
+              "Live classroom quizzes",
+              "Jigsaw learning missions",
+              "Connect-the-dots logic games",
+              "Six-digit room codes and QR joining",
+              "Real-time participant rankings",
+            ],
+          },
+          {
+            "@type": "Service",
+            "@id": `${SITE_URL}/#service`,
+            name: "GamiBar live gamified learning sessions",
+            serviceType: "Interactive classroom and training session software",
+            provider: { "@id": `${SITE_URL}/#organization` },
+            audience: [
+              { "@type": "EducationalAudience", educationalRole: "teacher" },
+              { "@type": "EducationalAudience", educationalRole: "student" },
+            ],
+            areaServed: "Worldwide",
+            availableChannel: {
+              "@type": "ServiceChannel",
+              serviceUrl: `${SITE_URL}/author/create`,
+            },
+          },
+          {
+            "@type": "FAQPage",
+            "@id": `${SITE_URL}/#faq`,
+            mainEntity: HOMEPAGE_FAQ.map((item) => ({
+              "@type": "Question",
+              name: item.question,
+              acceptedAnswer: { "@type": "Answer", text: item.answer },
+            })),
+          },
+        ],
+      },
+    }),
   component: Landing,
 });
 
@@ -62,8 +146,12 @@ function Landing() {
                 <div className="grid size-10 place-items-center rounded-xl border border-[var(--gamibar-border)] bg-[var(--surface)] text-[var(--foreground)]">
                   <f.icon className="size-5" />
                 </div>
-                <h3 className="mt-4 text-lg font-bold text-[var(--foreground)] sm:mt-5">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">{f.copy}</p>
+                <h3 className="mt-4 text-lg font-bold text-[var(--foreground)] sm:mt-5">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+                  {f.copy}
+                </p>
               </Card3DTilt>
             </Reveal>
           ))}
@@ -87,8 +175,7 @@ function Landing() {
                 <div className="relative flex h-full flex-col justify-between p-6 sm:p-7">
                   <img
                     src={t.image}
-                    alt=""
-                    aria-hidden
+                    alt={t.imageAlt}
                     loading="lazy"
                     decoding="async"
                     className="absolute inset-0 h-full w-full object-cover"

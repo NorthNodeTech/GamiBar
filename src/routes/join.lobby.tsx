@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConnectionBanner, PageErrorState, PageLoader } from "@/components/ui/async-state";
 import { friendlyGameError } from "@/lib/accessibility";
 import { loadParticipantSession } from "@/lib/game/client-session";
-import { useRoomPolling } from "@/lib/game/useRoomPolling";
+import { useRoomSync } from "@/lib/game/useRoomSync";
 
 const searchSchema = z.object({
   code: z.string().catch(""),
@@ -27,7 +27,7 @@ function StudentLobbyPage() {
   const participant = useMemo(() => loadParticipantSession(), [code]);
   const reconnectToken =
     participant && participant.code === code ? participant.reconnectToken : undefined;
-  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomPolling({
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomSync({
     code,
     reconnectToken,
   });

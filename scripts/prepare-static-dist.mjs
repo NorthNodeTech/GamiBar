@@ -5,7 +5,16 @@
  * Materializes index.html under every static route so deep links and refresh
  * work even when the host has not applied a SPA rewrite rule yet.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { extractStaticRoutes, routePathToDistDir } from "./extract-static-routes.mjs";
 
@@ -48,28 +57,36 @@ if (!existsSync(indexHtml)) {
   process.exit(1);
 }
 
+function normalizeHtmlDocuments(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      normalizeHtmlDocuments(path);
+      continue;
+    }
+    if (!entry.isFile() || entry.name !== "index.html") continue;
+
+    const html = readFileSync(path, "utf8");
+    const closingTagEnd = html.lastIndexOf("</html>") + "</html>".length;
+    if (closingTagEnd < "</html>".length) continue;
+
+    const normalized = `${html.slice(0, closingTagEnd)}\n`;
+    if (normalized !== html) writeFileSync(path, normalized);
+  }
+}
+
+// Prerender output must end at the document boundary. This also strips any
+// stale trailing bytes that a streamed render may leave after </html>.
+normalizeHtmlDocuments(dist);
+
 // Netlify-style; some CDNs honor this. Render still needs Dashboard/Blueprint rewrites
 // for dynamic paths like /play/:roomId and /author/room/:roomId.
 writeFileSync(join(dist, "_redirects"), "/*    /index.html   200\n");
 
-// Some hosts serve 404.html for unknown paths — load the SPA shell.
+// Some hosts serve 404.html for unknown paths - load the SPA shell.
 copyFileSync(indexHtml, join(dist, "404.html"));
 
 const staticRoutes = extractStaticRoutes(root);
-const shellDirs = new Set();
-
-for (const routePath of staticRoutes) {
-  const dir = routePathToDistDir(routePath);
-  if (dir) shellDirs.add(dir);
-}
-
-let created = 0;
-for (const route of shellDirs) {
-  const dir = join(dist, ...route.split("/"));
-  mkdirSync(dir, { recursive: true });
-  copyFileSync(indexHtml, join(dir, "index.html"));
-  created += 1;
-}
 
 const missing = [];
 for (const route of staticRoutes) {
@@ -87,5 +104,5 @@ if (missing.length > 0) {
 
 const entries = readdirSync(dist);
 console.log(
-  `[prepare-static-dist] Ready: dist/ (${entries.length} top-level items, ${created} route shells, ${staticRoutes.length} static routes verified)`,
+  `[prepare-static-dist] Ready: dist/ (${entries.length} top-level items, ${staticRoutes.length} prerendered routes verified)`,
 );

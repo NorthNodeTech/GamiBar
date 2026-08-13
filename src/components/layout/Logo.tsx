@@ -1,4 +1,4 @@
-import gamibarLogo from "@/assets/gamibar logo.png";
+import gamibarLogo from "@/assets/gamibar-logo-ui.webp";
 import { cn } from "@/lib/utils";
 
 type LogoProps = {

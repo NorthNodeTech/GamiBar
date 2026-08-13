@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Clock, Play, Sparkles, Square, Users } from "lucide-react";
+import { Clock, Play, Plus, Sparkles, Square, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
 import { CompletionTimeline } from "@/components/author/LiveLeaderboard";
+import {
+  LiveRoomActionDialog,
+  type LiveRoomAction,
+} from "@/components/author/LiveRoomActionDialog";
 import { LiveGameDashboard } from "@/components/author/LiveGameDashboard";
 import { UnifiedLeaderboard } from "@/components/author/UnifiedLeaderboard";
 import { LobbyWall, ParticipantStrip } from "@/components/author/LobbyWall";
@@ -26,7 +30,7 @@ import { loadAuthorRoom } from "@/lib/game/client-session";
 import { friendlyGameError } from "@/lib/accessibility";
 import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
 import { startGameFn, stopGameFn, setShowLeaderboardToStudentsFn } from "@/lib/game/room.functions";
-import { useRoomPolling } from "@/lib/game/useRoomPolling";
+import { useRoomSync } from "@/lib/game/useRoomSync";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/room/$roomId")({
@@ -38,13 +42,14 @@ export const Route = createFileRoute("/author/room/$roomId")({
 
 function AuthorRoomPage() {
   const { roomId } = Route.useParams();
-  const author = useMemo(() => loadAuthorRoom(), [roomId]);
+  const author = loadAuthorRoom();
   const authorToken = author?.roomId === roomId ? author.authorToken : undefined;
   const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry, refresh } =
-    useRoomPolling({ roomId, authorToken });
+    useRoomSync({ roomId, authorToken });
   const [busy, setBusy] = useState(false);
   const [leaderboardBusy, setLeaderboardBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<LiveRoomAction | null>(null);
 
   const connectDotsSolvability = useMemo(() => {
     if (!snapshot?.ok) return null;
@@ -65,7 +70,10 @@ function AuthorRoomPage() {
           <p className="mt-5 text-sm leading-relaxed text-[var(--muted-foreground)]">
             Author session for this room was not found in this browser.
           </p>
-          <Button asChild className="mt-5 rounded-xl bg-[var(--gamibar-brand)] text-white hover:bg-[var(--gamibar-brand-hover)]">
+          <Button
+            asChild
+            className="mt-5 rounded-xl bg-[var(--gamibar-brand)] text-white hover:bg-[var(--gamibar-brand-hover)]"
+          >
             <Link to="/author/create">Create a new room</Link>
           </Button>
         </div>
@@ -76,7 +84,12 @@ function AuthorRoomPage() {
   if (isInitialLoading) {
     return (
       <AuthorShell>
-        <PageLoader message="Loading room…" description="Fetching live game data." fullScreen={false} className="min-h-[40vh]" />
+        <PageLoader
+          message="Loading room…"
+          description="Fetching live game data."
+          fullScreen={false}
+          className="min-h-[40vh]"
+        />
       </AuthorShell>
     );
   }
@@ -86,7 +99,10 @@ function AuthorRoomPage() {
       <AuthorShell>
         <PageErrorState
           title="Connection problem"
-          message={friendlyGameError(error, "Could not connect to this room. Check your network and try again.")}
+          message={friendlyGameError(
+            error,
+            "Could not connect to this room. Check your network and try again.",
+          )}
           onRetry={retry}
           retrying={retrying}
           fullScreen={false}
@@ -101,7 +117,10 @@ function AuthorRoomPage() {
       <AuthorShell>
         <PageErrorState
           title="Could not load room"
-          message={friendlyGameError(error ?? snapshot.error, "This room may have been deleted or closed.")}
+          message={friendlyGameError(
+            error ?? snapshot.error,
+            "This room may have been deleted or closed.",
+          )}
           onRetry={retry}
           retrying={retrying}
           fullScreen={false}
@@ -136,14 +155,10 @@ function AuthorRoomPage() {
   const completed = room.participants.filter((p) => p.status === "COMPLETED").length;
   const inLobby = room.status === "LOBBY" || room.status === "READY" || room.status === "DRAFT";
   const isLive = room.status === "LIVE" || room.status === "COUNTDOWN";
-  const canStart = (room.status === "LOBBY" || room.status === "READY") && room.participantCount >= 1;
+  const canStart =
+    (room.status === "LOBBY" || room.status === "READY") && room.participantCount >= 1;
 
   const handleStart = async () => {
-    let confirmMessage = "Start the game for all students in the lobby?";
-    if (connectDotsSolvability?.warning) {
-      confirmMessage = `${connectDotsSolvability.warning}\n\nYou can still start, but students may not be able to finish. Start anyway?`;
-    }
-    if (!window.confirm(confirmMessage)) return;
     setBusy(true);
     setActionError(null);
     try {
@@ -166,7 +181,6 @@ function AuthorRoomPage() {
   };
 
   const handleStop = async () => {
-    if (!window.confirm("Stop the game and calculate the final leaderboard?")) return;
     setBusy(true);
     setActionError(null);
     try {
@@ -200,7 +214,9 @@ function AuthorRoomPage() {
         setActionError(message);
         toast.error(message);
       } else {
-        toast.success(enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students");
+        toast.success(
+          enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students",
+        );
         void refresh();
       }
     } catch (e) {
@@ -231,45 +247,47 @@ function AuthorRoomPage() {
         {actionError ? (
           <InlineErrorBanner message={actionError} onDismiss={() => setActionError(null)} />
         ) : null}
-        <section className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-5 shadow-[var(--shadow-soft)] sm:px-7 sm:py-6">
+        <section className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-5 shadow-[var(--shadow-soft)] sm:px-7 sm:py-6 lg:px-6 lg:py-5">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.18),transparent_50%)]"
           />
-          <div className="relative space-y-4 sm:space-y-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill status={room.status} />
-              <RoomMetaChips room={room} />
+          <div className="relative space-y-4 sm:space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-6 lg:space-y-0">
+            <div className="min-w-0 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill status={room.status} />
+                <RoomMetaChips room={room} />
+              </div>
+
+              <div className="min-w-0">
+                <h1 className="font-display text-[clamp(1.75rem,7vw,2.25rem)] font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-[2rem]">
+                  {room.name}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)] lg:max-w-xl">
+                  {statusHint}
+                </p>
+                {inLobby && connectDotsSolvability?.warning && (
+                  <ConnectDotsLayoutWarning assessment={connectDotsSolvability} className="mt-4" />
+                )}
+                {!inLobby && (
+                  <div className="mt-4">
+                    <ParticipantStrip participants={room.participants} />
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="min-w-0">
-              <h1 className="font-display text-[clamp(1.75rem,7vw,2.25rem)] font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-4xl">
-                {room.name}
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-                {statusHint}
-              </p>
-              {inLobby && connectDotsSolvability?.warning && (
-                <ConnectDotsLayoutWarning assessment={connectDotsSolvability} className="mt-4" />
-              )}
-              {!inLobby && (
-                <div className="mt-4">
-                  <ParticipantStrip participants={room.participants} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end lg:min-w-[18rem] lg:justify-end">
               {(room.status === "LOBBY" || room.status === "READY") && (
                 <Button
                   className={cn(
-                    "h-11 w-full rounded-xl px-6 font-semibold sm:w-auto",
+                    "h-11 w-full rounded-xl px-6 font-semibold sm:w-auto lg:h-10",
                     canStart
                       ? "bg-[var(--gamibar-brand)] text-white hover:bg-[var(--gamibar-brand-hover)]"
                       : "bg-[var(--surface)] text-[var(--gamibar-text-tertiary)] hover:bg-[var(--surface)]",
                   )}
                   disabled={busy || !canStart}
-                  onClick={() => void handleStart()}
+                  onClick={() => setPendingAction("start")}
                 >
                   <Play className="mr-2 size-4 shrink-0" />
                   <span className="truncate">
@@ -283,21 +301,23 @@ function AuthorRoomPage() {
               )}
               {isLive && (
                 <Button
-                  variant="outline"
-                  className="h-11 w-full rounded-xl border-[var(--gamibar-border)] bg-transparent text-[var(--foreground)] hover:bg-[var(--surface)] sm:w-auto"
+                  className="h-10 w-full rounded-xl bg-red-600 px-4 text-sm font-bold text-white shadow-sm shadow-red-900/10 hover:bg-red-700 focus-visible:ring-red-200 sm:w-auto"
                   disabled={busy}
-                  onClick={() => void handleStop()}
+                  onClick={() => setPendingAction("stop")}
                 >
-                  <Square className="mr-2 size-4 shrink-0" />
+                  <Square className="mr-2 size-3.5 shrink-0" />
                   {busy ? "Ending game…" : "Stop game"}
                 </Button>
               )}
               <Button
                 asChild
                 variant="outline"
-                className="h-11 w-full rounded-xl border-[var(--gamibar-border)] bg-transparent text-[var(--foreground)] hover:bg-[var(--surface)] sm:w-auto"
+                className="h-10 w-full rounded-xl border-transparent bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--muted-foreground)] shadow-none hover:border-[var(--gamibar-border)] hover:bg-[var(--gamibar-surface)] hover:text-[var(--foreground)] sm:w-auto"
               >
-                <Link to="/author/create">New room</Link>
+                <Link to="/author/create">
+                  <Plus className="mr-2 size-4 shrink-0" />
+                  New room
+                </Link>
               </Button>
             </div>
           </div>
@@ -309,7 +329,9 @@ function AuthorRoomPage() {
               <HeroMetric label="Completed" value={completed} accent="connect_dots" />
               <HeroMetric
                 label="Time left"
-                value={remaining != null ? `${remaining}s` : room.status === "LIVE" ? "No limit" : "—"}
+                value={
+                  remaining != null ? `${remaining}s` : room.status === "LIVE" ? "No limit" : "—"
+                }
                 icon={Clock}
                 {...(remaining != null ? { accent: "brand" as const } : {})}
               />
@@ -318,12 +340,21 @@ function AuthorRoomPage() {
         </section>
 
         {inLobby ? (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-            <RoomJoinShare code={room.code} prominent />
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(460px,520px)_minmax(0,1fr)] lg:items-start">
+            <div className="space-y-5 lg:sticky lg:top-20">
+              <RoomJoinShare code={room.code} prominent />
+              {room.participantCount < 1 && (
+                <div className="hidden items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)] lg:flex">
+                  <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
+                  Share the QR or 6-digit code. Start unlocks as soon as one student joins.
+                </div>
+              )}
+            </div>
             <LobbyWall
               participants={room.participants}
               mode={room.mode}
               roomName={room.name}
+              className="lg:min-h-[34rem]"
             />
           </div>
         ) : (
@@ -354,7 +385,10 @@ function AuthorRoomPage() {
                 {room.mode === "quiz" && isLive && (
                   <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-4 shadow-[var(--shadow-soft)] sm:px-6">
                     <div className="min-w-0">
-                      <Label htmlFor="show-leaderboard" className="text-sm font-semibold text-[var(--foreground)]">
+                      <Label
+                        htmlFor="show-leaderboard"
+                        className="text-sm font-semibold text-[var(--foreground)]"
+                      >
                         Show leaderboard to students
                       </Label>
                     </div>
@@ -388,6 +422,20 @@ function AuthorRoomPage() {
           </div>
         )}
       </div>
+
+      <LiveRoomActionDialog
+        action={pendingAction}
+        busy={busy}
+        joinedCount={room.participantCount}
+        roomCode={room.code}
+        startWarning={connectDotsSolvability?.warning}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+        onConfirm={() => {
+          void (pendingAction === "stop" ? handleStop() : handleStart());
+        }}
+      />
     </AuthorShell>
   );
 }

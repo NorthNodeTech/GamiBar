@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 
 import type { AuthUser, UserRole } from "@/lib/auth-store";
-import { supabase } from "@/lib/supabase/client";
+import { clearSupabaseAuthSession, supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AuthorRow = Database["public"]["Tables"]["gamibar_authors"]["Row"];
@@ -23,6 +23,19 @@ export function formatAuthError(message: string): string {
 export function isEmailNotConfirmedError(message: string): boolean {
   const lower = message.toLowerCase();
   return lower.includes("email not confirmed") || lower.includes("email_not_confirmed");
+}
+
+function isRecoverableSessionError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const lower = error.message.toLowerCase();
+  return (
+    lower.includes("invalid refresh token") ||
+    lower.includes("refresh token not found") ||
+    lower.includes("refresh token has been revoked") ||
+    lower.includes("already used") ||
+    lower.includes("auth session missing") ||
+    lower.includes("session_not_found")
+  );
 }
 
 export function mapProfileToAuthUser(user: User, profile: AuthorRow): AuthUser {
@@ -47,7 +60,13 @@ export async function fetchProfileForUser(userId: string) {
 
 export async function resolveAuthUserFromSession() {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw new Error(sessionError.message);
+  if (sessionError) {
+    if (isRecoverableSessionError(sessionError)) {
+      await clearSupabaseAuthSession();
+      return null;
+    }
+    throw new Error(sessionError.message);
+  }
 
   const session = sessionData.session;
   if (!session?.user) return null;
@@ -161,11 +180,20 @@ export async function signUpAuthor(
 }
 
 export async function signOutSupabase() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw new Error(error.message);
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+  if (error) {
+    if (isRecoverableSessionError(error)) {
+      await clearSupabaseAuthSession();
+      return;
+    }
+    throw new Error(error.message);
+  }
 }
 
-export async function resendAuthorSignupConfirmation(email: string, redirectPath = "/author/create") {
+export async function resendAuthorSignupConfirmation(
+  email: string,
+  redirectPath = "/author/create",
+) {
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: email.trim().toLowerCase(),

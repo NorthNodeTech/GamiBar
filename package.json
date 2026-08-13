@@ -10,7 +10,9 @@
     "preview": "vite preview --outDir dist",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "images:webp": "node scripts/convert-to-webp.mjs"
+    "images:webp": "node scripts/convert-to-webp.mjs",
+    "images:optimize": "node scripts/optimize-testimonial-images.mjs",
+    "seo:assets": "node scripts/generate-seo-assets.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

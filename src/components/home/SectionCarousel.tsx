@@ -78,7 +78,7 @@ export function SectionCarousel({
       </div>
 
       {count > 1 && (
-        <div className="mt-3 flex shrink-0 items-center justify-center gap-2 sm:mt-4" role="tablist">
+        <div className="mt-3 flex shrink-0 items-center justify-center sm:mt-4" role="tablist">
           {items.map((_, index) => (
             <button
               key={index}
@@ -87,13 +87,18 @@ export function SectionCarousel({
               aria-selected={index === active}
               aria-label={`Go to slide ${index + 1}`}
               onClick={() => setActive(index)}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300",
-                index === active
-                  ? "w-6 bg-[var(--gamibar-brand)]"
-                  : "w-2 bg-[var(--gamibar-border)]",
-              )}
-            />
+              className="grid size-6 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  index === active
+                    ? "w-6 bg-[var(--gamibar-brand)]"
+                    : "w-2 bg-[var(--gamibar-border)]",
+                )}
+              />
+            </button>
           ))}
         </div>
       )}

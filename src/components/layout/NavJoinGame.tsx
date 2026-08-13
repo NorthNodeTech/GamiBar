@@ -8,10 +8,12 @@ export function NavJoinGame({
   className,
   size = "sm",
   variant = "default",
+  onClick,
 }: {
   className?: string;
   size?: "sm" | "default";
   variant?: "default" | "mobile";
+  onClick?: () => void;
 }) {
   return (
     <Button
@@ -23,7 +25,9 @@ export function NavJoinGame({
         className,
       )}
     >
-      <Link to="/join">Join Game</Link>
+      <Link to="/join" onClick={onClick}>
+        Join Game
+      </Link>
     </Button>
   );
 }

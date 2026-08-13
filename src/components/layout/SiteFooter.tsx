@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import northNodeLogo from "@/assets/northnode.webp";
+import northNodeLogo from "@/assets/northnode-optimized.webp";
 import { Logo } from "@/components/layout/Logo";
 
 type FooterItem = {
@@ -8,25 +8,25 @@ type FooterItem = {
   to?: string;
 };
 
+const productItems: FooterItem[] = [
+  { label: "Game Modes", to: "/games" },
+  { label: "Play Quiz", to: "/games/quiz" },
+  { label: "Join with Code", to: "/join" },
+  { label: "Leaderboard", to: "/leaderboard" },
+];
+
+const accountItems: FooterItem[] = [
+  { label: "Create Game", to: "/author/create" },
+  { label: "Join Game", to: "/join" },
+];
+
+const activityItems: FooterItem[] = [
+  { label: "Quiz Challenge", to: "/games/quiz" },
+  { label: "Jigsaw Mission", to: "/games/jigsaw" },
+  { label: "Connect Dots", to: "/games/connect-dots" },
+];
+
 export function SiteFooter() {
-  const productItems: FooterItem[] = [
-    { label: "Game Modes" },
-    { label: "Play Games" },
-    { label: "Join with Code" },
-    { label: "Leaderboard" },
-  ];
-
-  const accountItems: FooterItem[] = [
-    { label: "Create Game", to: "/author/create" },
-    { label: "Join Game", to: "/join" },
-  ];
-
-  const activityItems: FooterItem[] = [
-    { label: "Quiz Challenge" },
-    { label: "Jigsaw Mission" },
-    { label: "Connect Dots" },
-  ];
-
   return (
     <footer className="mt-auto border-t border-[#E5E7EB] bg-[#111111] text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
@@ -42,7 +42,7 @@ export function SiteFooter() {
             challenges for classrooms.
           </p>
           <div className="mt-5 flex items-center gap-2.5">
-            <span className="text-[11px] text-[#737373]">by</span>
+            <span className="text-[11px] text-[#A3A3A3]">by</span>
             <a
               href="https://northnode.live/"
               target="_blank"
@@ -70,12 +70,12 @@ export function SiteFooter() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-6 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-          <p className="text-xs text-[#737373]">
+          <p className="text-xs text-[#A3A3A3]">
             © {new Date().getFullYear()} GamiBAR. All rights reserved.
           </p>
           <div className="flex flex-col gap-3 sm:items-end">
-            <span className="text-xs text-[#525252]">Built for teachers and students</span>
-            <p className="text-[11px] text-[#737373]">
+            <span className="text-xs text-[#A3A3A3]">Built for teachers and students</span>
+            <p className="text-[11px] text-[#A3A3A3]">
               Powered by{" "}
               <a
                 href="https://northnode.live/"
@@ -83,7 +83,7 @@ export function SiteFooter() {
                 rel="noopener noreferrer"
                 className="font-semibold text-[#A3A3A3] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
-                northnode
+                NorthNode
               </a>
             </p>
           </div>
@@ -96,7 +96,7 @@ export function SiteFooter() {
 function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-widest text-[#737373]">{title}</h4>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-[#A3A3A3]">{title}</h2>
       <ul className="mt-4 space-y-2.5">
         {items.map((item) => (
           <li key={item.label}>

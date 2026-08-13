@@ -10,19 +10,29 @@ import { JigsawBoard, TOTAL_PIECES } from "@/components/games/JigsawBoard";
 import { QuestionCard } from "@/components/games/QuestionCard";
 import { quizQuestions } from "@/data/questions";
 import { usePlayer } from "@/lib/player-store";
+import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
+
+const jigsawTitle = "Jigsaw Classroom Game | GamiBar";
+const jigsawDescription =
+  "Turn a classroom image into a live timed jigsaw mission. Students answer, reconstruct the visual puzzle, and compare results in GamiBar.";
 
 export const Route = createFileRoute("/games/jigsaw")({
-  head: () => ({
-    meta: [
-      { title: "Jigsaw Mission - GamiBar" },
-      {
-        name: "description",
-        content: "Reconstruct diagrams, workflows and systems piece by piece.",
-      },
-      { property: "og:title", content: "Jigsaw Mission - GamiBar" },
-      { property: "og:description", content: "Answer, unlock a piece, complete the image." },
-    ],
-  }),
+  head: () =>
+    createSeoHead({
+      title: jigsawTitle,
+      description: jigsawDescription,
+      path: "/games/jigsaw",
+      jsonLd: createWebPageJsonLd({
+        title: jigsawTitle,
+        description: jigsawDescription,
+        path: "/games/jigsaw",
+        breadcrumbs: [
+          { name: "Home", path: "/" },
+          { name: "Game Modes", path: "/games/" },
+          { name: "Jigsaw Mission", path: "/games/jigsaw" },
+        ],
+      }),
+    }),
   component: JigsawGame,
 });
 
@@ -112,7 +122,9 @@ function JigsawGame() {
           </AnimatePresence>
 
           <div className="mt-6 flex items-center justify-between border-t border-border pt-5">
-            <p className="text-xs text-muted-foreground">Swap the puzzle image - logic stays identical.</p>
+            <p className="text-xs text-muted-foreground">
+              Swap the puzzle image - logic stays identical.
+            </p>
             <label className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs transition-colors hover:bg-secondary">
               Upload image
               <input

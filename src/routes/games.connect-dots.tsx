@@ -7,22 +7,29 @@ import { GameShell } from "@/components/games/GameShell";
 import { Button } from "@/components/ui/button";
 import { generateConnectDotsPuzzle, type ConnectDotsDifficulty } from "@/lib/connect-dots";
 import { usePlayer } from "@/lib/player-store";
+import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
+
+const connectDotsTitle = "Connect Dots Classroom Game | GamiBar";
+const connectDotsDescription =
+  "Challenge a class with the same live connect-the-dots logic board. Participants connect matching colors and race for a valid finish in GamiBar.";
 
 export const Route = createFileRoute("/games/connect-dots")({
-  head: () => ({
-    meta: [
-      { title: "Connect Dots - GamiBar" },
-      {
-        name: "description",
-        content: "Connect matching coloured dots and complete every path as fast as possible.",
-      },
-      { property: "og:title", content: "Connect Dots - GamiBar" },
-      {
-        property: "og:description",
-        content: "Connect matching dots and complete every path before time runs out.",
-      },
-    ],
-  }),
+  head: () =>
+    createSeoHead({
+      title: connectDotsTitle,
+      description: connectDotsDescription,
+      path: "/games/connect-dots",
+      jsonLd: createWebPageJsonLd({
+        title: connectDotsTitle,
+        description: connectDotsDescription,
+        path: "/games/connect-dots",
+        breadcrumbs: [
+          { name: "Home", path: "/" },
+          { name: "Game Modes", path: "/games/" },
+          { name: "Connect Dots", path: "/games/connect-dots" },
+        ],
+      }),
+    }),
   component: ConnectDotsGame,
 });
 
@@ -32,7 +39,10 @@ function ConnectDotsGame() {
   const [seed, setSeed] = useState(0);
   const [finished, setFinished] = useState(false);
 
-  const puzzle = useMemo(() => generateConnectDotsPuzzle(difficulty), [difficulty, seed]);
+  const puzzle = useMemo(
+    () => generateConnectDotsPuzzle(difficulty, `preview-${difficulty}-${seed}`),
+    [difficulty, seed],
+  );
 
   const regenerate = () => {
     setFinished(false);
@@ -66,7 +76,12 @@ function ConnectDotsGame() {
               {level[0]!.toUpperCase() + level.slice(1)}
             </button>
           ))}
-          <Button type="button" variant="outline" className="ml-auto h-9 rounded-xl" onClick={regenerate}>
+          <Button
+            type="button"
+            variant="outline"
+            className="ml-auto h-9 rounded-xl"
+            onClick={regenerate}
+          >
             New puzzle
           </Button>
         </div>

@@ -1,11 +1,10 @@
 import { createFileRoute, getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, CameraOff, HelpCircle, Keyboard, ScanLine } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Logo } from "@/components/layout/Logo";
 import { GameCodeInput } from "@/components/session/GameCodeInput";
-import { JoinQrScanner } from "@/components/session/JoinQrScanner";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { getRoomSnapshotFn } from "@/lib/game/room.functions";
@@ -13,19 +12,34 @@ import { normalizeRoomCode } from "@/lib/game/room-code";
 import { friendlyGameError } from "@/lib/accessibility";
 import { releaseAllCameraStreams } from "@/lib/media/release-camera";
 import { cn } from "@/lib/utils";
+import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
 
 const joinRouteApi = getRouteApi("/join");
+const JoinQrScanner = lazy(() =>
+  import("@/components/session/JoinQrScanner").then((module) => ({
+    default: module.JoinQrScanner,
+  })),
+);
+const joinTitle = "Join a Live Classroom Game | GamiBar";
+const joinDescription =
+  "Join a GamiBar classroom game from any phone, tablet, or computer. Enter the six-digit room code or scan the session QR code to begin.";
 
 export const Route = createFileRoute("/join/")({
-  head: () => ({
-    meta: [
-      { title: "Join Game - GamiBAR" },
-      {
-        name: "description",
-        content: "Scan the QR code or enter the 6-digit game code to join a live session.",
-      },
-    ],
-  }),
+  head: () =>
+    createSeoHead({
+      title: joinTitle,
+      description: joinDescription,
+      path: "/join/",
+      jsonLd: createWebPageJsonLd({
+        title: joinTitle,
+        description: joinDescription,
+        path: "/join/",
+        breadcrumbs: [
+          { name: "Home", path: "/" },
+          { name: "Join Game", path: "/join/" },
+        ],
+      }),
+    }),
   component: JoinCodePage,
 });
 
@@ -75,7 +89,12 @@ function JoinCodePage() {
       try {
         const snap = await getRoomSnapshotFn({ data: { code: clean } });
         if (!snap.ok) {
-          setJoinError(friendlyGameError(snap.error, "That room code was not found. Check the code and try again."));
+          setJoinError(
+            friendlyGameError(
+              snap.error,
+              "That room code was not found. Check the code and try again.",
+            ),
+          );
           return;
         }
         if (snap.room.status === "FINISHED" || snap.room.status === "CANCELLED") {
@@ -143,9 +162,7 @@ function JoinCodePage() {
             onClick={() => switchMode("scan")}
             className={cn(
               "inline-flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors",
-              mode === "scan"
-                ? "bg-[#111111] text-white"
-                : "text-[#525252] hover:text-[#111111]",
+              mode === "scan" ? "bg-[#111111] text-white" : "text-[#525252] hover:text-[#111111]",
             )}
           >
             <ScanLine className="size-4" />
@@ -156,9 +173,7 @@ function JoinCodePage() {
             onClick={() => switchMode("code")}
             className={cn(
               "inline-flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors",
-              mode === "code"
-                ? "bg-[#111111] text-white"
-                : "text-[#525252] hover:text-[#111111]",
+              mode === "code" ? "bg-[#111111] text-white" : "text-[#525252] hover:text-[#111111]",
             )}
           >
             <Keyboard className="size-4" />
@@ -175,14 +190,25 @@ function JoinCodePage() {
                 <p className="text-xs text-white/60">Validating room…</p>
               </div>
             ) : (
-              <JoinQrScanner
-                onCode={handleScannedCode}
-                onError={(message) => setJoinError(message)}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className="mx-auto aspect-square w-full max-w-[min(100%,360px)] rounded-[24px] border border-[var(--gamibar-border)] bg-[#0a0a0a]"
+                    aria-label="Loading QR scanner"
+                  />
+                }
+              >
+                <JoinQrScanner
+                  onCode={handleScannedCode}
+                  onError={(message) => setJoinError(message)}
+                />
+              </Suspense>
             )
           ) : (
             <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-5 shadow-[var(--shadow-soft)]">
-              <p className="text-center text-sm font-medium text-[#525252]">Enter the 6-digit room code</p>
+              <p className="text-center text-sm font-medium text-[#525252]">
+                Enter the 6-digit room code
+              </p>
               <div className="mt-5">
                 <GameCodeInput value={code} onChange={setCode} autoFocus length={6} />
               </div>

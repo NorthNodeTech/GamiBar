@@ -10,9 +10,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import connectDotsPreview from "@/assets/game-connect-dots-preview.png";
-import jigsawPreview from "@/assets/game-jigsaw-preview.webp";
-import quizPreview from "@/assets/game-quiz-preview.webp";
+import connectDotsPreview from "@/assets/game-connect-dots-preview-card.webp";
+import jigsawPreview from "@/assets/game-jigsaw-preview-card.webp";
+import quizPreview from "@/assets/game-quiz-preview-card.webp";
 import testimonialCorporate from "@/assets/testimonial-corporate-learning.webp";
 import testimonialMath from "@/assets/testimonial-math-classroom.webp";
 import testimonialPhysics from "@/assets/testimonial-physics-classroom.webp";
@@ -20,20 +20,16 @@ import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
 import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, type GameMode } from "@/lib/game/config";
 
 export const HOMEPAGE_SEO = {
-  title: "GamiBAR - Live Classroom Game Lobby",
+  title: "GamiBar | Live Classroom Games, Quizzes & Activities",
   description:
-    "Run live Quiz Challenge, Jigsaw Mission, and Connect Dots sessions with a 6-digit room code - built for classrooms and training rooms.",
-  ogTitle: "GamiBAR - Live Classroom Game Lobby",
-  ogDescription:
-    "Authors create a room, students join instantly, and everyone plays the same round with live rankings.",
+    "Create interactive classroom games with GamiBar. Run live quizzes, jigsaw missions, and connect-the-dots activities that students join with a room code.",
 } as const;
 
 export const HOMEPAGE_HERO = {
   badge: "GamiBAR · Live Classroom Games",
   headlinePrefix: "Turn Any Lesson Into a",
   headlineAccent: "Live Game.",
-  lede:
-    "Create a room in minutes, share a 6-digit code, and run synchronized Quiz, Jigsaw, or Connect Dots rounds - with a live leaderboard everyone can see.",
+  lede: "Create a room in minutes, share a 6-digit code, and run synchronized Quiz, Jigsaw, or Connect Dots rounds - with a live leaderboard everyone can see.",
   primaryCta: "Create Room",
   secondaryCta: "Join with Code",
   imageAlt:
@@ -76,7 +72,7 @@ const MODE_PRESENTATION: Record<
   quiz: {
     tag: "Competitive",
     tint: "bg-[var(--game-quiz-soft)]",
-    accent: "text-[var(--game-quiz)]",
+    accent: "text-[#b91c1c]",
     icon: Timer,
     preview: quizPreview,
     imageAlt: "Quiz Challenge - multiple-choice question with four answers and live ranking",
@@ -85,7 +81,7 @@ const MODE_PRESENTATION: Record<
   jigsaw: {
     tag: "Visual puzzle",
     tint: "bg-[var(--game-jigsaw-soft)]",
-    accent: "text-[var(--game-jigsaw)]",
+    accent: "text-[#1d4ed8]",
     icon: Blocks,
     preview: jigsawPreview,
     imageAlt: "Jigsaw Mission - draggable puzzle pieces forming a classroom image",
@@ -94,7 +90,7 @@ const MODE_PRESENTATION: Record<
   connect_dots: {
     tag: "Logic & speed",
     tint: "bg-[var(--game-connect-dots-soft)]",
-    accent: "text-[var(--game-connect-dots)]",
+    accent: "text-[#047857]",
     icon: CircleDot,
     preview: connectDotsPreview,
     imageAlt: "Connect Dots - coloured dot pairs linked by paths on a grid",

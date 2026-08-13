@@ -10,19 +10,29 @@ import { GameShell } from "@/components/games/GameShell";
 import { QuestionCard } from "@/components/games/QuestionCard";
 import { quizQuestions } from "@/data/questions";
 import { usePlayer } from "@/lib/player-store";
+import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
+
+const quizTitle = "Live Classroom Quiz Game | GamiBar";
+const quizDescription =
+  "Run a live multiple-choice classroom quiz with instant feedback, streaks, and rankings. Create a GamiBar room and let students join by code.";
 
 export const Route = createFileRoute("/games/quiz")({
-  head: () => ({
-    meta: [
-      { title: "Quiz Challenge - GamiBar" },
-      {
-        name: "description",
-        content: "Speed-based multiple choice quiz with streak multipliers, lifelines and live XP rewards.",
-      },
-      { property: "og:title", content: "Quiz Challenge - GamiBar" },
-      { property: "og:description", content: "Answer fast, build a combo, earn XP." },
-    ],
-  }),
+  head: () =>
+    createSeoHead({
+      title: quizTitle,
+      description: quizDescription,
+      path: "/games/quiz",
+      jsonLd: createWebPageJsonLd({
+        title: quizTitle,
+        description: quizDescription,
+        path: "/games/quiz",
+        breadcrumbs: [
+          { name: "Home", path: "/" },
+          { name: "Game Modes", path: "/games/" },
+          { name: "Quiz Challenge", path: "/games/quiz" },
+        ],
+      }),
+    }),
   component: QuizGame,
 });
 
@@ -53,11 +63,9 @@ function QuizGame() {
       if (choice === question.answer) {
         const gained = 20 + Math.max(0, Math.round((time / TIME) * 15)) + combo * 5;
         setCorrect((c) => c + 1);
-        setCombo((c) => {
-          const next = c + 1;
-          setBestCombo((b) => Math.max(b, next));
-          return next;
-        });
+        const nextCombo = combo + 1;
+        setCombo(nextCombo);
+        setBestCombo((best) => Math.max(best, nextCombo));
         setXp((x) => x + gained);
       } else {
         setCombo(0);
@@ -176,8 +184,8 @@ function QuizGame() {
             <p className="mt-2 font-display text-4xl font-bold tabular-nums">{time}s</p>
             <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-elevated">
               <motion.div
-                className="h-full bg-foreground"
-                animate={{ width: `${(time / TIME) * 100}%` }}
+                className="h-full origin-left bg-foreground"
+                animate={{ scaleX: time / TIME }}
                 transition={{ ease: "linear", duration: 0.9 }}
               />
             </div>

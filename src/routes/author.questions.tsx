@@ -3,6 +3,7 @@ import { BookOpen, Check, ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { QuestionSetDeleteDialog } from "@/components/author/QuestionSetDeleteDialog";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,19 @@ export const Route = createFileRoute("/author/questions")({
   component: QuestionBankPage,
 });
 
+const QUIZ_OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
+
+function isQuestionComplete(item: QuizQuestionDraft) {
+  return Boolean(
+    item.prompt.trim() &&
+    item.correctOption &&
+    item.options.A.trim() &&
+    item.options.B.trim() &&
+    item.options.C.trim() &&
+    item.options.D.trim(),
+  );
+}
+
 function QuestionBankPage() {
   const [sets, setSets] = useState<QuestionBankSet[]>(() => listQuestionSets());
   const [editing, setEditing] = useState<QuestionBankSet | null>(null);
@@ -34,6 +48,7 @@ function QuestionBankPage() {
     emptyQuizQuestions("quiz_jigsaw"),
   );
   const [activeQ, setActiveQ] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<QuestionBankSet | null>(null);
 
   const refresh = useCallback(() => setSets(listQuestionSets()), []);
 
@@ -69,25 +84,15 @@ function QuestionBankPage() {
     startNew();
   };
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm("Delete this question set?")) return;
-    deleteQuestionSet(id);
+  const handleDelete = (set: QuestionBankSet) => {
+    deleteQuestionSet(set.id);
     refresh();
-    if (editing?.id === id) startNew();
-    toast.success("Deleted.");
+    if (editing?.id === set.id) startNew();
+    setDeleteTarget(null);
+    toast.success("Question set deleted.");
   };
 
   const q = questions[activeQ]!;
-  const options: QuizOptionId[] = ["A", "B", "C", "D"];
-  const isQuestionComplete = (item: QuizQuestionDraft) =>
-    Boolean(
-      item.prompt.trim() &&
-        item.correctOption &&
-        item.options.A.trim() &&
-        item.options.B.trim() &&
-        item.options.C.trim() &&
-        item.options.D.trim(),
-    );
   const currentComplete = isQuestionComplete(q);
   const hasNext = activeQ < questions.length - 1;
   const hasPrev = activeQ > 0;
@@ -99,10 +104,7 @@ function QuestionBankPage() {
   return (
     <AuthorShell>
       <div className="mx-auto max-w-5xl pb-8">
-        <Link
-          to="/author"
-          className="text-sm font-medium text-[#525252] hover:text-[#111111]"
-        >
+        <Link to="/author" className="text-sm font-medium text-[#525252] hover:text-[#111111]">
           ← Home
         </Link>
 
@@ -110,7 +112,8 @@ function QuestionBankPage() {
           <div>
             <h1 className="font-display text-2xl font-extrabold text-[#111111]">Question Bank</h1>
             <p className="mt-1 text-sm text-[#525252]">
-              Save question sets with correct answers. Reuse them when creating Puzzle Quest sessions.
+              Save question sets with correct answers. Reuse them when creating Puzzle Quest
+              sessions.
             </p>
           </div>
           <Button onClick={startNew} className="rounded-xl bg-[#111111] hover:bg-black">
@@ -175,7 +178,8 @@ function QuestionBankPage() {
             </div>
 
             <p className="mt-4 text-xs text-[#737373]">
-              {GAME_CONFIG.quiz_jigsaw.questionCount} questions recommended for Puzzle Quest (one piece per correct answer).
+              {GAME_CONFIG.quiz_jigsaw.questionCount} questions recommended for Puzzle Quest (one
+              piece per correct answer).
             </p>
 
             <div className="mt-4 flex flex-wrap gap-1.5">
@@ -188,7 +192,11 @@ function QuestionBankPage() {
                     onClick={() => setActiveQ(i)}
                     className={cn(
                       "grid size-9 place-items-center rounded-xl text-xs font-bold",
-                      i === activeQ ? "bg-[#111111] text-white" : done ? "bg-green-100 text-green-700" : "bg-[#F3F4F6] text-[#737373]",
+                      i === activeQ
+                        ? "bg-[#111111] text-white"
+                        : done
+                          ? "bg-green-100 text-green-700"
+                          : "bg-[#F3F4F6] text-[#737373]",
                     )}
                   >
                     {i + 1}
@@ -211,7 +219,7 @@ function QuestionBankPage() {
                 Tap the letter or row to mark the correct answer — it turns green.
               </p>
               <div className="mt-3 grid gap-2">
-                {options.map((opt) => {
+                {QUIZ_OPTIONS.map((opt) => {
                   const isCorrect = q.correctOption === opt;
                   return (
                     <div
@@ -317,7 +325,7 @@ function QuestionBankPage() {
                   <Button
                     variant="outline"
                     className="rounded-xl text-red-600 hover:text-red-700"
-                    onClick={() => handleDelete(editing.id)}
+                    onClick={() => setDeleteTarget(editing)}
                   >
                     <Trash2 className="mr-2 size-4" />
                     Delete
@@ -331,6 +339,18 @@ function QuestionBankPage() {
           </div>
         </div>
       </div>
+
+      <QuestionSetDeleteDialog
+        open={deleteTarget !== null}
+        setName={deleteTarget?.name}
+        questionCount={deleteTarget?.questions.length}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget);
+        }}
+      />
     </AuthorShell>
   );
 }
