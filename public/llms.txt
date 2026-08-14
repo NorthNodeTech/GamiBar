@@ -12,12 +12,11 @@ GamiBar is a web-based live gamified learning platform for classrooms, universit
 
 ## Important pages
 
-- Homepage: https://gamibar.com/
-- Game modes: https://gamibar.com/games/
-- Quiz Challenge: https://gamibar.com/games/quiz
-- Jigsaw Mission: https://gamibar.com/games/jigsaw
-- Connect Dots: https://gamibar.com/games/connect-dots
-- Join a live game: https://gamibar.com/join/
+- [Homepage](https://gamibar.com/)
+- [Game modes](https://gamibar.com/games/)
+- [Quiz Challenge](https://gamibar.com/games/quiz)
+- [Jigsaw Mission](https://gamibar.com/games/jigsaw)
+- [Connect Dots](https://gamibar.com/games/connect-dots)
+- [Join a live game](https://gamibar.com/join/)
 
-GamiBar is powered by NorthNode: https://northnode.live/
-
+GamiBar is powered by [NorthNode](https://northnode.live/).
