@@ -350,12 +350,7 @@ function AuthorRoomPage() {
                 </div>
               )}
             </div>
-            <LobbyWall
-              participants={room.participants}
-              mode={room.mode}
-              roomName={room.name}
-              className="lg:min-h-[34rem]"
-            />
+            <LobbyWall participants={room.participants} mode={room.mode} roomName={room.name} />
           </div>
         ) : (
           <>

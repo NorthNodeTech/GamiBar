@@ -31,7 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
+import {
+  getStoredAuth,
+  isAuthorAuthenticated,
+  sanitizeAuthorRedirect,
+  useAuth,
+} from "@/lib/auth-store";
 import { saveAuthorRoom } from "@/lib/game/client-session";
 import {
   buildConnectDotsFromContentPairs,
@@ -62,7 +67,13 @@ import { getModeCatalog, type GameModeCatalogItem } from "@/lib/game/mode-catalo
 import { modeUsesQuestions } from "@/lib/game/mode-registry";
 import { createRoomFn } from "@/lib/game/room.functions";
 import { formatTimerLong, gameInstruction } from "@/lib/game/timer";
-import type { ConnectDotsBoardConfig, ConnectDotsContentPair, GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
+import type {
+  ConnectDotsBoardConfig,
+  ConnectDotsContentPair,
+  GamePayload,
+  QuizOptionId,
+  QuizQuestionDraft,
+} from "@/lib/game/types";
 import { prepareJigsawImage } from "@/lib/game/jigsaw-image";
 import {
   emptyQuizQuestions,
@@ -95,6 +106,7 @@ export const Route = createFileRoute("/author/create")({
 });
 
 type Step = "details" | "mode" | "configure" | "review";
+const QUIZ_OPTION_IDS: QuizOptionId[] = ["A", "B", "C", "D"];
 
 function CreateRoomWizard() {
   const navigate = useNavigate();
@@ -104,7 +116,7 @@ function CreateRoomWizard() {
   const [step, setStep] = useState<Step>("mode");
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
-  const [mode, setMode] = useState<GameMode | null>(presetMode ?? null);
+  const [mode, setMode] = useState<GameMode | null>(presetMode ?? "quiz");
   const [questions, setQuestions] = useState<QuizQuestionDraft[]>(() => emptyQuizQuestions("quiz"));
   const [rewardCode, setRewardCode] = useState("");
   const [connectDotsPairs, setConnectDotsPairs] = useState<ConnectDotsContentPair[]>(() =>
@@ -113,7 +125,9 @@ function CreateRoomWizard() {
   const [connectDotsSeed, setConnectDotsSeed] = useState(() => `cd-${Date.now()}`);
   const [jigsawUrl, setJigsawUrl] = useState<string | null>(null);
   const [jigsawMime, setJigsawMime] = useState<string | null>(null);
-  const [jigsawTemplateId, setJigsawTemplateId] = useState<JigsawTemplateId>(DEFAULT_JIGSAW_TEMPLATE_ID);
+  const [jigsawTemplateId, setJigsawTemplateId] = useState<JigsawTemplateId>(
+    DEFAULT_JIGSAW_TEMPLATE_ID,
+  );
   const [jigsawPieceUnlockAt, setJigsawPieceUnlockAt] = useState<number[]>(() => {
     const template = jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID);
     const questionCount = defaultQuestionCountForTemplate(template);
@@ -135,7 +149,7 @@ function CreateRoomWizard() {
     if (connectDotsPairs.length === 0) return null;
     const stubs = connectDotsPairs.map((p) => ({ ...p, question: " ", answer: " " }));
     return buildConnectDotsFromContentPairs(stubs, connectDotsSeed).boardConfig;
-  }, [connectDotsPairs.length, connectDotsSeed, connectDotsPairs.map((p) => p.id).join(",")]);
+  }, [connectDotsPairs, connectDotsSeed]);
 
   const connectDotsBoard = useMemo((): ConnectDotsBoardConfig | null => {
     if (!connectDotsLayout) return null;
@@ -195,7 +209,17 @@ function CreateRoomWizard() {
       connectDots: connectDotsBoard,
       timeLimitSeconds: timerSeconds,
     };
-  }, [mode, questions, connectDotsBoard, jigsawUrl, jigsawMime, jigsawTemplateId, jigsawPieceUnlockAt, timerSeconds, rewardCode]);
+  }, [
+    mode,
+    questions,
+    connectDotsBoard,
+    jigsawUrl,
+    jigsawMime,
+    jigsawTemplateId,
+    jigsawPieceUnlockAt,
+    timerSeconds,
+    rewardCode,
+  ]);
 
   const configValid = payload && mode ? validateGamePayload(mode, payload).ok : false;
 
@@ -364,9 +388,15 @@ function CreateRoomWizard() {
   };
 
   const addJigsawQuestion = () =>
-    addQuestion({ minQuestions: jigsawMinQuestions, maxQuestions: GAME_CONFIG.jigsaw.maxQuestions });
+    addQuestion({
+      minQuestions: jigsawMinQuestions,
+      maxQuestions: GAME_CONFIG.jigsaw.maxQuestions,
+    });
   const removeJigsawQuestion = () =>
-    removeQuestion({ minQuestions: jigsawMinQuestions, maxQuestions: GAME_CONFIG.jigsaw.maxQuestions });
+    removeQuestion({
+      minQuestions: jigsawMinQuestions,
+      maxQuestions: GAME_CONFIG.jigsaw.maxQuestions,
+    });
   const addQuizQuestion = () => addQuestion(GAME_CONFIG.quiz);
   const removeQuizQuestion = () => removeQuestion(GAME_CONFIG.quiz);
 
@@ -396,10 +426,7 @@ function CreateRoomWizard() {
     setActiveQ(toIndex);
   };
 
-  const jigsawTemplate = useMemo(
-    () => jigsawTemplateById(jigsawTemplateId),
-    [jigsawTemplateId],
-  );
+  const jigsawTemplate = useMemo(() => jigsawTemplateById(jigsawTemplateId), [jigsawTemplateId]);
   const jigsawGrid = useMemo(() => layoutFromTemplate(jigsawTemplate), [jigsawTemplate]);
   const jigsawMinQuestions = useMemo(
     () => minQuestionCountForTemplate(jigsawTemplate),
@@ -472,16 +499,9 @@ function CreateRoomWizard() {
     }
   };
 
-  const isCompactStep = step === "details";
-
   return (
     <AuthorShell>
-      <div
-        className={cn(
-          "author-page mx-auto w-full min-w-0 pb-6 md:pb-8",
-          isCompactStep ? "max-w-lg" : "max-w-5xl",
-        )}
-      >
+      <div className="author-page mx-auto w-full max-w-5xl min-w-0 pb-6 md:pb-8">
         <Link
           to="/author"
           className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
@@ -490,12 +510,7 @@ function CreateRoomWizard() {
           Home
         </Link>
 
-        <div
-          className={cn(
-            "author-card relative mt-3 flex flex-col overflow-visible",
-            step === "mode" && !skipModeStep.current && "md:overflow-visible",
-          )}
-        >
+        <div className="author-card relative mt-3 flex flex-col overflow-hidden">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--gamibar-brand)]/45 to-transparent"
@@ -516,7 +531,9 @@ function CreateRoomWizard() {
               </p>
             )}
             {step === "mode" && !skipModeStep.current && (
-              <p className="mt-1 hidden text-sm text-[#525252] sm:block">Choose the game that fits this lesson.</p>
+              <p className="mt-1 hidden text-sm text-[#525252] sm:block">
+                Choose the game that fits this lesson.
+              </p>
             )}
             {step === "details" && (
               <p className="mt-1 hidden text-sm text-[#525252] sm:block">
@@ -538,12 +555,7 @@ function CreateRoomWizard() {
             <AuthorWizardSteps current={step} compact className="mt-3 sm:mt-4" />
           </div>
 
-          <div
-            className={cn(
-              "wizard-sticky-content px-4 py-4 sm:px-5 sm:py-5",
-              step === "mode" && !skipModeStep.current && "md:overflow-visible",
-            )}
-          >
+          <div className={cn("wizard-sticky-content px-4 py-4 sm:px-5 sm:py-5")}>
             {step === "mode" && skipModeStep.current && mode && modeCatalog && (
               <SelectedGamePreview mode={mode} catalog={modeCatalog} />
             )}
@@ -553,7 +565,7 @@ function CreateRoomWizard() {
             )}
 
             {step === "details" && (
-              <div className="grid gap-4">
+              <div className="mx-auto grid w-full max-w-xl gap-4 py-1 sm:py-3">
                 <div className="grid gap-2">
                   <Label htmlFor="room-name">Room / session name</Label>
                   <Input
@@ -581,7 +593,10 @@ function CreateRoomWizard() {
             {step === "mode" && skipModeStep.current && (
               <p className="mt-4 text-center text-xs text-[#737373]">
                 Want a different game?{" "}
-                <Link to="/author" className="font-semibold text-[#111111] underline-offset-2 hover:underline">
+                <Link
+                  to="/author"
+                  className="font-semibold text-[#111111] underline-offset-2 hover:underline"
+                >
                   Go back home
                 </Link>
               </p>
@@ -593,7 +608,13 @@ function CreateRoomWizard() {
                 <p className="mt-1 text-sm text-[#525252]">
                   Go back and pick Quiz, Jigsaw, or Connect Dots.
                 </p>
-                <Button type="button" variant="outline" size="sm" className="mt-4 rounded-xl" onClick={goBack}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 rounded-xl"
+                  onClick={goBack}
+                >
                   Pick a game
                 </Button>
               </div>
@@ -654,10 +675,14 @@ function CreateRoomWizard() {
                   <>
                     {listQuestionSets().length > 0 && (
                       <div className="rounded-2xl border border-[#E5E7EB] bg-[#FAFAFA] p-4">
-                        <Label className="text-xs uppercase tracking-wider text-[#737373]">
+                        <Label
+                          htmlFor="question-bank-import"
+                          className="text-xs uppercase tracking-wider text-[#737373]"
+                        >
                           Import from question bank
                         </Label>
                         <select
+                          id="question-bank-import"
                           className="mt-2 h-11 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm"
                           defaultValue=""
                           onChange={(e) => {
@@ -671,7 +696,9 @@ function CreateRoomWizard() {
                               })),
                             );
                             if (set.subject) setSubject(set.subject);
-                            toast.success(`Loaded "${set.name}" (${Math.min(set.questions.length, count)} questions).`);
+                            toast.success(
+                              `Loaded "${set.name}" (${Math.min(set.questions.length, count)} questions).`,
+                            );
                           }}
                         >
                           <option value="">Choose a saved set…</option>
@@ -746,7 +773,9 @@ function CreateRoomWizard() {
                                   : "border-[var(--gamibar-border)] bg-white text-[#525252] hover:border-[var(--game-jigsaw)]/40",
                               )}
                             >
-                              <span className="block font-display text-lg font-bold">{template.label}</span>
+                              <span className="block font-display text-lg font-bold">
+                                {template.label}
+                              </span>
                               <span className="mt-0.5 block text-[11px] font-medium">
                                 {template.tileCount} piece{template.tileCount === 1 ? "" : "s"}
                               </span>
@@ -765,8 +794,8 @@ function CreateRoomWizard() {
                             {jigsawGrid.cols}×{jigsawGrid.rows} grid ({jigsawGrid.tileCount} pieces)
                           </p>
                           <p className="mt-0.5 text-xs text-[#737373]">
-                            Minimum {jigsawMinQuestions} questions for this grid · wrong answers retry at
-                            the end
+                            Minimum {jigsawMinQuestions} questions for this grid · wrong answers
+                            retry at the end
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -869,21 +898,21 @@ function CreateRoomWizard() {
                   <>
                     <ConnectDotsLayoutWarning assessment={connectDotsSolvability} />
                     <ConnectDotsPairEditor
-                    pairs={connectDotsPairs}
-                    activePair={activeQ}
-                    setActivePair={setActiveQ}
-                    setPairs={setConnectDotsPairs}
-                    progress={connectDotsProgress}
-                    board={connectDotsBoard}
-                    onAddPair={addConnectDotsPair}
-                    onRemovePair={removeConnectDotsPair}
-                    onMovePair={moveConnectDotsPair}
-                    onShuffleLayout={() => {
-                      setConnectDotsSeed(`cd-${Date.now()}`);
-                      toast.success("Answer order shuffled.");
-                    }}
-                    timerLabel={formatTimerLong(timerSeconds)}
-                  />
+                      pairs={connectDotsPairs}
+                      activePair={activeQ}
+                      setActivePair={setActiveQ}
+                      setPairs={setConnectDotsPairs}
+                      progress={connectDotsProgress}
+                      board={connectDotsBoard}
+                      onAddPair={addConnectDotsPair}
+                      onRemovePair={removeConnectDotsPair}
+                      onMovePair={moveConnectDotsPair}
+                      onShuffleLayout={() => {
+                        setConnectDotsSeed(`cd-${Date.now()}`);
+                        toast.success("Answer order shuffled.");
+                      }}
+                      timerLabel={formatTimerLong(timerSeconds)}
+                    />
                   </>
                 )}
               </div>
@@ -895,17 +924,19 @@ function CreateRoomWizard() {
                   <ConnectDotsLayoutWarning assessment={connectDotsSolvability} />
                 )}
                 <ReviewLaunchCard
-                name={name}
-                subject={subject}
-                mode={mode}
-                preview={modeCatalog.preview}
-                accentClass={modeCatalog.accentClass}
-                badgeClass={modeCatalog.badgeClass}
-                timeLimitSeconds={payload.timeLimitSeconds}
-                questionCount={
-                  mode === "quiz" && payload.mode === "quiz" ? payload.questions.length : undefined
-                }
-              />
+                  name={name}
+                  subject={subject}
+                  mode={mode}
+                  preview={modeCatalog.preview}
+                  accentClass={modeCatalog.accentClass}
+                  badgeClass={modeCatalog.badgeClass}
+                  timeLimitSeconds={payload.timeLimitSeconds}
+                  questionCount={
+                    mode === "quiz" && payload.mode === "quiz"
+                      ? payload.questions.length
+                      : undefined
+                  }
+                />
               </div>
             )}
           </div>
@@ -971,13 +1002,7 @@ function CreateRoomWizard() {
   );
 }
 
-function SelectedGamePreview({
-  mode,
-  catalog,
-}: {
-  mode: GameMode;
-  catalog: GameModeCatalogItem;
-}) {
+function SelectedGamePreview({ mode, catalog }: { mode: GameMode; catalog: GameModeCatalogItem }) {
   const Icon = catalog.icon;
   return (
     <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
@@ -993,7 +1018,9 @@ function SelectedGamePreview({
         </span>
       </div>
       <div className="p-4 sm:p-5">
-        <p className="font-display text-lg font-bold text-[#111111]">{GAME_MODE_META[mode].title}</p>
+        <p className="font-display text-lg font-bold text-[#111111]">
+          {GAME_MODE_META[mode].title}
+        </p>
         <p className="mt-1 text-sm text-[#525252]">{catalog.tagline}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {catalog.specs.map((spec) => (
@@ -1013,11 +1040,11 @@ function SelectedGamePreview({
 function isQuizQuestionComplete(item: QuizQuestionDraft): boolean {
   return Boolean(
     item.prompt.trim() &&
-      item.correctOption &&
-      item.options.A.trim() &&
-      item.options.B.trim() &&
-      item.options.C.trim() &&
-      item.options.D.trim(),
+    item.correctOption &&
+    item.options.A.trim() &&
+    item.options.B.trim() &&
+    item.options.C.trim() &&
+    item.options.D.trim(),
   );
 }
 
@@ -1037,7 +1064,7 @@ function QuizEditor({
   accent?: "default" | "purple" | "jigsaw";
 }) {
   const q = questions[activeQ]!;
-  const options: QuizOptionId[] = ["A", "B", "C", "D"];
+  const options = QUIZ_OPTION_IDS;
   const currentComplete = isQuizQuestionComplete(q);
   const hasNext = activeQ < questions.length - 1;
   const hasPrev = activeQ > 0;
@@ -1066,7 +1093,9 @@ function QuizEditor({
           <p className="text-sm font-semibold text-[#111111]">
             Question deck · {progress.done}/{progress.total}
           </p>
-          <p className="text-xs text-[#737373]">Tap a number, fill the prompt and four choices, then mark the correct letter.</p>
+          <p className="text-xs text-[#737373]">
+            Tap a number, fill the prompt and four choices, then mark the correct letter.
+          </p>
         </div>
         <span className={cn("rounded-full px-3 py-1 text-xs font-bold", accentBadge)}>
           {pct}% ready
@@ -1104,7 +1133,9 @@ function QuizEditor({
       </div>
 
       <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
-        <Label className="text-xs uppercase tracking-wider text-[#737373]">Question {activeQ + 1}</Label>
+        <Label className="text-xs uppercase tracking-wider text-[#737373]">
+          Question {activeQ + 1}
+        </Label>
         <Input
           value={q.prompt}
           onChange={(e) => update({ prompt: e.target.value })}
@@ -1248,7 +1279,10 @@ function JigsawUploader({
         >
           {uploading ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--gamibar-page)] px-6 text-center">
-              <Loader2 className="size-8 animate-spin text-[var(--game-jigsaw)]" aria-hidden="true" />
+              <Loader2
+                className="size-8 animate-spin text-[var(--game-jigsaw)]"
+                aria-hidden="true"
+              />
               <p className="mt-4 text-sm font-semibold text-[#111111]">Preparing image…</p>
               <p className="mt-1 text-xs text-[#737373]">Cropping to a square puzzle canvas</p>
             </div>
@@ -1433,7 +1467,9 @@ function ConnectDotsPairEditor({
       </div>
 
       <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
-        <Label className="text-xs uppercase tracking-wider text-[#737373]">Pair {activePair + 1}</Label>
+        <Label className="text-xs uppercase tracking-wider text-[#737373]">
+          Pair {activePair + 1}
+        </Label>
         <div className="mt-3 grid gap-3">
           <div className="grid gap-2">
             <Label htmlFor="connect-dots-question">Question</Label>
@@ -1463,7 +1499,13 @@ function ConnectDotsPairEditor({
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
             Student preview
           </p>
-          <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl" onClick={onShuffleLayout}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-xl"
+            onClick={onShuffleLayout}
+          >
             Shuffle answers
           </Button>
         </div>
@@ -1512,25 +1554,32 @@ function ReviewLaunchCard({
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">What happens next</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
+            What happens next
+          </p>
           <ul className="mt-3 space-y-2 text-sm text-[#525252]">
             <li className="flex gap-2">
-              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />6-digit room code generated
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
+              6-digit room code generated
             </li>
             <li className="flex gap-2">
-              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />QR code ready for students to scan
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
+              QR code ready for students to scan
             </li>
             <li className="flex gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
               Unlimited students can join with the room code or QR
             </li>
             <li className="flex gap-2">
-              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />You control Start from the live lobby
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
+              You control Start from the live lobby
             </li>
           </ul>
         </div>
         <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">Game rules</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
+            Game rules
+          </p>
           <p className="mt-2 text-sm leading-relaxed text-[#525252]">{instruction}</p>
           <p className="mt-3 inline-flex items-center rounded-full bg-[var(--gamibar-page)] px-3 py-1 text-[11px] font-semibold text-[#111111]">
             Timer · {formatTimerLong(timeLimitSeconds)}
@@ -1538,7 +1587,10 @@ function ReviewLaunchCard({
           {catalog && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {catalog.specs.map((spec) => (
-                <span key={spec} className="rounded-full bg-[var(--gamibar-page)] px-2.5 py-0.5 text-[10px] font-semibold text-[#525252]">
+                <span
+                  key={spec}
+                  className="rounded-full bg-[var(--gamibar-page)] px-2.5 py-0.5 text-[10px] font-semibold text-[#525252]"
+                >
                   {spec}
                 </span>
               ))}
@@ -1566,7 +1618,9 @@ function ReviewLaunchCard({
             >
               {GAME_MODE_META[mode].title}
             </span>
-            <h3 className="mt-1.5 font-display text-lg font-extrabold text-white sm:text-xl">{name}</h3>
+            <h3 className="mt-1.5 font-display text-lg font-extrabold text-white sm:text-xl">
+              {name}
+            </h3>
             <p className="mt-0.5 text-xs text-white/75 sm:text-sm">{subject || "General"}</p>
           </div>
         </div>

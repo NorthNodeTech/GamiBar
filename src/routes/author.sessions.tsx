@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -46,8 +46,15 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/sessions")({
   head: () => ({ meta: [{ title: "My Games - GamiBAR" }] }),
-  component: MyGamesPage,
+  component: AuthorSessionsRoute,
 });
+
+function AuthorSessionsRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const normalizedPathname = pathname.replace(/\/+$/, "");
+
+  return normalizedPathname === "/author/sessions" ? <MyGamesPage /> : <Outlet />;
+}
 
 const statusLabel: Record<string, string> = {
   DRAFT: "Draft",
@@ -155,7 +162,7 @@ function MyGamesPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const sessions = sessionsQuery.data ?? [];
+  const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
 
   const filteredSessions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -170,14 +177,13 @@ function MyGamesPage() {
       );
     });
   }, [sessions, searchQuery, statusFilter]);
-  const busyId =
-    openLiveMutation.isPending
-      ? openLiveMutation.variables?.session.id
-      : duplicateMutation.isPending
-        ? duplicateMutation.variables?.session.id
-        : deleteMutation.isPending
-          ? deleteMutation.variables?.id
-          : null;
+  const busyId = openLiveMutation.isPending
+    ? openLiveMutation.variables?.session.id
+    : duplicateMutation.isPending
+      ? duplicateMutation.variables?.session.id
+      : deleteMutation.isPending
+        ? deleteMutation.variables?.id
+        : null;
 
   return (
     <AuthorShell>
@@ -185,7 +191,10 @@ function MyGamesPage() {
         <AuthorPageHeader
           title="My Games"
           actions={
-            <Button asChild className="w-full rounded-xl bg-[var(--gamibar-brand)] font-semibold shadow-[0_8px_24px_-8px_rgba(239,68,68,0.45)] hover:bg-[var(--gamibar-brand-hover)] sm:w-auto">
+            <Button
+              asChild
+              className="w-full rounded-xl bg-[var(--gamibar-brand)] font-semibold shadow-[0_8px_24px_-8px_rgba(239,68,68,0.45)] hover:bg-[var(--gamibar-brand-hover)] sm:w-auto"
+            >
               <Link to="/author/create">
                 <Plus className="mr-2 size-4" />
                 Create Game
@@ -205,7 +214,10 @@ function MyGamesPage() {
                   {savedRoom.code}
                 </p>
               </div>
-              <Button asChild className="h-11 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 sm:w-auto sm:min-h-0">
+              <Button
+                asChild
+                className="h-11 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 sm:w-auto sm:min-h-0"
+              >
                 <Link to="/author/room/$roomId" params={{ roomId: savedRoom.roomId }}>
                   Open live control
                   <ArrowRight className="ml-2 size-4" />
@@ -271,7 +283,10 @@ function MyGamesPage() {
                 <Gamepad2 className="size-7" />
               </div>
               <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No games yet</p>
-              <Button asChild className="mt-5 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]">
+              <Button
+                asChild
+                className="mt-5 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]"
+              >
                 <Link to="/author/create">Create Game</Link>
               </Button>
             </div>
@@ -287,9 +302,6 @@ function MyGamesPage() {
                   session={session}
                   busy={busyId === session.id}
                   onOpenLive={() => openLiveMutation.mutate(session)}
-                  onViewResults={() =>
-                    navigate({ to: "/author/sessions/$roomId", params: { roomId: session.id } })
-                  }
                   onDuplicate={() => {
                     setDuplicateTarget(session);
                     setDuplicateName("");
@@ -371,8 +383,8 @@ function MyGamesPage() {
               <div className="space-y-3 text-left text-sm text-muted-foreground">
                 <p>
                   Permanently removes{" "}
-                  <span className="font-semibold text-foreground">{deleteTarget?.name}</span> and all
-                  its data.
+                  <span className="font-semibold text-foreground">{deleteTarget?.name}</span> and
+                  all its data.
                 </p>
                 <p>
                   Type <span className="font-semibold text-foreground">DELETE</span> to confirm:
@@ -411,14 +423,12 @@ function MyGameCard({
   session,
   busy,
   onOpenLive,
-  onViewResults,
   onDuplicate,
   onDelete,
 }: {
   session: AuthorSessionSummary;
   busy: boolean;
   onOpenLive: () => void;
-  onViewResults: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
@@ -452,7 +462,9 @@ function MyGameCard({
             </span>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--muted-foreground)]">
-            <span className="inline-flex items-center gap-1 font-mono tracking-wider">{session.code}</span>
+            <span className="inline-flex items-center gap-1 font-mono tracking-wider">
+              {session.code}
+            </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-3.5" />
               {session.playerCount}
@@ -474,16 +486,11 @@ function MyGameCard({
             Open live
           </Button>
         ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
-          disabled={busy}
-          onClick={onViewResults}
-        >
-          <Eye className="mr-1 size-3" />
-          {isFinished ? "Results" : "Summary"}
+        <Button asChild variant="ghost" size="sm" className="h-10 rounded-lg px-2.5 text-xs sm:h-8">
+          <Link to="/author/sessions/$roomId" params={{ roomId: session.id }}>
+            <Eye className="mr-1 size-3" />
+            {isFinished ? "Results" : "Summary"}
+          </Link>
         </Button>
         <Button
           type="button"
