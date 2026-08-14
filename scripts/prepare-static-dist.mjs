@@ -6,6 +6,7 @@
  * work even when the host has not applied a SPA rewrite rule yet.
  */
 import {
+  cpSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -22,6 +23,7 @@ const root = process.cwd();
 const dist = join(root, "dist");
 const client = join(dist, "client");
 const server = join(dist, "server");
+const publicDir = join(root, "public");
 
 if (!existsSync(client)) {
   console.error("[prepare-static-dist] Missing dist/client — run vite build first.");
@@ -49,6 +51,14 @@ for (const name of readdirSync(client)) {
 rmSync(client, { recursive: true, force: true });
 if (existsSync(server)) {
   rmSync(server, { recursive: true, force: true });
+}
+
+// Multi-environment builds do not consistently retain Vite's publicDir copy.
+// Copy it explicitly so fonts, icons, manifests, and crawler files always ship.
+if (existsSync(publicDir)) {
+  for (const name of readdirSync(publicDir)) {
+    cpSync(join(publicDir, name), join(dist, name), { recursive: true, force: true });
+  }
 }
 
 const indexHtml = join(dist, "index.html");

@@ -20,7 +20,7 @@ export function NavJoinGame({
       asChild
       size={size}
       className={cn(
-        "rounded-xl bg-[var(--gamibar-brand)] font-semibold text-white shadow-[0_4px_12px_rgba(239,68,68,0.28)] hover:bg-[var(--gamibar-brand-hover)]",
+        "rounded-xl bg-[#dc2626] font-semibold text-white shadow-[0_4px_12px_rgba(220,38,38,0.28)] hover:bg-[#b91c1c]",
         variant === "mobile" && "h-9 px-3 text-xs",
         className,
       )}
