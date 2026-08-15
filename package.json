@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "images:webp": "node scripts/convert-to-webp.mjs",
     "images:optimize": "node scripts/optimize-testimonial-images.mjs",
-    "seo:assets": "node scripts/generate-seo-assets.mjs"
+    "seo:assets": "node scripts/generate-seo-assets.mjs",
+    "jigsaw:generate": "node scripts/generate-jigsaw-library.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

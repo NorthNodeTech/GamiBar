@@ -19,6 +19,11 @@ import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutW
 import { GameModePicker } from "@/components/author/GameModePicker";
 import { GameTimerSettings } from "@/components/author/GameTimerSettings";
 import { ConnectDots } from "@/components/games/quizes/maze/ConnectDots";
+import {
+  JigsawImageSourceSelector,
+  type JigsawImageSource,
+} from "@/components/games/quizes/puzzle/JigsawImageSourceSelector";
+import { JigsawLibrary } from "@/components/games/quizes/puzzle/JigsawLibrary";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
@@ -125,6 +130,8 @@ function CreateRoomWizard() {
   const [connectDotsSeed, setConnectDotsSeed] = useState(() => `cd-${Date.now()}`);
   const [jigsawUrl, setJigsawUrl] = useState<string | null>(null);
   const [jigsawMime, setJigsawMime] = useState<string | null>(null);
+  const [jigsawImageSource, setJigsawImageSource] = useState<JigsawImageSource | null>(null);
+  const [jigsawLibraryImageId, setJigsawLibraryImageId] = useState<string | null>(null);
   const [jigsawTemplateId, setJigsawTemplateId] = useState<JigsawTemplateId>(
     DEFAULT_JIGSAW_TEMPLATE_ID,
   );
@@ -199,6 +206,7 @@ function CreateRoomWizard() {
           cols: grid.cols,
           rows: grid.rows,
           pieceUnlockAt: jigsawPieceUnlockAt,
+          libraryImageId: jigsawLibraryImageId,
         },
         timeLimitSeconds: timerSeconds,
       };
@@ -215,6 +223,7 @@ function CreateRoomWizard() {
     connectDotsBoard,
     jigsawUrl,
     jigsawMime,
+    jigsawLibraryImageId,
     jigsawTemplateId,
     jigsawPieceUnlockAt,
     timerSeconds,
@@ -287,6 +296,10 @@ function CreateRoomWizard() {
       setActiveQ(0);
     }
     if (next === "jigsaw") {
+      setJigsawImageSource(null);
+      setJigsawLibraryImageId(null);
+      setJigsawUrl(null);
+      setJigsawMime(null);
       const template = jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID);
       setJigsawTemplateId(DEFAULT_JIGSAW_TEMPLATE_ID);
       setJigsawPieceUnlockAt(
@@ -347,6 +360,8 @@ function CreateRoomWizard() {
       }
       setJigsawUrl(result.dataUrl);
       setJigsawMime(result.mime);
+      setJigsawLibraryImageId(null);
+      setJigsawImageSource("upload");
       toast.success(
         result.cropped
           ? "Image cropped to a square so pieces fit the puzzle grid."
@@ -773,6 +788,13 @@ function CreateRoomWizard() {
                                   : "border-[var(--gamibar-border)] bg-white text-[#525252] hover:border-[var(--game-jigsaw)]/40",
                               )}
                             >
+                              <span className="block text-[11px] font-semibold uppercase tracking-wide">
+                                {template.id === "2x2"
+                                  ? "Easy"
+                                  : template.id === "3x3"
+                                    ? "Medium"
+                                    : "Hard"}
+                              </span>
                               <span className="block font-display text-lg font-bold">
                                 {template.label}
                               </span>
@@ -878,19 +900,74 @@ function CreateRoomWizard() {
                       progress={quizProgress}
                       accent="jigsaw"
                     />
-                    <JigsawUploader
-                      jigsawUrl={jigsawUrl}
-                      timerLabel={formatTimerLong(timerSeconds)}
-                      onFile={handleImage}
-                      uploading={imageUploading}
-                      uploadError={imageUploadError}
-                      onDismissUploadError={() => setImageUploadError(null)}
-                      pieceCount={jigsawGrid.tileCount}
-                      gridCols={jigsawGrid.cols}
-                      gridRows={jigsawGrid.rows}
-                      label="Final puzzle image"
-                      hint={`Students reconstruct this ${jigsawGrid.cols}×${jigsawGrid.rows} image · ${jigsawGrid.tileCount} pieces · ${formatTimerLong(timerSeconds)} timer`}
-                    />
+                    {!jigsawImageSource ? (
+                      <JigsawImageSourceSelector onSelect={setJigsawImageSource} />
+                    ) : jigsawImageSource === "library" && !jigsawUrl ? (
+                      <JigsawLibrary
+                        selectedImageId={jigsawLibraryImageId}
+                        selectedTemplateId={jigsawTemplateId}
+                        onBack={() => setJigsawImageSource(null)}
+                        onUploadDevice={() => {
+                          setJigsawUrl(null);
+                          setJigsawMime(null);
+                          setJigsawLibraryImageId(null);
+                          setJigsawImageSource("upload");
+                        }}
+                        onUseImage={(image, templateId) => {
+                          setJigsawUrl(image.imageUrl);
+                          setJigsawMime("image/webp");
+                          setJigsawLibraryImageId(image.id);
+                          handleJigsawTemplateChange(templateId);
+                          toast.success("Library image locked in.");
+                        }}
+                      />
+                    ) : (
+                      <div className="grid gap-3">
+                        <JigsawUploader
+                          jigsawUrl={jigsawUrl}
+                          timerLabel={formatTimerLong(timerSeconds)}
+                          onFile={handleImage}
+                          uploading={imageUploading}
+                          uploadError={imageUploadError}
+                          onDismissUploadError={() => setImageUploadError(null)}
+                          pieceCount={jigsawGrid.tileCount}
+                          gridCols={jigsawGrid.cols}
+                          gridRows={jigsawGrid.rows}
+                          label="Final puzzle image"
+                          hint={`Students reconstruct this ${jigsawGrid.cols}×${jigsawGrid.rows} image · ${jigsawGrid.tileCount} pieces · ${formatTimerLong(timerSeconds)} timer`}
+                        />
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => {
+                              setJigsawUrl(null);
+                              setJigsawMime(null);
+                              setJigsawLibraryImageId(null);
+                              setJigsawImageSource(null);
+                              setImageUploadError(null);
+                            }}
+                          >
+                            Change image source
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => {
+                              setJigsawUrl(null);
+                              setJigsawMime(null);
+                              setJigsawLibraryImageId(null);
+                              setJigsawImageSource("library");
+                              setImageUploadError(null);
+                            }}
+                          >
+                            Browse library
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 

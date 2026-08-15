@@ -301,12 +301,170 @@ export type Database = {
           },
         ]
       }
+      jigsaw_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      jigsaw_library_images: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          description: string | null
+          file_size_bytes: number | null
+          format: string | null
+          height: number | null
+          id: string
+          illustration_type: string | null
+          keywords: string[] | null
+          slug: string
+          source: string | null
+          status: string | null
+          storage_path: string
+          subtopic_id: string
+          thumbnail_path: string | null
+          title: string
+          updated_at: string | null
+          usage_count: number | null
+          width: number | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          description?: string | null
+          file_size_bytes?: number | null
+          format?: string | null
+          height?: number | null
+          id?: string
+          illustration_type?: string | null
+          keywords?: string[] | null
+          slug: string
+          source?: string | null
+          status?: string | null
+          storage_path: string
+          subtopic_id: string
+          thumbnail_path?: string | null
+          title: string
+          updated_at?: string | null
+          usage_count?: number | null
+          width?: number | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          description?: string | null
+          file_size_bytes?: number | null
+          format?: string | null
+          height?: number | null
+          id?: string
+          illustration_type?: string | null
+          keywords?: string[] | null
+          slug?: string
+          source?: string | null
+          status?: string | null
+          storage_path?: string
+          subtopic_id?: string
+          thumbnail_path?: string | null
+          title?: string
+          updated_at?: string | null
+          usage_count?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jigsaw_library_images_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "jigsaw_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jigsaw_library_images_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "jigsaw_subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jigsaw_subtopics: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jigsaw_subtopics_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "jigsaw_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_jigsaw_library_usage: {
+        Args: { p_image_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       gamibar_game_mode: "quiz" | "quiz_jigsaw" | "jigsaw" | "maze" | "connect_dots"

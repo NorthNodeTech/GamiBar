@@ -28,6 +28,8 @@ export type JigsawConfig = {
   rows: number;
   /** Correct-answer counts at which each puzzle piece unlocks (length = cols × rows). */
   pieceUnlockAt?: number[];
+  /** Official library image id when the author used Auto Upload. */
+  libraryImageId?: string | null;
 };
 
 export type ConnectDotsDifficulty = "easy" | "medium" | "hard";

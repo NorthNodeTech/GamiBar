@@ -178,6 +178,7 @@ const JIGSAW_MODE: LiveModeDefinition = {
       cols: grid.cols,
       rows: grid.rows,
       pieceUnlockAt: payload.jigsaw.pieceUnlockAt,
+      libraryImageId: payload.jigsaw.libraryImageId ?? null,
     };
     if (opts?.includeSecrets) {
       return { mode: "jigsaw", questions: payload.questions, jigsaw, timeLimitSeconds: payload.timeLimitSeconds };

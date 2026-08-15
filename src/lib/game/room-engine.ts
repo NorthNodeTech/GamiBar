@@ -25,6 +25,7 @@ import { generateRoomCode, isValidRoomCodeFormat, normalizeRoomCode } from "@/li
 import { assertTransition, canStudentEnterRoom, canStudentsJoin, canStudentsRejoin, type RoomStatus } from "@/lib/game/state-machine";
 import { gameInstruction, resolvePayloadTimeLimit } from "@/lib/game/timer";
 import { questionCountFromConfig } from "@/lib/supabase/author-sessions";
+import { incrementJigsawLibraryUsage } from "@/lib/supabase/jigsaw-library";
 import { computeLiveParticipantProgress } from "@/lib/game/live-dashboard";
 import {
   sanitizeConnectDotsMatches,
@@ -287,6 +288,14 @@ export async function createRoom(input: {
   };
   pushEvent(stored, { type: "room_updated", status: "LOBBY" });
   await persist(stored);
+
+  const libraryImageId =
+    payload.mode === "jigsaw" || payload.mode === "quiz_jigsaw"
+      ? payload.jigsaw.libraryImageId
+      : null;
+  if (libraryImageId) {
+    await incrementJigsawLibraryUsage(libraryImageId);
+  }
 
   return {
     ok: true as const,
