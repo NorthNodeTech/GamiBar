@@ -1,8 +1,8 @@
 import { forwardRef, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "framer-motion";
 
-import { JigsawTileFace } from "@/components/games/JigsawTileFace";
-import { JigsawTileCardVisual } from "@/components/games/JigsawTileCardVisual";
+import { JigsawTileFace } from "@/components/games/quizes/puzzle/JigsawTileFace";
+import { JigsawTileCardVisual } from "@/components/games/quizes/puzzle/JigsawTileCardVisual";
 import type { TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
 import { bindExplicitRotateTap } from "@/lib/game/jigsaw-tile-interaction";
 import { buildJigsawTiles, tileIndexFromId, type JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";

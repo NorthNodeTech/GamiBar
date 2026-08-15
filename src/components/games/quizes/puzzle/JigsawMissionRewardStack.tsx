@@ -1,6 +1,9 @@
 import { forwardRef } from "react";
 
-import { JigsawMissionScrambledTiles, COLLECTION_CARD_SIZE } from "@/components/games/JigsawMissionScrambledTiles";
+import {
+  JigsawMissionScrambledTiles,
+  COLLECTION_CARD_SIZE,
+} from "@/components/games/quizes/puzzle/JigsawMissionScrambledTiles";
 import { jigsawBoardMaxWidthClass } from "@/lib/game/jigsaw-grid";
 import type { TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
 import { cn } from "@/lib/utils";
@@ -10,7 +13,7 @@ export {
   tileLayoutRect,
   tileRowLayoutRect,
   tileMetaFromId,
-} from "@/components/games/JigsawMissionScrambledTiles";
+} from "@/components/games/quizes/puzzle/JigsawMissionScrambledTiles";
 
 type JigsawMissionRewardStackProps = {
   displayedTileIds: readonly string[];

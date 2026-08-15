@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { createPortal } from "react-dom";
 
-import { JigsawTileFace } from "@/components/games/JigsawTileFace";
-import { JigsawTileCardVisual } from "@/components/games/JigsawTileCardVisual";
+import { JigsawTileFace } from "@/components/games/quizes/puzzle/JigsawTileFace";
+import { JigsawTileCardVisual } from "@/components/games/quizes/puzzle/JigsawTileCardVisual";
 import type { JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
 
 type JigsawMissionFlyingTileProps = {

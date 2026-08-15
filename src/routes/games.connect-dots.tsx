@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { ConnectDots } from "@/components/games/ConnectDots";
-import { GameShell } from "@/components/games/GameShell";
+import { ConnectDots } from "@/components/games/quizes/maze/ConnectDots";
+import { GameShell } from "@/components/games/ui/GameShell";
 import { Button } from "@/components/ui/button";
 import { generateConnectDotsPuzzle, type ConnectDotsDifficulty } from "@/lib/connect-dots";
 import { usePlayer } from "@/lib/player-store";

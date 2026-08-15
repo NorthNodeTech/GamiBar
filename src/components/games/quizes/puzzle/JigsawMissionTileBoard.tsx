@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-import { JigsawTileFace } from "@/components/games/JigsawTileFace";
+import { JigsawTileFace } from "@/components/games/quizes/puzzle/JigsawTileFace";
 import { jigsawBoardMaxWidthClass } from "@/lib/game/jigsaw-grid";
 import { buildJigsawTiles } from "@/lib/game/jigsaw-tiles";
 import { cn } from "@/lib/utils";

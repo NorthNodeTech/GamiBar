@@ -5,9 +5,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
-import { Confetti } from "@/components/games/Confetti";
-import { GameShell } from "@/components/games/GameShell";
-import { QuestionCard } from "@/components/games/QuestionCard";
+import { Confetti } from "@/components/games/ui/Confetti";
+import { GameShell } from "@/components/games/ui/GameShell";
+import { QuestionCard } from "@/components/games/quizes/normal/QuestionCard";
 import { quizQuestions } from "@/data/questions";
 import { usePlayer } from "@/lib/player-store";
 import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";

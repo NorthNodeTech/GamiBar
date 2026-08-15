@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
-import { GameModeNav } from "@/components/games/GameModeNav";
+import { GameModeNav } from "@/components/games/ui/GameModeNav";
 
 export function GameShell({
   title,

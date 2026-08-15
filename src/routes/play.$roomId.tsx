@@ -13,19 +13,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 
 import { friendlyGameError } from "@/lib/accessibility";
-import { ConnectDots } from "@/components/games/ConnectDots";
-import { JigsawMissionAssembly } from "@/components/games/JigsawMissionAssembly";
-import { JigsawMissionFlyingTile } from "@/components/games/JigsawMissionFlyingTile";
-import { JigsawMissionSuccess } from "@/components/games/JigsawMissionSuccess";
+import { ConnectDots } from "@/components/games/quizes/maze/ConnectDots";
+import { JigsawMissionAssembly } from "@/components/games/quizes/puzzle/JigsawMissionAssembly";
+import { JigsawMissionFlyingTile } from "@/components/games/quizes/puzzle/JigsawMissionFlyingTile";
+import { JigsawMissionSuccess } from "@/components/games/quizes/puzzle/JigsawMissionSuccess";
 import {
   JigsawMissionRewardStack,
   tileRowLayoutRect,
   tileMetaFromId,
-} from "@/components/games/JigsawMissionRewardStack";
-import { JigsawPuzzle } from "@/components/games/JigsawPuzzle";
-import { PuzzleQuestBoard } from "@/components/games/PuzzleQuestBoard";
-import { SlidoProgressHeader, SlidoQuizPanel } from "@/components/games/SlidoQuizPanel";
-import { GameCompletionScreen } from "@/components/games/GameCompletionScreen";
+} from "@/components/games/quizes/puzzle/JigsawMissionRewardStack";
+import { JigsawPuzzle } from "@/components/games/quizes/puzzle/JigsawPuzzle";
+import { PuzzleQuestBoard } from "@/components/games/quizes/puzzle/PuzzleQuestBoard";
+import { SlidoProgressHeader, SlidoQuizPanel } from "@/components/games/quizes/normal/SlidoQuizPanel";
+import { GameCompletionScreen } from "@/components/games/ui/GameCompletionScreen";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import {

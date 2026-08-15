@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { JigsawMissionSkeletonBoard } from "@/components/games/JigsawMissionSkeletonBoard";
+import { JigsawMissionSkeletonBoard } from "@/components/games/quizes/puzzle/JigsawMissionSkeletonBoard";
 import {
   ASSEMBLY_PILE_CARD_SIZE,
   JigsawMissionScrambledTiles,
   pieceIndexFromTileId,
   tileIdFromPieceIndex,
-} from "@/components/games/JigsawMissionScrambledTiles";
-import { JigsawTileCardVisual } from "@/components/games/JigsawTileCardVisual";
-import { JigsawTileFace } from "@/components/games/JigsawTileFace";
+} from "@/components/games/quizes/puzzle/JigsawMissionScrambledTiles";
+import { JigsawTileCardVisual } from "@/components/games/quizes/puzzle/JigsawTileCardVisual";
+import { JigsawTileFace } from "@/components/games/quizes/puzzle/JigsawTileFace";
 import { nextLiveMessage } from "@/lib/accessibility";
 import {
   jigsawAssemblyValidationMessage,

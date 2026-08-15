@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Confetti } from "@/components/games/Confetti";
-import { GameShell } from "@/components/games/GameShell";
-import { JigsawBoard, TOTAL_PIECES } from "@/components/games/JigsawBoard";
-import { QuestionCard } from "@/components/games/QuestionCard";
+import { Confetti } from "@/components/games/ui/Confetti";
+import { GameShell } from "@/components/games/ui/GameShell";
+import { JigsawBoard, TOTAL_PIECES } from "@/components/games/quizes/puzzle/JigsawBoard";
+import { QuestionCard } from "@/components/games/quizes/normal/QuestionCard";
 import { quizQuestions } from "@/data/questions";
 import { usePlayer } from "@/lib/player-store";
 import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";

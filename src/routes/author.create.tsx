@@ -18,7 +18,7 @@ import { AuthorWizardSteps } from "@/components/author/AuthorWizardSteps";
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
 import { GameModePicker } from "@/components/author/GameModePicker";
 import { GameTimerSettings } from "@/components/author/GameTimerSettings";
-import { ConnectDots } from "@/components/games/ConnectDots";
+import { ConnectDots } from "@/components/games/quizes/maze/ConnectDots";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 
-import { Confetti } from "@/components/games/Confetti";
+import { Confetti } from "@/components/games/ui/Confetti";
 import { jigsawSkeletonBoardWidthClass } from "@/lib/game/jigsaw-grid";
 import { formatAccuracy, formatDuration } from "@/lib/game/ranking";
 import { cn } from "@/lib/utils";
