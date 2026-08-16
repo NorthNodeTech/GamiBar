@@ -37,6 +37,7 @@ import { Route as JoinIndexRouteImport } from './routes/join.index'
 import { Route as JoinLobbyRouteImport } from './routes/join.lobby'
 import { Route as JoinNameRouteImport } from './routes/join.name'
 import { Route as PlayRoomIdRouteImport } from './routes/play.$roomId'
+import { Route as ShareShareSlugRouteImport } from './routes/share.$shareSlug'
 import { Route as AuthorRoomRoomIdRouteImport } from './routes/author.room.$roomId'
 import { Route as AuthorSessionsRoomIdRouteImport } from './routes/author.sessions.$roomId'
 
@@ -180,6 +181,11 @@ const PlayRoomIdRoute = PlayRoomIdRouteImport.update({
   path: '/play/$roomId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareShareSlugRoute = ShareShareSlugRouteImport.update({
+  id: '/share/$shareSlug',
+  path: '/share/$shareSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthorRoomRoomIdRoute = AuthorRoomRoomIdRouteImport.update({
   id: '/room/$roomId',
   path: '/room/$roomId',
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/join/lobby': typeof JoinLobbyRoute
   '/join/name': typeof JoinNameRoute
   '/play/$roomId': typeof PlayRoomIdRoute
+  '/share/$shareSlug': typeof ShareShareSlugRoute
   '/author/': typeof AuthorIndexRoute
   '/games/': typeof GamesIndexRoute
   '/join/': typeof JoinIndexRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/join/lobby': typeof JoinLobbyRoute
   '/join/name': typeof JoinNameRoute
   '/play/$roomId': typeof PlayRoomIdRoute
+  '/share/$shareSlug': typeof ShareShareSlugRoute
   '/author': typeof AuthorIndexRoute
   '/games': typeof GamesIndexRoute
   '/join': typeof JoinIndexRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/join/lobby': typeof JoinLobbyRoute
   '/join/name': typeof JoinNameRoute
   '/play/$roomId': typeof PlayRoomIdRoute
+  '/share/$shareSlug': typeof ShareShareSlugRoute
   '/author/': typeof AuthorIndexRoute
   '/games/': typeof GamesIndexRoute
   '/join/': typeof JoinIndexRoute
@@ -314,6 +323,7 @@ export interface FileRouteTypes {
     | '/join/lobby'
     | '/join/name'
     | '/play/$roomId'
+    | '/share/$shareSlug'
     | '/author/'
     | '/games/'
     | '/join/'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/join/lobby'
     | '/join/name'
     | '/play/$roomId'
+    | '/share/$shareSlug'
     | '/author'
     | '/games'
     | '/join'
@@ -376,6 +387,7 @@ export interface FileRouteTypes {
     | '/join/lobby'
     | '/join/name'
     | '/play/$roomId'
+    | '/share/$shareSlug'
     | '/author/'
     | '/games/'
     | '/join/'
@@ -398,6 +410,7 @@ export interface RootRouteChildren {
   GamesJigsawRoute: typeof GamesJigsawRoute
   GamesQuizRoute: typeof GamesQuizRoute
   PlayRoomIdRoute: typeof PlayRoomIdRoute
+  ShareShareSlugRoute: typeof ShareShareSlugRoute
   GamesIndexRoute: typeof GamesIndexRoute
 }
 
@@ -599,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayRoomIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$shareSlug': {
+      id: '/share/$shareSlug'
+      path: '/share/$shareSlug'
+      fullPath: '/share/$shareSlug'
+      preLoaderRoute: typeof ShareShareSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/author/room/$roomId': {
       id: '/author/room/$roomId'
       path: '/room/$roomId'
@@ -688,6 +708,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesJigsawRoute: GamesJigsawRoute,
   GamesQuizRoute: GamesQuizRoute,
   PlayRoomIdRoute: PlayRoomIdRoute,
+  ShareShareSlugRoute: ShareShareSlugRoute,
   GamesIndexRoute: GamesIndexRoute,
 }
 export const routeTree = rootRouteImport

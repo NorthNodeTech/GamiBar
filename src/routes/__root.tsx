@@ -206,8 +206,9 @@ function RootComponent() {
     pathname === "/author" || pathname === "/author/" || pathname.startsWith("/author/");
   const isJoinFlow = pathname === "/join" || pathname === "/join/" || pathname.startsWith("/join/");
   const isPlayFlow = pathname === "/play" || pathname.startsWith("/play/");
-  const hideChrome = isAuthPage || isAuthorApp || isJoinFlow || isPlayFlow;
-  const showFloatingThemeToggle = isAuthPage || isJoinFlow || isPlayFlow;
+  const isShareFlow = pathname === "/share" || pathname.startsWith("/share/");
+  const hideChrome = isAuthPage || isAuthorApp || isJoinFlow || isPlayFlow || isShareFlow;
+  const showFloatingThemeToggle = isAuthPage || isJoinFlow || isPlayFlow || isShareFlow;
   const needsRemoteAuth =
     isAuthPage ||
     isAuthorApp ||

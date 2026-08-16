@@ -25,6 +25,7 @@ import {
 } from "@/components/games/quizes/puzzle/JigsawImageSourceSelector";
 import { JigsawLibrary } from "@/components/games/quizes/puzzle/JigsawLibrary";
 import { AuthorShell } from "@/components/layout/AuthorShell";
+import { SessionFilesPicker } from "@/components/sharing-files/SessionFilesPicker";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,7 @@ import {
   validateGamePayload,
 } from "@/lib/game/validation";
 import { listQuestionSets } from "@/lib/question-bank";
+import { uploadSessionFiles, validateSessionShareFiles } from "@/lib/sharing-files/session-files";
 import { cn } from "@/lib/utils";
 
 const createSearchSchema = z.object({
@@ -147,6 +149,7 @@ function CreateRoomWizard() {
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [sessionFiles, setSessionFiles] = useState<File[]>([]);
 
   const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
   const connectDotsProgress = connectDotsPairsProgress(connectDotsPairs);
@@ -480,6 +483,13 @@ function CreateRoomWizard() {
       toast.error(v.error);
       return;
     }
+    const fileValidation = validateSessionShareFiles(sessionFiles);
+    if (!fileValidation.ok) {
+      const message = fileValidation.errors[0] ?? "Some session files cannot be uploaded.";
+      setCreateError(message);
+      toast.error(message);
+      return;
+    }
     setSubmitting(true);
     setCreateError(null);
     try {
@@ -503,7 +513,18 @@ function CreateRoomWizard() {
         code: result.room.code,
         authorToken: result.authorToken,
       });
-      toast.success(`Room ${result.room.code} is ready.`);
+      if (sessionFiles.length > 0) {
+        try {
+          await uploadSessionFiles(result.room.id, result.authorToken, sessionFiles);
+          toast.success(`Room ${result.room.code} is ready with shared files.`);
+        } catch (uploadError) {
+          const message =
+            uploadError instanceof Error ? uploadError.message : "Could not upload session files.";
+          toast.error(`Room is ready, but files were not uploaded. ${message}`);
+        }
+      } else {
+        toast.success(`Room ${result.room.code} is ready.`);
+      }
       navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not create room.";
@@ -1014,6 +1035,7 @@ function CreateRoomWizard() {
                       : undefined
                   }
                 />
+                <SessionFilesPicker files={sessionFiles} onChange={setSessionFiles} />
               </div>
             )}
           </div>

@@ -14,6 +14,7 @@ import { UnifiedLeaderboard } from "@/components/author/UnifiedLeaderboard";
 import { LobbyWall, ParticipantStrip } from "@/components/author/LobbyWall";
 import { RoomCodeDisplay } from "@/components/author/RoomCodeDisplay";
 import { AuthorShell } from "@/components/layout/AuthorShell";
+import { SessionFilesPanel } from "@/components/sharing-files/SessionFilesPanel";
 import { RoomJoinShare } from "@/components/session/RoomJoinShare";
 import { Button } from "@/components/ui/button";
 import {
@@ -343,6 +344,7 @@ function AuthorRoomPage() {
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(460px,520px)_minmax(0,1fr)] lg:items-start">
             <div className="space-y-5 lg:sticky lg:top-20">
               <RoomJoinShare code={room.code} prominent />
+              <SessionFilesPanel roomId={room.id} authorToken={authorToken} />
               {room.participantCount < 1 && (
                 <div className="hidden items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)] lg:flex">
                   <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
@@ -354,6 +356,7 @@ function AuthorRoomPage() {
           </div>
         ) : (
           <>
+            <SessionFilesPanel roomId={room.id} authorToken={authorToken} />
             {isLive && (
               <LiveGameDashboard
                 mode={room.mode}
