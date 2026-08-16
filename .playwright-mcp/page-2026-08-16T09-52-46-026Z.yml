@@ -1,0 +1,4 @@
+- generic [active] [ref=f5e1]:
+  - main [ref=f5e3]
+  - button "Switch to dark mode" [ref=f5e4] [cursor=pointer]
+  - region "Notifications alt+T"

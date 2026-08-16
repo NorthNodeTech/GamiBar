@@ -1,0 +1,67 @@
+- generic [active] [ref=f9e1]:
+  - generic [ref=f9e2]:
+    - banner [ref=f9e3]:
+      - generic [ref=f9e4]:
+        - link "GamiBAR logo GamiBAR" [ref=f9e5] [cursor=pointer]:
+          - /url: /
+          - img "GamiBAR logo" [ref=f9e7]
+          - generic [ref=f9e8]: GamiBAR
+        - button "Toggle navigation" [ref=f9e10]
+    - main
+    - contentinfo [ref=f9e12]:
+      - generic [ref=f9e13]:
+        - generic [ref=f9e14]:
+          - generic [ref=f9e15]:
+            - img "GamiBAR logo" [ref=f9e17]
+            - generic [ref=f9e18]: GamiBAR
+          - paragraph [ref=f9e19]: Where learning becomes a game. Live quizzes, collaborative puzzles and connect-the-dots challenges for classrooms.
+          - generic [ref=f9e20]:
+            - generic [ref=f9e21]: by
+            - link "Visit NorthNode" [ref=f9e22] [cursor=pointer]:
+              - /url: https://northnode.live/
+              - img "NorthNode" [ref=f9e23]
+        - generic [ref=f9e24]:
+          - heading "Product" [level=2] [ref=f9e25]
+          - list [ref=f9e26]:
+            - listitem [ref=f9e27]:
+              - link "Game Modes" [ref=f9e28] [cursor=pointer]:
+                - /url: /games
+            - listitem [ref=f9e29]:
+              - link "Play Quiz" [ref=f9e30] [cursor=pointer]:
+                - /url: /games/quiz
+            - listitem [ref=f9e31]:
+              - link "Join with Code" [ref=f9e32] [cursor=pointer]:
+                - /url: /join
+            - listitem [ref=f9e33]:
+              - link "Leaderboard" [ref=f9e34] [cursor=pointer]:
+                - /url: /leaderboard
+        - generic [ref=f9e35]:
+          - heading "Account" [level=2] [ref=f9e36]
+          - list [ref=f9e37]:
+            - listitem [ref=f9e38]:
+              - link "Create Game" [ref=f9e39] [cursor=pointer]:
+                - /url: /author/create
+            - listitem [ref=f9e40]:
+              - link "Join Game" [ref=f9e41] [cursor=pointer]:
+                - /url: /join
+        - generic [ref=f9e42]:
+          - heading "Activities" [level=2] [ref=f9e43]
+          - list [ref=f9e44]:
+            - listitem [ref=f9e45]:
+              - link "Quiz Challenge" [ref=f9e46] [cursor=pointer]:
+                - /url: /games/quiz
+            - listitem [ref=f9e47]:
+              - link "Jigsaw Mission" [ref=f9e48] [cursor=pointer]:
+                - /url: /games/jigsaw
+            - listitem [ref=f9e49]:
+              - link "Connect Dots" [ref=f9e50] [cursor=pointer]:
+                - /url: /games/connect-dots
+      - generic [ref=f9e52]:
+        - paragraph [ref=f9e53]: © 2026 GamiBAR. All rights reserved.
+        - generic [ref=f9e54]:
+          - generic [ref=f9e55]: Built for teachers and students
+          - paragraph [ref=f9e56]:
+            - text: Powered by
+            - link "NorthNode" [ref=f9e57] [cursor=pointer]:
+              - /url: https://northnode.live/
+  - region "Notifications alt+T"

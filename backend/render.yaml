@@ -1,0 +1,90 @@
+# GamiBAR - Render static frontend + Node API
+# If the static service was created via the Dashboard instead of this Blueprint,
+# add Redirects/Rewrites -> Source: /*  Destination: /index.html  Action: Rewrite.
+services:
+  - type: web
+    name: gamibar-api
+    runtime: node
+    branch: main
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SESSION_FILES_CRON_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: gamibar
+    runtime: static
+    branch: main
+    rootDir: frontend
+    buildCommand: npm ci && VITE_API_BASE_URL=https://${GAMIBAR_API_HOST} npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /author/room/*
+        destination: /index.html
+      - type: rewrite
+        source: /play/*
+        destination: /index.html
+      - type: rewrite
+        source: /share/*
+        destination: /index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
+      - path: /*
+        name: Content-Security-Policy
+        value: >-
+          default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://twluyjazkesmrnvlcvtd.supabase.co wss://twluyjazkesmrnvlcvtd.supabase.co https://*.onrender.com https://www.google-analytics.com https://*.google-analytics.com https://www.clarity.ms https://*.clarity.ms; worker-src 'self' blob:; manifest-src 'self'; frame-src 'self' https://accounts.google.com
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /fonts/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GAMIBAR_API_HOST
+        fromService:
+          name: gamibar-api
+          type: web
+          property: host
+      # Set these in the Render Dashboard. Vite embeds them at build time.
+      # VITE_SUPABASE_URL
+      # VITE_SUPABASE_ANON_KEY
+      # VITE_API_BASE_URL is derived from gamibar-api in this Blueprint.
+      # VITE_PUBLIC_APP_URL
+      # VITE_GOOGLE_SITE_VERIFICATION
+      # VITE_BING_SITE_VERIFICATION
+      # VITE_GA_MEASUREMENT_ID
+      # VITE_MICROSOFT_CLARITY_ID

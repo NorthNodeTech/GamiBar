@@ -1,0 +1,572 @@
+import crypto from "node:crypto";
+
+import multer from "multer";
+
+import { HttpError } from "./http-error.js";
+import { createAdminClient } from "./supabase-admin.js";
+
+const BUCKET = "gamibar-session-files";
+const MAX_FILES_PER_SESSION = 10;
+const MAX_BYTES = 50 * 1024 * 1024;
+const DOWNLOAD_TTL_SECONDS = 90;
+const RETENTION_DAY_OPTIONS = new Set([7, 14, 28]);
+const DEFAULT_RETENTION_DAYS = 7;
+
+const MIME_BY_EXTENSION = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+};
+
+export const sessionFileUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: MAX_FILES_PER_SESSION,
+    fileSize: MAX_BYTES,
+  },
+});
+
+export function registerSessionFileRoutes(app) {
+  app.post(
+    "/api/session-files/teacher-list",
+    asyncRoute(async (req, res) => {
+      const admin = createAdminClient();
+      const room = await verifyAuthor(
+        admin,
+        stringBody(req.body, "roomId"),
+        stringBody(req.body, "authorToken"),
+      );
+      const summary = await teacherSummary(admin, room);
+      await notifyResourceDropChanged(admin, {
+        roomId: room.id,
+        shareSlug: summary.shareSlug,
+      });
+      res.json(summary);
+    }),
+  );
+
+  app.post(
+    "/api/session-files/upload",
+    sessionFileUpload.array("files", MAX_FILES_PER_SESSION),
+    asyncRoute(async (req, res) => {
+      const admin = createAdminClient();
+      const roomId = stringBody(req.body, "roomId");
+      const authorToken = stringBody(req.body, "authorToken");
+      const retentionDays = parseRetentionDays(req.body.expiryDays);
+      const room = await verifyAuthor(admin, roomId, authorToken);
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (files.length === 0)
+        throw new HttpError("Choose at least one document.", 400);
+
+      await cleanupExpired(admin);
+      const current = await activeFilesForRoom(admin, room.id);
+      if (current.length + files.length > MAX_FILES_PER_SESSION) {
+        throw new HttpError(
+          `A resource drop can hold up to ${MAX_FILES_PER_SESSION} active documents.`,
+          400,
+        );
+      }
+
+      const uploadedPaths = [];
+      try {
+        for (const file of files) {
+          const prepared = validateUpload(file);
+          const id = crypto.randomUUID();
+          const storagePath = `${room.id}/${id}/${prepared.safeName}`;
+
+          const { error: uploadError } = await admin.storage
+            .from(BUCKET)
+            .upload(storagePath, file.buffer, {
+              cacheControl: "3600",
+              contentType: prepared.mimeType,
+              upsert: false,
+            });
+          if (uploadError) throw uploadError;
+          uploadedPaths.push(storagePath);
+
+          const { error: insertError } = await admin
+            .from("gamibar_session_files")
+            .insert({
+              id,
+              room_id: room.id,
+              storage_path: storagePath,
+              original_name: prepared.originalName,
+              mime_type: prepared.mimeType,
+              byte_size: file.size,
+              expires_at: daysFromNow(retentionDays).toISOString(),
+            });
+          if (insertError) throw insertError;
+        }
+      } catch (error) {
+        if (uploadedPaths.length > 0) {
+          await admin.storage.from(BUCKET).remove(uploadedPaths);
+        }
+        throw error;
+      }
+
+      const summary = await teacherSummary(admin, room);
+      await notifyResourceDropChanged(admin, {
+        roomId: room.id,
+        shareSlug: summary.shareSlug,
+      });
+      res.json(summary);
+    }),
+  );
+
+  app.delete(
+    "/api/session-files/delete",
+    asyncRoute(async (req, res) => {
+      const admin = createAdminClient();
+      const roomId = stringBody(req.body, "roomId");
+      const authorToken = stringBody(req.body, "authorToken");
+      const fileId = stringBody(req.body, "fileId");
+      const room = await verifyAuthor(admin, roomId, authorToken);
+
+      const { data: file, error } = await admin
+        .from("gamibar_session_files")
+        .select(fileSelect())
+        .eq("id", fileId)
+        .eq("room_id", room.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!file || file.deleted_at)
+        throw new HttpError("That document is already removed.", 404);
+
+      await admin.storage.from(BUCKET).remove([file.storage_path]);
+      const { error: updateError } = await admin
+        .from("gamibar_session_files")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", file.id);
+      if (updateError) throw updateError;
+
+      res.json(await teacherSummary(admin, room));
+    }),
+  );
+
+  app.get(
+    "/api/session-files/list",
+    asyncRoute(async (req, res) => {
+      const admin = createAdminClient();
+      const shareSlug = stringQuery(req.query, "shareSlug");
+      res.json(await publicList(admin, shareSlug));
+    }),
+  );
+
+  app.post(
+    "/api/session-files/download",
+    asyncRoute(async (req, res) => {
+      const admin = createAdminClient();
+      res.json(await downloadFile(admin, req.body));
+    }),
+  );
+
+  app.post(
+    "/api/session-files/cleanup",
+    asyncRoute(async (req, res) => {
+      assertCronSecret(req);
+      const admin = createAdminClient();
+      res.json(await cleanupExpired(admin));
+    }),
+  );
+}
+
+export function scheduleSessionFileCleanup() {
+  const intervalMs = Number.parseInt(
+    process.env.SESSION_FILES_CLEANUP_INTERVAL_MS ?? "",
+    10,
+  );
+  const cleanupEveryMs =
+    Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : 60 * 60 * 1000;
+
+  void runSessionFileCleanup();
+  const timer = setInterval(() => {
+    void runSessionFileCleanup();
+  }, cleanupEveryMs);
+  timer.unref?.();
+}
+
+async function runSessionFileCleanup() {
+  try {
+    const admin = createAdminClient();
+    await cleanupExpired(admin);
+  } catch (error) {
+    console.warn(
+      error instanceof Error
+        ? `Resource Drop cleanup skipped: ${error.message}`
+        : error,
+    );
+  }
+}
+
+async function teacherSummary(admin, room) {
+  await cleanupExpired(admin);
+  const share = await ensureShare(admin, room.id);
+  const files = await activeFilesForRoom(admin, room.id);
+  return {
+    room: publicRoom(room),
+    shareSlug: share.share_slug,
+    files: files.map(publicFile),
+  };
+}
+
+async function publicList(admin, shareSlug) {
+  const share = await shareBySlug(admin, shareSlug);
+  await cleanupExpired(admin);
+  const { data: room, error: roomError } = await admin
+    .from("gamibar_rooms")
+    .select("id, code, name, status, author_token_hash")
+    .eq("id", share.room_id)
+    .maybeSingle();
+  if (roomError) throw roomError;
+  if (!room) throw new HttpError("This resource drop is not active.", 404);
+
+  const files = await activeFilesForRoom(admin, room.id);
+  return {
+    room: publicRoom(room),
+    shareSlug: share.share_slug,
+    files: files.map(publicFile),
+  };
+}
+
+async function downloadFile(admin, body) {
+  const shareSlug = stringBody(body, "shareSlug");
+  const fileId = stringBody(body, "fileId");
+  const share = await shareBySlug(admin, shareSlug);
+
+  const { data: file, error } = await admin
+    .from("gamibar_session_files")
+    .select(fileSelect())
+    .eq("id", fileId)
+    .eq("room_id", share.room_id)
+    .is("deleted_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (error) throw error;
+  if (!file)
+    throw new HttpError("This document has expired or was removed.", 404);
+
+  const { data, error: signError } = await admin.storage
+    .from(BUCKET)
+    .createSignedUrl(file.storage_path, DOWNLOAD_TTL_SECONDS, {
+      download: file.original_name,
+    });
+  if (signError) throw signError;
+
+  await admin
+    .from("gamibar_session_files")
+    .update({
+      downloaded_count: file.downloaded_count + 1,
+      last_downloaded_at: new Date().toISOString(),
+    })
+    .eq("id", file.id);
+
+  return {
+    url: data.signedUrl,
+    expiresInSeconds: DOWNLOAD_TTL_SECONDS,
+  };
+}
+
+async function cleanupExpired(admin) {
+  const now = new Date().toISOString();
+  const { data: expired, error } = await admin
+    .from("gamibar_session_files")
+    .select("id, room_id, storage_path")
+    .is("deleted_at", null)
+    .lte("expires_at", now)
+    .limit(100);
+  if (error) throw error;
+
+  const rows = expired ?? [];
+  const paths = rows.map((row) => row.storage_path);
+  if (paths.length > 0) {
+    await admin.storage.from(BUCKET).remove(paths);
+    const { error: updateError } = await admin
+      .from("gamibar_session_files")
+      .update({ deleted_at: now })
+      .in(
+        "id",
+        rows.map((row) => row.id),
+      );
+    if (updateError) throw updateError;
+
+    const roomIds = [...new Set(rows.map((row) => row.room_id))];
+    const { data: shares } = await admin
+      .from("gamibar_session_file_shares")
+      .select("room_id, share_slug")
+      .in("room_id", roomIds);
+    await Promise.all(
+      roomIds.map((roomId) =>
+        notifyResourceDropChanged(admin, {
+          roomId,
+          shareSlug: shares?.find((share) => share.room_id === roomId)
+            ?.share_slug,
+        }),
+      ),
+    );
+  }
+
+  return { deleted: rows.length };
+}
+
+async function notifyResourceDropChanged(admin, { roomId, shareSlug }) {
+  await Promise.all([
+    sendBroadcast(admin, `resource-drop-room:${roomId}`, { roomId, shareSlug }),
+    shareSlug
+      ? sendBroadcast(admin, `resource-drop:${shareSlug}`, {
+          roomId,
+          shareSlug,
+        })
+      : Promise.resolve(),
+  ]);
+}
+
+async function sendBroadcast(admin, topic, payload) {
+  const channel = admin.channel(topic);
+  try {
+    const subscribed = await new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(false), 1500);
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          clearTimeout(timeout);
+          resolve(true);
+        }
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          clearTimeout(timeout);
+          resolve(false);
+        }
+      });
+    });
+    if (!subscribed) return;
+    await channel.send({
+      type: "broadcast",
+      event: "changed",
+      payload: {
+        ...payload,
+        changedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.warn(
+      error instanceof Error
+        ? `Resource Drop realtime skipped: ${error.message}`
+        : error,
+    );
+  } finally {
+    await admin.removeChannel(channel);
+  }
+}
+
+async function verifyAuthor(admin, roomId, authorToken) {
+  if (!isUuid(roomId) || !authorToken.trim()) {
+    throw new HttpError("Invalid room credentials.", 401);
+  }
+  const { data: room, error } = await admin
+    .from("gamibar_rooms")
+    .select("id, code, name, status, author_token_hash")
+    .eq("id", roomId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!room) throw new HttpError("Room not found.", 404);
+  if (sha256Hex(authorToken) !== room.author_token_hash) {
+    throw new HttpError("Invalid author token.", 401);
+  }
+  return room;
+}
+
+async function ensureShare(admin, roomId) {
+  const { data: existing, error } = await admin
+    .from("gamibar_session_file_shares")
+    .select("room_id, share_slug")
+    .eq("room_id", roomId)
+    .maybeSingle();
+  if (error) throw error;
+  if (existing) return existing;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data, error: insertError } = await admin
+      .from("gamibar_session_file_shares")
+      .insert({ room_id: roomId, share_slug: randomSlug() })
+      .select("room_id, share_slug")
+      .single();
+    if (!insertError && data) return data;
+    if (insertError?.code !== "23505") throw insertError;
+  }
+  throw new HttpError("Could not create a resource drop link.", 500);
+}
+
+async function shareBySlug(admin, shareSlug) {
+  if (!/^[A-Za-z0-9_-]{24,80}$/.test(shareSlug)) {
+    throw new HttpError("This resource drop is not active.", 404);
+  }
+  const { data, error } = await admin
+    .from("gamibar_session_file_shares")
+    .select("room_id, share_slug")
+    .eq("share_slug", shareSlug)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new HttpError("This resource drop is not active.", 404);
+  return data;
+}
+
+async function activeFilesForRoom(admin, roomId) {
+  const { data, error } = await admin
+    .from("gamibar_session_files")
+    .select(fileSelect())
+    .eq("room_id", roomId)
+    .is("deleted_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+function validateUpload(file) {
+  const originalName = sanitizeOriginalName(file.originalname);
+  const extension = originalName.split(".").pop()?.toLowerCase() ?? "";
+  const expectedMime = MIME_BY_EXTENSION[extension];
+  if (!expectedMime) {
+    throw new HttpError(
+      "Only PDF, PPT, PPTX, DOC, and DOCX documents are supported.",
+      400,
+    );
+  }
+  if (file.size <= 0) throw new HttpError(`${originalName} is empty.`, 400);
+  if (file.size > MAX_BYTES)
+    throw new HttpError(`${originalName} is larger than 50 MB.`, 400);
+  if (
+    file.mimetype &&
+    file.mimetype !== "application/octet-stream" &&
+    file.mimetype !== expectedMime
+  ) {
+    throw new HttpError(`${originalName} does not match its file type.`, 400);
+  }
+  return {
+    originalName,
+    safeName: safeStorageName(originalName),
+    mimeType: expectedMime,
+  };
+}
+
+function sanitizeOriginalName(name) {
+  const trimmed = String(name ?? "")
+    .replace(/[\\/\u0000-\u001f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!trimmed) throw new HttpError("Every document needs a name.", 400);
+  if (trimmed.length > 180) {
+    throw new HttpError(
+      `${trimmed.slice(0, 32)}... has a name that is too long.`,
+      400,
+    );
+  }
+  return trimmed;
+}
+
+function safeStorageName(name) {
+  const clean = name
+    .normalize("NFKD")
+    .replace(/[^\w.\- ]+/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+  return clean || "document";
+}
+
+function parseRetentionDays(value) {
+  const parsed = Number.parseInt(String(value ?? DEFAULT_RETENTION_DAYS), 10);
+  if (!RETENTION_DAY_OPTIONS.has(parsed)) {
+    throw new HttpError("Choose a retention window of 7, 14, or 28 days.", 400);
+  }
+  return parsed;
+}
+
+function daysFromNow(days) {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
+
+function publicFile(file) {
+  return {
+    id: file.id,
+    name: file.original_name,
+    mimeType: file.mime_type,
+    byteSize: Number(file.byte_size),
+    createdAt: file.created_at,
+    expiresAt: file.expires_at,
+    downloadedCount: file.downloaded_count,
+  };
+}
+
+function publicRoom(room) {
+  return {
+    id: room.id,
+    code: room.code,
+    name: room.name,
+    status: room.status,
+  };
+}
+
+function randomSlug() {
+  return crypto.randomBytes(24).toString("base64url");
+}
+
+function sha256Hex(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function fileSelect() {
+  return [
+    "id",
+    "room_id",
+    "storage_path",
+    "original_name",
+    "mime_type",
+    "byte_size",
+    "created_at",
+    "expires_at",
+    "deleted_at",
+    "downloaded_count",
+    "last_downloaded_at",
+  ].join(", ");
+}
+
+function stringBody(body, key) {
+  const value = body?.[key];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new HttpError(`${key} is required.`, 400);
+  }
+  return value;
+}
+
+function stringQuery(query, key) {
+  const value = query?.[key];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new HttpError(`${key} is required.`, 400);
+  }
+  return value;
+}
+
+function assertCronSecret(req) {
+  const expected = process.env.SESSION_FILES_CRON_SECRET;
+  const provided = req.get("x-session-files-cron-secret");
+  if (!expected || provided !== expected) {
+    throw new HttpError("Cleanup is not authorized.", 401);
+  }
+}
+
+function asyncRoute(handler) {
+  return (req, res, next) => {
+    Promise.resolve(handler(req, res, next)).catch(next);
+  };
+}
