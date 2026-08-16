@@ -575,7 +575,7 @@ function CreateRoomWizard() {
             </h1>
             {step === "mode" && skipModeStep.current && (
               <p className="mt-1 text-sm text-[#525252]">
-                You chose this game from home. Continue to name your session.
+                You chose this game from the tools catalog. Continue to name your session.
               </p>
             )}
             {step === "mode" && !skipModeStep.current && (
@@ -642,10 +642,10 @@ function CreateRoomWizard() {
               <p className="mt-4 text-center text-xs text-[#737373]">
                 Want a different game?{" "}
                 <Link
-                  to="/author"
+                  to="/author/tools"
                   className="font-semibold text-[#111111] underline-offset-2 hover:underline"
                 >
-                  Go back home
+                  Browse tools
                 </Link>
               </p>
             )}

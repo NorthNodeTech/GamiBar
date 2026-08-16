@@ -36,7 +36,7 @@ export function AppSidebar() {
         {authorNavItems.map((item) => {
           const Icon = item.icon;
           const active =
-            item.match(pathname) || (item.to === "/author/create" && onLiveRoom);
+            item.match(pathname) || (item.to === "/author/tools" && onLiveRoom);
           return (
             <Link
               key={item.to}

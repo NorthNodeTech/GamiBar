@@ -10,7 +10,7 @@ import { clearAuthorRoom } from "@/lib/game/client-session";
 import { cn } from "@/lib/utils";
 
 function navItemActive(pathname: string, item: AuthorNavItem, onLiveRoom: boolean) {
-  return item.match(pathname) || (item.to === "/author/create" && onLiveRoom);
+  return item.match(pathname) || (item.to === "/author/tools" && onLiveRoom);
 }
 
 function navLinkClass(active: boolean, layout: "mobile" | "desktop") {

@@ -29,6 +29,7 @@ import { Route as AuthorRegisterRouteImport } from './routes/author.register'
 import { Route as AuthorReportsRouteImport } from './routes/author.reports'
 import { Route as AuthorSessionsRouteImport } from './routes/author.sessions'
 import { Route as AuthorTemplatesRouteImport } from './routes/author.templates'
+import { Route as AuthorToolsRouteImport } from './routes/author.tools'
 import { Route as GamesIndexRouteImport } from './routes/games.index'
 import { Route as GamesConnectDotsRouteImport } from './routes/games.connect-dots'
 import { Route as GamesJigsawRouteImport } from './routes/games.jigsaw'
@@ -141,6 +142,11 @@ const AuthorTemplatesRoute = AuthorTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AuthorRoute,
 } as any)
+const AuthorToolsRoute = AuthorToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => AuthorRoute,
+} as any)
 const GamesIndexRoute = GamesIndexRouteImport.update({
   id: '/games/',
   path: '/games/',
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/author/reports': typeof AuthorReportsRoute
   '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
+  '/author/tools': typeof AuthorToolsRoute
   '/games/connect-dots': typeof GamesConnectDotsRoute
   '/games/jigsaw': typeof GamesJigsawRoute
   '/games/quiz': typeof GamesQuizRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/author/reports': typeof AuthorReportsRoute
   '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
+  '/author/tools': typeof AuthorToolsRoute
   '/games/connect-dots': typeof GamesConnectDotsRoute
   '/games/jigsaw': typeof GamesJigsawRoute
   '/games/quiz': typeof GamesQuizRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/author/reports': typeof AuthorReportsRoute
   '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
+  '/author/tools': typeof AuthorToolsRoute
   '/games/connect-dots': typeof GamesConnectDotsRoute
   '/games/jigsaw': typeof GamesJigsawRoute
   '/games/quiz': typeof GamesQuizRoute
@@ -317,6 +326,7 @@ export interface FileRouteTypes {
     | '/author/reports'
     | '/author/sessions'
     | '/author/templates'
+    | '/author/tools'
     | '/games/connect-dots'
     | '/games/jigsaw'
     | '/games/quiz'
@@ -348,6 +358,7 @@ export interface FileRouteTypes {
     | '/author/reports'
     | '/author/sessions'
     | '/author/templates'
+    | '/author/tools'
     | '/games/connect-dots'
     | '/games/jigsaw'
     | '/games/quiz'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/author/reports'
     | '/author/sessions'
     | '/author/templates'
+    | '/author/tools'
     | '/games/connect-dots'
     | '/games/jigsaw'
     | '/games/quiz'
@@ -556,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorTemplatesRouteImport
       parentRoute: typeof AuthorRoute
     }
+    '/author/tools': {
+      id: '/author/tools'
+      path: '/tools'
+      fullPath: '/author/tools'
+      preLoaderRoute: typeof AuthorToolsRouteImport
+      parentRoute: typeof AuthorRoute
+    }
     '/games/': {
       id: '/games/'
       path: '/games'
@@ -658,6 +677,7 @@ interface AuthorRouteChildren {
   AuthorReportsRoute: typeof AuthorReportsRoute
   AuthorSessionsRoute: typeof AuthorSessionsRouteWithChildren
   AuthorTemplatesRoute: typeof AuthorTemplatesRoute
+  AuthorToolsRoute: typeof AuthorToolsRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
   AuthorRoomRoomIdRoute: typeof AuthorRoomRoomIdRoute
 }
@@ -672,6 +692,7 @@ const AuthorRouteChildren: AuthorRouteChildren = {
   AuthorReportsRoute: AuthorReportsRoute,
   AuthorSessionsRoute: AuthorSessionsRouteWithChildren,
   AuthorTemplatesRoute: AuthorTemplatesRoute,
+  AuthorToolsRoute: AuthorToolsRoute,
   AuthorIndexRoute: AuthorIndexRoute,
   AuthorRoomRoomIdRoute: AuthorRoomRoomIdRoute,
 }

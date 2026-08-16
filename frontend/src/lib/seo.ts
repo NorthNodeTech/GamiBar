@@ -26,6 +26,11 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
     description:
       "Build a GamiBar quiz, jigsaw mission, or connect-the-dots session for your class.",
   },
+  "/author/tools": {
+    title: "Tools | GamiBar",
+    description:
+      "Browse GamiBar tools for quizzes, polls, gamified experiences, and Resource Drop file sharing.",
+  },
   "/author/login": {
     title: "Author Sign In | GamiBar",
     description: "Sign in to create, host, and review live GamiBar classroom sessions.",

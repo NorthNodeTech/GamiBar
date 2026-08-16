@@ -1,4 +1,4 @@
-import { BarChart3, Gamepad2, Home, Plus, Trophy, type LucideIcon } from "lucide-react";
+import { BarChart3, Gamepad2, Home, Trophy, Wrench, type LucideIcon } from "lucide-react";
 
 export type AuthorNavItem = {
   to: string;
@@ -16,10 +16,11 @@ export const authorNavItems: AuthorNavItem[] = [
     match: (pathname) => pathname === "/author" || pathname === "/author/",
   },
   {
-    to: "/author/create",
+    to: "/author/tools",
     label: "Tools",
-    icon: Plus,
-    match: (pathname) => pathname.startsWith("/author/create"),
+    icon: Wrench,
+    match: (pathname) =>
+      pathname.startsWith("/author/tools") || pathname.startsWith("/author/create"),
   },
   {
     to: "/author/sessions",

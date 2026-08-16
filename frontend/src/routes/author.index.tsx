@@ -17,9 +17,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import gameConnectDotsPreview from "@/assets/game-connect-dots-preview.png";
-import gameJigsawPreview from "@/assets/game-jigsaw-preview.webp";
-import gameQuizPreview from "@/assets/game-quiz-preview.webp";
+import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
+import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import type { GameMode } from "@/lib/game/config";

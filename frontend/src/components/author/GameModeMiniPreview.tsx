@@ -1,6 +1,6 @@
-import gameConnectDotsPreview from "@/assets/game-connect-dots-preview.png";
-import gameJigsawPreview from "@/assets/game-jigsaw-preview.webp";
-import gameQuizPreview from "@/assets/game-quiz-preview.webp";
+import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
+import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import type { GameMode } from "@/lib/game/config";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ type GameModeMiniPreviewProps = {
   size?: "sm" | "md";
 };
 
-/** Compact gameplay thumbnail — uses real mode preview assets. */
+/** Compact gameplay thumbnail using real mode preview assets. */
 export function GameModeMiniPreview({ mode, className, size = "sm" }: GameModeMiniPreviewProps) {
   const src = previews[mode] ?? gameQuizPreview;
   const sizeClass = size === "md" ? "size-16 sm:size-20" : "size-12 sm:size-14";

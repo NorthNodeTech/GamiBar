@@ -12,9 +12,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import connectDotsPreview from "@/assets/game-connect-dots-preview-card.webp";
-import jigsawPreview from "@/assets/game-jigsaw-preview-card.webp";
-import quizPreview from "@/assets/game-quiz-preview-card.webp";
+import connectDotsPreview from "@/assets/tool-connect-dots.webp";
+import jigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import quizPreview from "@/assets/tool-quiz-battle.webp";
 import testimonialCorporate from "@/assets/testimonial-corporate-learning.webp";
 import testimonialMath from "@/assets/testimonial-math-classroom.webp";
 import testimonialPhysics from "@/assets/testimonial-physics-classroom.webp";

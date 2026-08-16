@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import { Blocks, CircleDot, Puzzle, Timer, Users, Zap } from "lucide-react";
 
-import gameConnectDotsPreview from "@/assets/game-connect-dots-preview.png";
-import gameJigsawPreview from "@/assets/game-jigsaw-preview.webp";
-import gameQuizPreview from "@/assets/game-quiz-preview.webp";
+import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
+import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
 
@@ -23,7 +23,7 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     mode: "quiz_jigsaw",
     preview: gameJigsawPreview,
     icon: Puzzle,
-    tagline: "Answer questions to unlock puzzle pieces — Slido-style live quiz",
+    tagline: "Answer questions to unlock puzzle pieces in a live quiz",
     specs: [
       `${GAME_CONFIG.quiz_jigsaw.questionCount} MCQs`,
       `${GAME_CONFIG.quiz_jigsaw.questionCount} puzzle pieces`,
@@ -67,7 +67,7 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     icon: CircleDot,
     tagline: "Connect each question to its matching answer on the grid",
     specs: [
-      "2–10 question/answer pairs",
+      "2-10 question/answer pairs",
       "Teacher writes every match",
       "Same board for every student",
     ],
