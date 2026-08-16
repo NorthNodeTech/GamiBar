@@ -45,7 +45,7 @@ export const Route = createFileRoute("/")({
             logo: `${SITE_URL}/icon-512.png`,
             image: DEFAULT_SOCIAL_IMAGE,
             description:
-              "GamiBar turns classrooms and training sessions into interactive experiences with live activities, resource sharing, and teacher tools.",
+              "GamiBar turns classrooms, workshops, and sessions into interactive experiences with live activities, QR resource sharing, and session tools.",
             parentOrganization: {
               "@type": "Organization",
               name: "NorthNode",
@@ -89,7 +89,7 @@ export const Route = createFileRoute("/")({
               "Jigsaw learning missions",
               "Connect-the-dots logic games",
               "QR-based Resource Drop document sharing",
-              "Teacher-selected 7, 14, or 28 day document retention",
+              "Host-selected 7, 14, or 28 day document retention",
               "Six-digit room codes and QR joining",
               "Real-time participant rankings",
             ],
@@ -101,8 +101,9 @@ export const Route = createFileRoute("/")({
             serviceType: "Interactive classroom and training session software",
             provider: { "@id": `${SITE_URL}/#organization` },
             audience: [
-              { "@type": "EducationalAudience", educationalRole: "teacher" },
-              { "@type": "EducationalAudience", educationalRole: "student" },
+              { "@type": "EducationalAudience", educationalRole: "instructor" },
+              { "@type": "EducationalAudience", educationalRole: "learner" },
+              { "@type": "BusinessAudience", audienceType: "training facilitator" },
             ],
             areaServed: "Worldwide",
             availableChannel: {
@@ -141,20 +142,10 @@ function Landing() {
           className="mb-10 text-center md:mb-14"
         />
 
-        <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-3 md:items-stretch">
+        <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:items-stretch">
           {HOMEPAGE_INFRASTRUCTURE_FEATURES.map((f, i) => (
             <Reveal key={f.title} delay={i * 0.08} className="h-full">
-              <Card3DTilt className="h-full p-6 sm:p-7">
-                <div className="grid size-10 place-items-center rounded-xl border border-[var(--gamibar-border)] bg-[var(--surface)] text-[var(--foreground)]">
-                  <f.icon className="size-5" />
-                </div>
-                <h3 className="mt-4 text-lg font-bold text-[var(--foreground)] sm:mt-5">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
-                  {f.copy}
-                </p>
-              </Card3DTilt>
+              <FeatureImageCard feature={f} />
             </Reveal>
           ))}
         </div>
@@ -269,5 +260,51 @@ function Landing() {
         </Reveal>
       </section>
     </div>
+  );
+}
+
+function FeatureImageCard({
+  feature,
+}: {
+  feature: (typeof HOMEPAGE_INFRASTRUCTURE_FEATURES)[number];
+}) {
+  const Icon = feature.icon;
+
+  return (
+    <Card3DTilt
+      variant="dark"
+      tilt={5}
+      className="group min-h-[20rem] rounded-lg border-white/10 bg-[#0b0b0f] p-0"
+    >
+      <img
+        src={feature.image}
+        alt=""
+        aria-hidden
+        width={1536}
+        height={1024}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full scale-110 object-cover opacity-35 blur-xl"
+      />
+      <img
+        src={feature.image}
+        alt={feature.imageAlt}
+        width={1536}
+        height={1024}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.02] sm:p-5"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,10,0.04)_0%,rgba(8,8,10,0.34)_42%,rgba(8,8,10,0.95)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(239,68,68,0.24),transparent_42%)]" />
+
+      <div className="relative z-10 flex h-full min-h-[20rem] flex-col justify-end p-5 text-white sm:p-6">
+        <span className="grid size-10 place-items-center rounded-lg border border-white/15 bg-white/12 text-white shadow-sm backdrop-blur-md">
+          <Icon className="size-5" />
+        </span>
+        <h3 className="mt-4 font-display text-2xl font-black leading-tight">{feature.title}</h3>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-white/76">{feature.copy}</p>
+      </div>
+    </Card3DTilt>
   );
 }

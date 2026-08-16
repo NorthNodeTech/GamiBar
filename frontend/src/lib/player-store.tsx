@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type PlayerState = {
   name: string;
@@ -13,7 +21,7 @@ export type PlayerState = {
 };
 
 const INITIAL: PlayerState = {
-  name: "Student User",
+  name: "Participant User",
   xp: 2480,
   coins: 640,
   streak: 6,

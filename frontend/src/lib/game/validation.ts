@@ -10,6 +10,7 @@ import {
   connectDotsPairsProgress,
   isConnectDotsPairComplete,
 } from "@/lib/game/connect-dots-content";
+import { validatePollQuestions } from "@/lib/game/polls";
 import { validatePieceUnlockAt, resolvePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
 import type { GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
 import { isTimerValid } from "@/lib/game/timer";
@@ -17,6 +18,7 @@ import { isTimerValid } from "@/lib/game/timer";
 const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 
 export function questionCountForMode(mode: GameMode): number {
+  if (mode === "polls") return GAME_CONFIG.polls.minQuestions;
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.questionCount;
   if (mode === "jigsaw") {
     return defaultQuestionCountForTemplate(jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID));
@@ -96,7 +98,10 @@ export function validateGamePayload(
     if (payload.questions.length < GAME_CONFIG.quiz.minQuestions) {
       return { ok: false, error: "Add at least one question." };
     }
-    if (payload.questions.length > GAME_CONFIG.quiz.maxQuestions && GAME_CONFIG.quiz.maxQuestions > 0) {
+    if (
+      payload.questions.length > GAME_CONFIG.quiz.maxQuestions &&
+      GAME_CONFIG.quiz.maxQuestions > 0
+    ) {
       return {
         ok: false,
         error: `Use at most ${GAME_CONFIG.quiz.maxQuestions} questions.`,
@@ -114,10 +119,13 @@ export function validateGamePayload(
       return { ok: false, error: `Complete all ${total} questions (${done}/${total}).` };
     }
     if (!payload.jigsaw.imageUrl) {
-      return { ok: false, error: "Upload a puzzle image for students to reveal." };
+      return { ok: false, error: "Upload a puzzle image for participants to reveal." };
     }
     if (!payload.rewardCode.trim()) {
-      return { ok: false, error: "Set a reward code students unlock when the puzzle is complete." };
+      return {
+        ok: false,
+        error: "Set a reward code participants unlock when the puzzle is complete.",
+      };
     }
     return { ok: true };
   }
@@ -127,7 +135,7 @@ export function validateGamePayload(
     if (payload.questions.length < minQuestions) {
       return {
         ok: false,
-        error: `Add at least ${minQuestions} questions for a ${payload.jigsaw.cols}×${payload.jigsaw.rows} puzzle (${tileCount} pieces).`,
+        error: `Add at least ${minQuestions} questions for a ${payload.jigsaw.cols}x${payload.jigsaw.rows} puzzle (${tileCount} pieces).`,
       };
     }
     if (payload.questions.length > GAME_CONFIG.jigsaw.maxQuestions) {
@@ -144,7 +152,7 @@ export function validateGamePayload(
       };
     }
     if (!payload.jigsaw.imageUrl) {
-      return { ok: false, error: "Upload one puzzle image for students to reconstruct." };
+      return { ok: false, error: "Upload one puzzle image for participants to reconstruct." };
     }
     const unlockValidation = validatePieceUnlockAt(
       resolvePieceUnlockAt(payload.questions.length, tileCount, payload.jigsaw.pieceUnlockAt),
@@ -155,7 +163,10 @@ export function validateGamePayload(
       return unlockValidation;
     }
     if (!isTimerValid("jigsaw", payload.timeLimitSeconds)) {
-      return { ok: false, error: "Choose a jigsaw timer between 30 seconds and 5 minutes, or no limit." };
+      return {
+        ok: false,
+        error: "Choose a jigsaw timer between 30 seconds and 5 minutes, or no limit.",
+      };
     }
     return { ok: true };
   }
@@ -177,10 +188,7 @@ export function validateGamePayload(
           error: `Complete every pair with a question and answer (${done}/${total}).`,
         };
       }
-      if (
-        !payload.connectDots.seed ||
-        payload.connectDots.pairs.length !== contentPairs.length
-      ) {
+      if (!payload.connectDots.seed || payload.connectDots.pairs.length !== contentPairs.length) {
         return { ok: false, error: "Generate the Connect Dots board before creating the room." };
       }
     } else {
@@ -198,7 +206,21 @@ export function validateGamePayload(
       }
     }
     if (!isTimerValid("connect_dots", payload.timeLimitSeconds)) {
-      return { ok: false, error: "Choose a Connect Dots timer between 30 seconds and 3 minutes, or no limit." };
+      return {
+        ok: false,
+        error: "Choose a Connect Dots timer between 30 seconds and 3 minutes, or no limit.",
+      };
+    }
+    return { ok: true };
+  }
+  if (mode === "polls" && payload.mode === "polls") {
+    const questionsValid = validatePollQuestions(payload.questions);
+    if (!questionsValid.ok) return questionsValid;
+    if (!isTimerValid("polls", payload.timeLimitSeconds)) {
+      return {
+        ok: false,
+        error: "Choose a poll timer between 30 seconds and 15 minutes, or no limit.",
+      };
     }
     return { ok: true };
   }

@@ -30,6 +30,11 @@ const MODE_ACCENT: Record<
     metric: "text-[var(--game-connect-dots-deep)]",
     ring: "border-[var(--game-connect-dots)]/20",
   },
+  polls: {
+    badge: "bg-orange-100 text-orange-800",
+    metric: "text-orange-700",
+    ring: "border-orange-400/20",
+  },
 };
 
 export function GameCompletionScreen({
@@ -52,7 +57,9 @@ export function GameCompletionScreen({
   const accent = MODE_ACCENT[model.mode];
   const completionTime = formatDuration(model.durationMs);
   const isQuiz = model.mode === "quiz";
-  const rankDisplay = model.rank != null ? `#${model.rank}` : isQuiz ? "#1" : "—";
+  const isPoll = model.mode === "polls";
+  const primaryPollMetric = model.metrics[0]?.value ?? "Submitted";
+  const rankDisplay = model.rank != null ? `#${model.rank}` : isQuiz ? "#1" : "-";
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[var(--gamibar-page)] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -70,11 +77,11 @@ export function GameCompletionScreen({
             {model.modeTitle}
           </span>
           <h1 className="mt-2 font-display text-xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-2xl">
-            Game completed
+            {isPoll ? "Response submitted" : "Game completed"}
           </h1>
           <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
             {model.roomName}
-            <span className="mx-1.5 text-[var(--gamibar-border)]">·</span>
+            <span className="mx-1.5 text-[var(--gamibar-border)]">-</span>
             <span className="font-medium text-[var(--foreground)]">{model.displayName}</span>
           </p>
         </header>
@@ -117,10 +124,26 @@ export function GameCompletionScreen({
               >
                 <p className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
                   <Trophy className={cn("size-3", accent.metric)} />
-                  Your rank
+                  {isPoll ? "Responses" : "Your rank"}
                 </p>
-                <p className={cn("mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none", accent.metric)}>
-                  {model.rank != null ? `#${model.rank}` : "—"}
+                {isPoll && (
+                  <p
+                    className={cn(
+                      "mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none",
+                      accent.metric,
+                    )}
+                  >
+                    {primaryPollMetric}
+                  </p>
+                )}
+                <p
+                  className={cn(
+                    "mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none",
+                    accent.metric,
+                    isPoll && "hidden",
+                  )}
+                >
+                  {model.rank != null ? `#${model.rank}` : "-"}
                 </p>
               </div>
 
@@ -131,7 +154,7 @@ export function GameCompletionScreen({
                 )}
               >
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
-                  Completion time
+                  {isPoll ? "Submission time" : "Completion time"}
                 </p>
                 <p className="mt-0.5 font-display text-2xl font-extrabold tabular-nums leading-none text-[var(--foreground)]">
                   {completionTime}
@@ -149,7 +172,9 @@ export function GameCompletionScreen({
 
         {!gameFinished && (
           <p className="mt-2 shrink-0 text-center text-[10px] leading-snug text-[var(--muted-foreground)]">
-            Waiting for the class to finish…
+            {isPoll
+              ? "Responses update live on the host screen."
+              : "Waiting for the class to finish..."}
           </p>
         )}
 

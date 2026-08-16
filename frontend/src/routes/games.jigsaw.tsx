@@ -14,7 +14,7 @@ import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
 
 const jigsawTitle = "Jigsaw Classroom Game | GamiBar";
 const jigsawDescription =
-  "Turn a classroom image into a live timed jigsaw mission. Students answer, reconstruct the visual puzzle, and compare results in GamiBar.";
+  "Turn a classroom image into a live timed jigsaw mission. Participants answer, reconstruct the visual puzzle, and compare results in GamiBar.";
 
 export const Route = createFileRoute("/games/jigsaw")({
   head: () =>
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/games/jigsaw")({
         path: "/games/jigsaw",
         breadcrumbs: [
           { name: "Home", path: "/" },
-          { name: "Game Modes", path: "/games/" },
+          { name: "Tools", path: "/games/" },
           { name: "Jigsaw Mission", path: "/games/jigsaw" },
         ],
       }),

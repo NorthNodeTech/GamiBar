@@ -2,10 +2,13 @@ import { GAME_CONFIG } from "@/lib/game/config";
 import { resolveJigsawGrid } from "@/lib/game/jigsaw-grid";
 import { normalizePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
 import { modeNeedsJigsawUpload, modePersistsQuizAnswers } from "@/lib/game/mode-registry";
+import { DEFAULT_POLL_SETTINGS, normalizePollPayload } from "@/lib/game/polls";
 import type {
   ConnectDotsBoardConfig,
   GamePayload,
   Participant,
+  PollQuestionDraft,
+  PollSettings,
   QuizQuestionDraft,
   Room,
   RoomEvent,
@@ -165,6 +168,22 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
       timeLimitSeconds,
     };
   }
+  if (normalizedMode === "polls") {
+    const questions = Array.isArray(raw["questions"])
+      ? (raw["questions"] as PollQuestionDraft[])
+      : [];
+    const settingsRaw =
+      raw["settings"] && typeof raw["settings"] === "object" && !Array.isArray(raw["settings"])
+        ? (raw["settings"] as Partial<PollSettings>)
+        : {};
+    const settings = { ...DEFAULT_POLL_SETTINGS, ...settingsRaw };
+    return normalizePollPayload({
+      mode: "polls",
+      questions,
+      settings,
+      timeLimitSeconds,
+    });
+  }
   const connectDots = parseConnectDotsConfig(raw);
   return {
     mode: "connect_dots",
@@ -191,6 +210,12 @@ function configFromPayload(
     base = {
       questions: payload.questions,
       jigsaw: payload.jigsaw,
+      timeLimitSeconds: payload.timeLimitSeconds,
+    };
+  } else if (payload.mode === "polls") {
+    base = {
+      questions: payload.questions,
+      settings: payload.settings,
       timeLimitSeconds: payload.timeLimitSeconds,
     };
   } else {

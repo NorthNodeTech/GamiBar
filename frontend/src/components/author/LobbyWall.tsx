@@ -1,4 +1,3 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
 import { motion, useReducedMotion } from "framer-motion";
 import { Radio, Users, WifiOff } from "lucide-react";
 
@@ -48,8 +47,8 @@ export function LobbyWall({
           </p>
           <h2 className="mt-1 font-display text-xl font-extrabold text-[var(--foreground)] sm:text-2xl">
             {joined === 0
-              ? "Waiting for students"
-              : `${joined} student${joined === 1 ? "" : "s"} in the lobby`}
+              ? "Waiting for participants"
+              : `${joined} participant${joined === 1 ? "" : "s"} in the lobby`}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
             Ready to start when you are.
@@ -74,7 +73,7 @@ export function LobbyWall({
               id="lobby-roster-heading"
               className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]"
             >
-              Student roster
+              Participant roster
             </h3>
             {joined > 0 && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
@@ -91,7 +90,7 @@ export function LobbyWall({
                   <Users className="size-5" />
                 </span>
                 <p className="mt-3 text-sm font-semibold text-[var(--foreground)]">
-                  No students yet
+                  No participants yet
                 </p>
                 <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                   Joined names will appear in this roster.
@@ -161,7 +160,19 @@ export function LobbyWall({
           <div className="flex min-w-0 items-center gap-3 p-3 lg:block lg:p-0">
             {catalog && (
               <div className="relative size-16 shrink-0 overflow-hidden rounded-xl lg:aspect-[16/10] lg:size-auto lg:rounded-none">
-                <img src={catalog.preview} alt="" className="size-full object-cover" />
+                <img
+                  src={catalog.preview}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-lg"
+                  loading="lazy"
+                />
+                <img
+                  src={catalog.preview}
+                  alt=""
+                  className="relative z-10 size-full object-contain p-1.5"
+                  loading="lazy"
+                />
                 <div
                   aria-hidden
                   className={cn(

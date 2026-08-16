@@ -17,7 +17,8 @@ export const Route = createFileRoute("/profile")({
       { title: "Profile - GamiBar" },
       {
         name: "description",
-        content: "Your GamiBar profile: XP, coins, level, accuracy, streaks, achievements and history.",
+        content:
+          "Your GamiBar profile: XP, coins, level, accuracy, streaks, achievements and history.",
       },
       { property: "og:title", content: "Profile - GamiBar" },
       { property: "og:description", content: "Statistics, achievements and match history." },
@@ -41,7 +42,11 @@ function Profile() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-16">
-      <PageHeader eyebrow="Profile" title={player.name} subtitle="Learner · Ashford College cohort 2026" />
+      <PageHeader
+        eyebrow="Profile"
+        title={player.name}
+        subtitle="Learner · Ashford College cohort 2026"
+      />
 
       <Reveal className="panel mt-10 flex items-center gap-5 p-7">
         <span className="grid size-16 place-items-center rounded-full border border-divider bg-elevated font-display text-lg font-bold">
@@ -72,14 +77,17 @@ function Profile() {
           <h2 className="font-semibold">Achievements</h2>
           <div className="mt-5 flex flex-wrap gap-2">
             {player.achievements.map((a) => (
-              <span key={a} className="rounded-full border border-divider bg-elevated px-3.5 py-1.5 text-xs">
+              <span
+                key={a}
+                className="rounded-full border border-divider bg-elevated px-3.5 py-1.5 text-xs"
+              >
                 {a}
               </span>
             ))}
           </div>
         </Reveal>
         <Reveal delay={0.05} className="panel p-7">
-          <h2 className="font-semibold">History</h2>
+          <h2 className="font-semibold">Participated games</h2>
           <div className="mt-5 divide-y divide-border">
             {player.history.map((h, i) => (
               <div key={i} className="flex items-center justify-between py-3 text-sm">

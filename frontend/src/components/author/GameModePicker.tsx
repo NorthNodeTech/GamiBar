@@ -1,4 +1,3 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import { ArrowRight, Check } from "lucide-react";
 
 import { GAME_MODE_CATALOG, getCoreModeCatalog } from "@/lib/game/mode-catalog";
@@ -28,6 +27,13 @@ const MODE_PRESENTATION = {
     soft: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
     selected: "border-[var(--game-connect-dots)] ring-2 ring-[var(--game-connect-dots)]/15",
   },
+  polls: {
+    moment: "Live feedback",
+    useCase: "Polls, ratings, and quick surveys",
+    accent: "bg-orange-500",
+    soft: "bg-orange-100 text-orange-800",
+    selected: "border-orange-400 ring-2 ring-orange-400/15",
+  },
 } as const;
 
 export function GameModePicker({
@@ -40,7 +46,7 @@ export function GameModePicker({
   const catalog = getCoreModeCatalog();
 
   return (
-    <div className="grid gap-3 md:grid-cols-3" role="radiogroup" aria-label="Game modes">
+    <div className="grid gap-3 md:grid-cols-4" role="radiogroup" aria-label="Game modes">
       {catalog.map((item) => (
         <PickerCard
           key={item.mode}
@@ -80,7 +86,14 @@ function PickerCard({
         <img
           src={item.preview}
           alt=""
-          className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+          aria-hidden
+          className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-xl"
+          loading="lazy"
+        />
+        <img
+          src={item.preview}
+          alt=""
+          className="relative z-10 size-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]"
           loading="lazy"
         />
         <span

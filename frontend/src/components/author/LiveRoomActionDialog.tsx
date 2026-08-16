@@ -61,8 +61,8 @@ export function LiveRoomActionDialog({
                 </AlertDialogTitle>
                 <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
                   {isStopping
-                    ? "Students will stop playing and the final leaderboard will be calculated."
-                    : `${joinedCount} student${joinedCount === 1 ? "" : "s"} will enter the game now.`}
+                    ? "Participants will stop playing and the final leaderboard will be calculated."
+                    : `${joinedCount} participant${joinedCount === 1 ? "" : "s"} will enter the game now.`}
                 </AlertDialogDescription>
               </div>
             </AlertDialogHeader>

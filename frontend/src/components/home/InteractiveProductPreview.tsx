@@ -99,7 +99,9 @@ export function InteractiveProductPreview() {
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <Trophy className="size-4 text-amber-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Cohort Standings</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Cohort Standings
+                </span>
               </div>
               <span className="flex items-center gap-1 text-[11px] text-emerald-400">
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" /> Live Sync
@@ -113,7 +115,9 @@ export function InteractiveProductPreview() {
                   className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs font-bold text-zinc-400 w-4">#{item.rank}</span>
+                    <span className="font-mono text-xs font-bold text-zinc-400 w-4">
+                      #{item.rank}
+                    </span>
                     <div className="grid size-8 place-items-center rounded-full bg-white/10 font-bold text-xs text-white">
                       {item.avatar}
                     </div>
@@ -169,7 +173,7 @@ export function InteractiveProductPreview() {
             {/* Bottom Status Feed */}
             <div className="flex items-center justify-between border-t border-white/10 pt-3 text-xs text-zinc-400">
               <span className="flex items-center gap-1.5">
-                <Users className="size-3.5 text-zinc-400" /> 34 Students connected
+                <Users className="size-3.5 text-zinc-400" /> 34 participants connected
               </span>
               <span className="text-zinc-400 font-mono">60 FPS ACTIVE</span>
             </div>

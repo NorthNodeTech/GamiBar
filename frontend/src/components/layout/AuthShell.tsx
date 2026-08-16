@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 
 const highlights = [
   { icon: Gamepad2, text: "Quiz, Jigsaw, and Connect Dots in one live session" },
-  { icon: Users, text: "Unlimited students join with a code or QR" },
-  { icon: Trophy, text: "Real-time leaderboard and classroom energy" },
+  { icon: Users, text: "Unlimited participants join with a code or QR" },
+  { icon: Trophy, text: "Real-time leaderboard and room energy" },
   { icon: Shield, text: "Secure accounts backed by Supabase" },
 ] as const;
 
@@ -25,7 +25,8 @@ const fadeUp = {
 export const authFieldClassName =
   "h-11 rounded-xl border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/80 pl-10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow] placeholder:text-[var(--muted-foreground)]/70 focus-visible:border-[var(--gamibar-brand)]/40 focus-visible:ring-2 focus-visible:ring-[var(--gamibar-brand)]/15 dark:bg-[var(--gamibar-surface)]/60";
 
-export const authLabelClassName = "text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]";
+export const authLabelClassName =
+  "text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]";
 
 export const authPrimaryButtonClassName =
   "h-11 w-full rounded-xl bg-[var(--gamibar-brand)] text-sm font-bold text-white shadow-[0_10px_28px_-8px_rgba(239,68,68,0.55)] transition-all hover:bg-[var(--gamibar-brand-hover)] hover:shadow-[0_14px_32px_-8px_rgba(239,68,68,0.6)] disabled:opacity-60";
@@ -82,14 +83,15 @@ export function AuthShell({
             GamiBAR
           </p>
           <h2 className="mt-5 font-display text-3xl font-black leading-[1.08] tracking-tight text-white xl:text-4xl">
-            Host games your
+            Host rooms your
             <br />
             <span className="bg-gradient-to-r from-white via-white to-white/75 bg-clip-text text-transparent">
-              class will love.
+              audience will love.
             </span>
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-white/55">
-            Create a room in minutes, share a 6-digit code, and run synchronized rounds with live results.
+            Create a room in minutes, share a 6-digit code, and run synchronized rounds with live
+            results.
           </p>
           <ul className="mt-10 space-y-3.5">
             {highlights.map((item, i) => (
@@ -110,7 +112,9 @@ export function AuthShell({
           </ul>
         </div>
 
-        <p className="relative text-xs text-white/30">© {new Date().getFullYear()} GamiBar. All rights reserved.</p>
+        <p className="relative text-xs text-white/30">
+          (c) {new Date().getFullYear()} GamiBar. All rights reserved.
+        </p>
       </div>
 
       <div className="relative flex min-h-dvh items-center justify-center px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8 lg:min-h-0 lg:px-10 lg:py-16">
@@ -165,7 +169,9 @@ export function AuthShell({
             <h1 className="mt-4 font-display text-[1.65rem] font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-3xl">
               {title}
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">{subtitle}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+              {subtitle}
+            </p>
 
             <div className="mt-7 sm:mt-8">{children}</div>
           </div>

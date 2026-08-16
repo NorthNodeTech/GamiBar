@@ -24,9 +24,13 @@ import {
 } from "@/components/games/quizes/puzzle/JigsawMissionRewardStack";
 import { JigsawPuzzle } from "@/components/games/quizes/puzzle/JigsawPuzzle";
 import { PuzzleQuestBoard } from "@/components/games/quizes/puzzle/PuzzleQuestBoard";
-import { SlidoProgressHeader, SlidoQuizPanel } from "@/components/games/quizes/normal/SlidoQuizPanel";
+import {
+  SlidoProgressHeader,
+  SlidoQuizPanel,
+} from "@/components/games/quizes/normal/SlidoQuizPanel";
 import { GameCompletionScreen } from "@/components/games/ui/GameCompletionScreen";
 import { Logo } from "@/components/layout/Logo";
+import { PollResultsPanel } from "@/components/polls/PollResultsPanel";
 import { Button } from "@/components/ui/button";
 import {
   ConnectionBanner,
@@ -34,6 +38,8 @@ import {
   PageErrorState,
   PageLoader,
 } from "@/components/ui/async-state";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, PUZZLE_QUEST_GRID } from "@/lib/game/config";
 import { buildGameCompletionViewModel } from "@/lib/game/completion";
 import { getModeCatalog } from "@/lib/game/mode-catalog";
@@ -66,12 +72,19 @@ import {
   recordConnectDotsIncorrectAttemptFn,
   submitJigsawMissionAnswerFn,
   submitJigsawMissionAssemblyFn,
+  submitPollResponsesFn,
   rotateJigsawMissionTileFn,
   submitJigsawProgressFn,
   submitQuizAnswerFn,
   submitQuizJigsawAnswerFn,
 } from "@/lib/game/room.functions";
-import type { ConnectDotsBoardConfig, QuizOptionId } from "@/lib/game/types";
+import { readPollResponses, type PollsPayload } from "@/lib/game/polls";
+import type {
+  ConnectDotsBoardConfig,
+  PollResponseValue,
+  PollResults,
+  QuizOptionId,
+} from "@/lib/game/types";
 import { useRoomSync } from "@/lib/game/useRoomSync";
 import type { PathMap } from "@/lib/connect-dots";
 import { cn } from "@/lib/utils";
@@ -91,10 +104,11 @@ function StudentPlayPage() {
   const [participant] = useState(() => loadParticipantSession());
   const reconnectToken =
     participant && participant.roomId === roomId ? participant.reconnectToken : undefined;
-  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry } = useRoomSync({
-    roomId,
-    reconnectToken,
-  });
+  const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry, refresh } =
+    useRoomSync({
+      roomId,
+      reconnectToken,
+    });
 
   useEffect(() => {
     if (!reconnectToken) return;
@@ -163,7 +177,7 @@ function StudentPlayPage() {
 
   const room = snapshot.room;
   const gameFinished = room.status === "FINISHED" || room.status === "CANCELLED";
-  const displayName = participant?.displayName ?? "Student";
+  const displayName = participant?.displayName ?? "Participant";
   const studentFinished = isStudentSessionFinished({
     room,
     answeredCount: snapshot.myAnswers.length,
@@ -176,7 +190,8 @@ function StudentPlayPage() {
   const totalQuestions =
     room.payload.mode === "quiz" ||
     room.payload.mode === "quiz_jigsaw" ||
-    room.payload.mode === "jigsaw"
+    room.payload.mode === "jigsaw" ||
+    room.payload.mode === "polls"
       ? room.payload.questions.length
       : 0;
   const totalPairs = room.payload.mode === "connect_dots" ? room.payload.connectDots.pairCount : 0;
@@ -226,6 +241,9 @@ function StudentPlayPage() {
             board={room.payload.connectDots}
             attemptPayload={snapshot.myAttempt?.payload}
           />
+        )}
+        {room.mode === "polls" && snapshot.pollResults && (
+          <PollResultsPanel results={snapshot.pollResults as PollResults} compact />
         )}
         {room.mode === "quiz_jigsaw" &&
           typeof snapshot.myAttempt?.payload?.rewardCode === "string" &&
@@ -282,6 +300,20 @@ function StudentPlayPage() {
         myAnswers={snapshot.myAnswers}
         instruction={room.instruction}
         endsAt={room.endsAt}
+      />,
+    );
+  }
+
+  if (room.mode === "polls" && room.payload.mode === "polls") {
+    return playShell(
+      <PollPlay
+        roomId={roomId}
+        reconnectToken={reconnectToken}
+        payload={room.payload}
+        instruction={room.instruction}
+        endsAt={room.endsAt}
+        savedResponses={readPollResponses(snapshot.myAttempt?.payload)}
+        onSubmitted={() => void refresh()}
       />,
     );
   }
@@ -813,6 +845,321 @@ function QuizPlay({
       </aside>
     </div>
   );
+}
+
+function PollPlay({
+  roomId,
+  reconnectToken,
+  payload,
+  instruction,
+  endsAt,
+  savedResponses,
+  onSubmitted,
+}: {
+  roomId: string;
+  reconnectToken: string;
+  payload: PollsPayload;
+  instruction: string;
+  endsAt: number | null;
+  savedResponses: Record<string, PollResponseValue>;
+  onSubmitted: () => void;
+}) {
+  const [responses, setResponses] = useState<Record<string, PollResponseValue>>(() => ({
+    ...savedResponses,
+  }));
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    setResponses({ ...savedResponses });
+  }, [savedResponses]);
+
+  const requiredMissing = payload.questions.some(
+    (question) => question.required && !hasPollValue(responses[question.id]),
+  );
+
+  const setValue = (questionId: string, value: PollResponseValue) => {
+    setResponses((prev) => ({ ...prev, [questionId]: value }));
+  };
+
+  const submit = async () => {
+    if (submitting || timedOut) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await submitPollResponsesFn({
+        data: {
+          roomId,
+          reconnectToken,
+          responses,
+        },
+      });
+      if (!res.ok) {
+        const message = friendlyGameError(res.error, "Could not submit your response.");
+        setSubmitError(message);
+        toast.error(message);
+        return;
+      }
+      toast.success(res.alreadySubmitted ? "Response already submitted" : "Response submitted");
+      onSubmitted();
+    } catch {
+      const message = "Could not save your response. Check your connection and try again.";
+      setSubmitError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto flex min-h-dvh-screen w-full max-w-5xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+      <div className="flex items-center justify-between gap-3">
+        <Logo size={32} />
+        <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
+      </div>
+
+      <div className="mt-5">
+        <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+          Polls & Surveys
+        </p>
+        <h1 className="mt-1 font-display text-2xl font-extrabold leading-tight text-[var(--foreground)] sm:text-3xl">
+          Share your response
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
+          {instruction}
+        </p>
+      </div>
+
+      {timedOut ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800">
+          Time&apos;s up. Responses are closed.
+        </p>
+      ) : null}
+
+      <div className="mt-5 grid gap-4">
+        {payload.questions.map((question, index) => (
+          <PollQuestionCard
+            key={question.id}
+            question={question}
+            index={index}
+            value={responses[question.id]}
+            onChange={(value) => setValue(question.id, value)}
+          />
+        ))}
+      </div>
+
+      <div className="sticky bottom-0 mt-6 border-t border-[var(--gamibar-border)] bg-white/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <Button
+          className="h-12 w-full rounded-xl bg-[#111111] font-bold hover:bg-black"
+          disabled={requiredMissing || submitting || timedOut}
+          onClick={() => void submit()}
+        >
+          {submitting ? "Submitting..." : "Submit response"}
+        </Button>
+        {requiredMissing && !timedOut ? (
+          <p className="mt-2 text-center text-xs font-medium text-[var(--gamibar-brand)]">
+            Answer the required questions.
+          </p>
+        ) : null}
+        {submitError ? (
+          <InlineErrorBanner
+            className="mt-3 text-left"
+            message={submitError}
+            onRetry={() => void submit()}
+            retrying={submitting}
+            onDismiss={() => setSubmitError(null)}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PollQuestionCard({
+  question,
+  index,
+  value,
+  onChange,
+}: {
+  question: PollsPayload["questions"][number];
+  index: number;
+  value: PollResponseValue | undefined;
+  onChange: (value: PollResponseValue) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
+            Question {index + 1}
+          </p>
+          <h2 className="mt-1 break-words font-display text-lg font-bold leading-tight text-[var(--foreground)]">
+            {question.prompt}
+          </h2>
+        </div>
+        {question.required ? (
+          <span className="rounded-full bg-[var(--gamibar-brand-soft)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--gamibar-brand)]">
+            Required
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-4">
+        {question.type === "rating" && (
+          <RatingResponse question={question} value={value} onChange={onChange} />
+        )}
+        {question.type === "single_choice" && (
+          <ChoiceResponse question={question} value={value} onChange={onChange} multiple={false} />
+        )}
+        {question.type === "multiple_choice" && (
+          <ChoiceResponse question={question} value={value} onChange={onChange} multiple />
+        )}
+        {question.type === "yes_no" && (
+          <div className="grid grid-cols-2 gap-2">
+            {["yes", "no"].map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                onClick={() => onChange(choice)}
+                className={cn(
+                  "h-12 rounded-xl border text-sm font-bold capitalize transition-colors",
+                  value === choice
+                    ? "border-[#111111] bg-[#111111] text-white"
+                    : "border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[#111111]",
+                )}
+              >
+                {choice}
+              </button>
+            ))}
+          </div>
+        )}
+        {question.type === "short_text" && (
+          <Input
+            value={typeof value === "string" ? value : ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Type your answer"
+            className="h-12 rounded-xl text-base"
+          />
+        )}
+        {question.type === "long_text" && (
+          <Textarea
+            value={typeof value === "string" ? value : ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Type your feedback"
+            className="min-h-28 resize-none rounded-xl text-base"
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RatingResponse({
+  question,
+  value,
+  onChange,
+}: {
+  question: PollsPayload["questions"][number];
+  value: PollResponseValue | undefined;
+  onChange: (value: PollResponseValue) => void;
+}) {
+  const min = question.min ?? 0;
+  const max = question.max ?? 5;
+  const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+
+  return (
+    <div className="grid gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(3rem,1fr))] gap-2">
+        {values.map((rating) => (
+          <button
+            key={rating}
+            type="button"
+            onClick={() => onChange(rating)}
+            className={cn(
+              "grid min-h-12 place-items-center rounded-xl border text-base font-extrabold tabular-nums transition-colors",
+              value === rating
+                ? "border-orange-500 bg-orange-500 text-white"
+                : "border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[#111111]",
+            )}
+          >
+            {rating}
+          </button>
+        ))}
+      </div>
+      {(question.lowLabel || question.highLabel) && (
+        <div className="flex justify-between gap-3 text-xs font-medium text-[var(--muted-foreground)]">
+          <span>{question.lowLabel}</span>
+          <span>{question.highLabel}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChoiceResponse({
+  question,
+  value,
+  onChange,
+  multiple,
+}: {
+  question: PollsPayload["questions"][number];
+  value: PollResponseValue | undefined;
+  onChange: (value: PollResponseValue) => void;
+  multiple: boolean;
+}) {
+  const selected = new Set(
+    multiple && Array.isArray(value) ? value : typeof value === "string" ? [value] : [],
+  );
+
+  const toggle = (optionId: string) => {
+    if (!multiple) {
+      onChange(optionId);
+      return;
+    }
+    const next = new Set(selected);
+    if (next.has(optionId)) next.delete(optionId);
+    else next.add(optionId);
+    onChange([...next]);
+  };
+
+  return (
+    <div className="grid gap-2">
+      {question.options.map((option) => {
+        const active = selected.has(option.id);
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => toggle(option.id)}
+            className={cn(
+              "flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors",
+              active
+                ? "border-[#111111] bg-[#111111] text-white"
+                : "border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[#111111]",
+            )}
+          >
+            <span
+              className={cn(
+                "grid size-7 shrink-0 place-items-center rounded-lg border text-xs",
+                active ? "border-white bg-white text-[#111111]" : "border-[var(--gamibar-border)]",
+              )}
+            >
+              {active ? <Check className="size-3.5" /> : <Circle className="size-3.5" />}
+            </span>
+            <span className="min-w-0 break-words">{option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function hasPollValue(value: PollResponseValue | undefined): boolean {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  return Number.isFinite(value);
 }
 
 function ConnectDotsCompletionCard({

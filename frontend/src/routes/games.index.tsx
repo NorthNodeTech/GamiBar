@@ -5,7 +5,7 @@ import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
 import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
 
-const gamesTitle = "Interactive Classroom Game Modes | GamiBar";
+const gamesTitle = "Interactive Session Tools | GamiBar";
 const gamesDescription =
   "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, and Connect Dots for logic and speed.";
 
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/games/")({
         path: "/games/",
         breadcrumbs: [
           { name: "Home", path: "/" },
-          { name: "Game Modes", path: "/games/" },
+          { name: "Tools", path: "/games/" },
         ],
       }),
     }),

@@ -10,9 +10,9 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { useTheme } from "@/lib/theme-store";
 
 const publicNav = [
-  { to: "/#games", label: "Teacher Tools", hash: true },
-  { to: "/#journey", label: "Classroom Flow", hash: true },
-  { to: "/#why", label: "Resource Drop", hash: true },
+  { to: "/#games", label: "Tools", hash: true },
+  { to: "/#journey", label: "Flow", hash: true },
+  { to: "/#why", label: "Why GamiBar", hash: true },
   { to: "/#faq", label: "FAQ", hash: true },
 ] as const;
 
@@ -72,7 +72,7 @@ export function SiteHeader() {
               size="sm"
               className="rounded-xl border-[var(--gamibar-border)] font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]"
             >
-              <Link to="/author">Teacher Workspace</Link>
+              <Link to="/author">Workspace</Link>
             </Button>
             <NavJoinGame />
             <ThemeToggle />

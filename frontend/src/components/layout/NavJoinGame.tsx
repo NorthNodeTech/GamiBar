@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Navigates straight to the student join portal - no authentication. */
+/** Navigates straight to the participant join portal - no authentication. */
 export function NavJoinGame({
   className,
   size = "sm",
@@ -26,7 +26,7 @@ export function NavJoinGame({
       )}
     >
       <Link to="/join" onClick={onClick}>
-        Join Game
+        Join room
       </Link>
     </Button>
   );

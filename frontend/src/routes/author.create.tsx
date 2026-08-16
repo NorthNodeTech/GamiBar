@@ -6,7 +6,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Plus,
   Rocket,
+  Trash2,
   Upload,
   Loader2,
 } from "lucide-react";
@@ -37,6 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   getStoredAuth,
   isAuthorAuthenticated,
@@ -52,6 +56,14 @@ import {
   reorderConnectDotsPairs,
 } from "@/lib/game/connect-dots-content";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
+import {
+  DEFAULT_POLL_SETTINGS,
+  POLL_TYPE_DESCRIPTIONS,
+  POLL_TYPE_LABELS,
+  emptyPollQuestions,
+  newPollQuestion,
+  pollCompletionCount,
+} from "@/lib/game/polls";
 import {
   DEFAULT_JIGSAW_TEMPLATE_ID,
   JIGSAW_TEMPLATES,
@@ -77,6 +89,9 @@ import type {
   ConnectDotsBoardConfig,
   ConnectDotsContentPair,
   GamePayload,
+  PollQuestionDraft,
+  PollSettings,
+  PollQuestionType,
   QuizOptionId,
   QuizQuestionDraft,
 } from "@/lib/game/types";
@@ -97,7 +112,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const createSearchSchema = z.object({
-  mode: z.enum(["quiz", "jigsaw", "connect_dots"]).optional(),
+  mode: z.enum(["quiz", "polls", "jigsaw", "connect_dots"]).optional(),
 });
 
 export const Route = createFileRoute("/author/create")({
@@ -119,6 +134,14 @@ export const Route = createFileRoute("/author/create")({
 
 type Step = "details" | "mode" | "configure" | "review";
 const QUIZ_OPTION_IDS: QuizOptionId[] = ["A", "B", "C", "D"];
+const POLL_TYPE_IDS: PollQuestionType[] = [
+  "rating",
+  "single_choice",
+  "multiple_choice",
+  "short_text",
+  "long_text",
+  "yes_no",
+];
 
 function CreateRoomWizard() {
   const navigate = useNavigate();
@@ -130,6 +153,10 @@ function CreateRoomWizard() {
   const [subject, setSubject] = useState("");
   const [mode, setMode] = useState<GameMode | null>(presetMode ?? "quiz");
   const [questions, setQuestions] = useState<QuizQuestionDraft[]>(() => emptyQuizQuestions("quiz"));
+  const [pollQuestions, setPollQuestions] = useState<PollQuestionDraft[]>(() =>
+    emptyPollQuestions(),
+  );
+  const [pollSettings, setPollSettings] = useState(DEFAULT_POLL_SETTINGS);
   const [rewardCode, setRewardCode] = useState("");
   const [connectDotsPairs, setConnectDotsPairs] = useState<ConnectDotsContentPair[]>(() =>
     emptyConnectDotsPairs(),
@@ -159,6 +186,7 @@ function CreateRoomWizard() {
     useState<SessionFileRetentionDays>(SESSION_FILE_DEFAULT_RETENTION_DAYS);
 
   const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
+  const pollProgress = pollCompletionCount(pollQuestions);
   const connectDotsProgress = connectDotsPairsProgress(connectDotsPairs);
   const modeCatalog = getModeCatalog(mode);
 
@@ -221,6 +249,14 @@ function CreateRoomWizard() {
         timeLimitSeconds: timerSeconds,
       };
     }
+    if (mode === "polls") {
+      return {
+        mode: "polls",
+        questions: pollQuestions,
+        settings: pollSettings,
+        timeLimitSeconds: timerSeconds,
+      };
+    }
     if (!connectDotsBoard) return null;
     return {
       mode: "connect_dots",
@@ -238,6 +274,8 @@ function CreateRoomWizard() {
     jigsawPieceUnlockAt,
     timerSeconds,
     rewardCode,
+    pollQuestions,
+    pollSettings,
   ]);
 
   const configValid = payload && mode ? validateGamePayload(mode, payload).ok : false;
@@ -303,6 +341,11 @@ function CreateRoomWizard() {
     if (next === "connect_dots") {
       setConnectDotsPairs(emptyConnectDotsPairs());
       setConnectDotsSeed(`cd-${Date.now()}`);
+      setActiveQ(0);
+    }
+    if (next === "polls") {
+      setPollQuestions(emptyPollQuestions());
+      setPollSettings(DEFAULT_POLL_SETTINGS);
       setActiveQ(0);
     }
     if (next === "jigsaw") {
@@ -568,36 +611,38 @@ function CreateRoomWizard() {
               Create session
             </p>
             <h1 className="mt-0.5 font-display text-xl font-extrabold text-[var(--foreground)] sm:text-2xl">
-              {step === "mode" && (skipModeStep.current ? "Your game" : "Pick a game")}
+              {step === "mode" && (skipModeStep.current ? "Your tool" : "Pick a tool")}
               {step === "details" && "Session details"}
-              {step === "configure" && "Game content"}
+              {step === "configure" && (mode === "polls" ? "Poll content" : "Game content")}
               {step === "review" && "Launch preview"}
             </h1>
             {step === "mode" && skipModeStep.current && (
               <p className="mt-1 text-sm text-[#525252]">
-                You chose this game from the tools catalog. Continue to name your session.
+                You chose this tool from the catalog. Continue to name your session.
               </p>
             )}
             {step === "mode" && !skipModeStep.current && (
               <p className="mt-1 hidden text-sm text-[#525252] sm:block">
-                Choose the game that fits this lesson.
+                Choose what you want to run.
               </p>
             )}
             {step === "details" && (
               <p className="mt-1 hidden text-sm text-[#525252] sm:block">
-                Name your room so students know they joined the right session.
+                Name your room so participants know they joined the right session.
               </p>
             )}
             {step === "configure" && mode && (
               <p className="mt-1 hidden text-sm text-[#525252] sm:block">
                 {mode === "quiz" &&
                   "Add multiple-choice questions for your class. Use Add or Remove to set how many you need."}
+                {mode === "polls" &&
+                  "Build ratings, votes, text feedback, and survey questions. Results update live."}
                 {mode === "quiz_jigsaw" &&
                   `Add ${GAME_CONFIG.quiz_jigsaw.questionCount} questions, upload a puzzle image, and set a reward code.`}
                 {mode === "jigsaw" &&
                   "In Puzzle setup, choose 2×2, 3×3, or 4×4 first, then add questions and upload the image."}
                 {mode === "connect_dots" &&
-                  "Add matching question/answer pairs. Each pair becomes two dots students connect on the grid."}
+                  "Add matching question/answer pairs. Each pair becomes two dots participants connect on the grid."}
               </p>
             )}
             <AuthorWizardSteps current={step} compact className="mt-3 sm:mt-4" />
@@ -631,7 +676,7 @@ function CreateRoomWizard() {
                     id="subject"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Biology, Algebra, History…"
+                    placeholder="Biology, Algebra, Civics..."
                     className="h-11 rounded-xl"
                   />
                 </div>
@@ -654,7 +699,7 @@ function CreateRoomWizard() {
               <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center">
                 <p className="text-sm font-medium text-[#111111]">No game selected</p>
                 <p className="mt-1 text-sm text-[#525252]">
-                  Go back and pick Quiz, Jigsaw, or Connect Dots.
+                  Go back and pick Quiz, Polls, Jigsaw, or Connect Dots.
                 </p>
                 <Button
                   type="button"
@@ -663,7 +708,7 @@ function CreateRoomWizard() {
                   className="mt-4 rounded-xl"
                   onClick={goBack}
                 >
-                  Pick a game
+                  Pick a tool
                 </Button>
               </div>
             )}
@@ -717,6 +762,18 @@ function CreateRoomWizard() {
                       progress={quizProgress}
                     />
                   </>
+                )}
+
+                {mode === "polls" && (
+                  <PollBuilder
+                    questions={pollQuestions}
+                    activeQ={activeQ}
+                    setActiveQ={setActiveQ}
+                    setQuestions={setPollQuestions}
+                    settings={pollSettings}
+                    setSettings={setPollSettings}
+                    progress={pollProgress}
+                  />
                 )}
 
                 {mode === "quiz_jigsaw" && (
@@ -776,7 +833,7 @@ function CreateRoomWizard() {
                       gridCols={GAME_CONFIG.quiz_jigsaw.cols}
                       gridRows={GAME_CONFIG.quiz_jigsaw.rows}
                       label="Puzzle image"
-                      hint="Students reveal this image piece by piece as they answer correctly."
+                      hint="Participants reveal this image piece by piece as they answer correctly."
                     />
                     <div className="grid gap-2 rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5">
                       <Label htmlFor="reward-code">Reward code</Label>
@@ -789,7 +846,7 @@ function CreateRoomWizard() {
                         maxLength={16}
                       />
                       <p className="text-xs text-[#737373]">
-                        Shown to students when all 9 puzzle pieces are unlocked.
+                        Shown to participants when all 9 puzzle pieces are unlocked.
                       </p>
                     </div>
                   </>
@@ -967,7 +1024,7 @@ function CreateRoomWizard() {
                           gridCols={jigsawGrid.cols}
                           gridRows={jigsawGrid.rows}
                           label="Final puzzle image"
-                          hint={`Students reconstruct this ${jigsawGrid.cols}×${jigsawGrid.rows} image · ${jigsawGrid.tileCount} pieces · ${formatTimerLong(timerSeconds)} timer`}
+                          hint={`Participants reconstruct this ${jigsawGrid.cols}x${jigsawGrid.rows} image - ${jigsawGrid.tileCount} pieces - ${formatTimerLong(timerSeconds)} timer`}
                         />
                         <div className="flex flex-wrap justify-center gap-2">
                           <Button
@@ -1042,7 +1099,8 @@ function CreateRoomWizard() {
                   badgeClass={modeCatalog.badgeClass}
                   timeLimitSeconds={payload.timeLimitSeconds}
                   questionCount={
-                    mode === "quiz" && payload.mode === "quiz"
+                    (mode === "quiz" && payload.mode === "quiz") ||
+                    (mode === "polls" && payload.mode === "polls")
                       ? payload.questions.length
                       : undefined
                   }
@@ -1101,7 +1159,7 @@ function CreateRoomWizard() {
                   onClick={() => void handleCreate()}
                 >
                   {submitting ? (
-                    "Creating…"
+                    "Creating..."
                   ) : (
                     <>
                       <Rocket className="mr-2 size-4" />
@@ -1123,7 +1181,7 @@ function SelectedGamePreview({ mode, catalog }: { mode: GameMode; catalog: GameM
   return (
     <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
       <div className="relative aspect-[16/10] overflow-hidden bg-[var(--gamibar-page)]">
-        <img src={catalog.preview} alt="" className="size-full object-cover" />
+        <FittedPreviewImage src={catalog.preview} alt="" />
         <span
           className={cn(
             "absolute left-3 top-3 grid size-10 place-items-center rounded-xl backdrop-blur-sm",
@@ -1255,7 +1313,7 @@ function QuizEditor({
         <Input
           value={q.prompt}
           onChange={(e) => update({ prompt: e.target.value })}
-          placeholder="What should students answer?"
+          placeholder="What should participants answer?"
           className="mt-2 h-11 rounded-xl text-base"
         />
 
@@ -1345,6 +1403,348 @@ function QuizEditor({
         </div>
       </div>
     </div>
+  );
+}
+
+function PollBuilder({
+  questions,
+  activeQ,
+  setActiveQ,
+  setQuestions,
+  settings,
+  setSettings,
+  progress,
+}: {
+  questions: PollQuestionDraft[];
+  activeQ: number;
+  setActiveQ: (n: number) => void;
+  setQuestions: Dispatch<SetStateAction<PollQuestionDraft[]>>;
+  settings: PollSettings;
+  setSettings: Dispatch<SetStateAction<PollSettings>>;
+  progress: { done: number; total: number; complete: boolean };
+}) {
+  const activeIndex = Math.min(activeQ, Math.max(0, questions.length - 1));
+  const q = questions[activeIndex] ?? questions[0] ?? emptyPollQuestions()[0];
+  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  const update = (patch: Partial<PollQuestionDraft>) => {
+    setQuestions((prev) =>
+      prev.map((item, index) => (index === activeIndex ? { ...item, ...patch } : item)),
+    );
+  };
+
+  const changeType = (type: PollQuestionType) => {
+    const next = newPollQuestion(type, activeIndex);
+    update({
+      ...next,
+      id: q.id,
+      prompt: q.prompt.trim() ? q.prompt : next.prompt,
+      required: q.required,
+    });
+  };
+
+  const addQuestion = (type: PollQuestionType = "single_choice") => {
+    if (questions.length >= GAME_CONFIG.polls.maxQuestions) {
+      toast.error(`Maximum ${GAME_CONFIG.polls.maxQuestions} questions.`);
+      return;
+    }
+    const next = newPollQuestion(type, questions.length);
+    setQuestions((prev) => [...prev, next]);
+    setActiveQ(questions.length);
+  };
+
+  const removeQuestion = () => {
+    if (questions.length <= GAME_CONFIG.polls.minQuestions) {
+      toast.error("Keep at least one poll question.");
+      return;
+    }
+    setQuestions((prev) => prev.filter((_, index) => index !== activeIndex));
+    setActiveQ(Math.max(0, activeIndex - 1));
+  };
+
+  const addOption = () => {
+    if (q.options.length >= GAME_CONFIG.polls.maxOptions) {
+      toast.error(`Use at most ${GAME_CONFIG.polls.maxOptions} options.`);
+      return;
+    }
+    update({
+      options: [
+        ...q.options,
+        {
+          id: `option-${q.options.length + 1}`,
+          label: `Option ${q.options.length + 1}`,
+        },
+      ],
+    });
+  };
+
+  const updateOption = (optionId: string, label: string) => {
+    update({
+      options: q.options.map((option) => (option.id === optionId ? { ...option, label } : option)),
+    });
+  };
+
+  const removeOption = (optionId: string) => {
+    if (q.options.length <= 2) {
+      toast.error("Keep at least two options.");
+      return;
+    }
+    update({ options: q.options.filter((option) => option.id !== optionId) });
+  };
+
+  const setScale = (min: number, max: number) => {
+    update({ min, max });
+  };
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#111111]">
+            {questions.length} question{questions.length === 1 ? "" : "s"} - {progress.done}/
+            {progress.total} ready
+          </p>
+          <p className="mt-0.5 text-xs text-[#737373]">
+            Ratings, choices, text feedback, and yes/no checks.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-xl"
+            disabled={questions.length <= GAME_CONFIG.polls.minQuestions}
+            onClick={removeQuestion}
+          >
+            <Trash2 className="mr-1 size-3.5" />
+            Remove
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="h-9 rounded-xl bg-[#111111] hover:bg-black"
+            disabled={questions.length >= GAME_CONFIG.polls.maxQuestions}
+            onClick={() => addQuestion()}
+          >
+            <Plus className="mr-1 size-3.5" />
+            Add
+          </Button>
+        </div>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--gamibar-page)]">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-orange-400 to-[var(--gamibar-brand)] transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {questions.map((question, index) => {
+          const done = progress.done > index && question.prompt.trim();
+          return (
+            <button
+              key={question.id}
+              type="button"
+              onClick={() => setActiveQ(index)}
+              className={cn(
+                "grid size-9 place-items-center rounded-xl text-xs font-bold transition-colors",
+                index === activeIndex
+                  ? "bg-[#111111] text-white"
+                  : done
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-[var(--gamibar-page)] text-[#737373]",
+              )}
+            >
+              {done ? <Check className="size-3.5" /> : index + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_13rem] md:items-end">
+          <div className="grid gap-2">
+            <Label
+              htmlFor="poll-question-prompt"
+              className="text-xs uppercase tracking-wider text-[#737373]"
+            >
+              Question {activeIndex + 1}
+            </Label>
+            <Input
+              id="poll-question-prompt"
+              value={q.prompt}
+              onChange={(e) => update({ prompt: e.target.value })}
+              placeholder="Ask anything"
+              className="h-11 rounded-xl text-base"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="poll-question-type">Type</Label>
+            <Select value={q.type} onValueChange={(value) => changeType(value as PollQuestionType)}>
+              <SelectTrigger id="poll-question-type" className="h-11 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {POLL_TYPE_IDS.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {POLL_TYPE_LABELS[type]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex items-center gap-2 rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-3 py-1.5 text-xs font-semibold text-[#525252]">
+            <Switch
+              checked={q.required}
+              onCheckedChange={(checked) => update({ required: checked })}
+            />
+            Required
+          </label>
+          <span className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-bold text-orange-800">
+            {POLL_TYPE_DESCRIPTIONS[q.type]}
+          </span>
+        </div>
+
+        {(q.type === "single_choice" || q.type === "multiple_choice") && (
+          <div className="grid gap-2">
+            {q.options.map((option, index) => (
+              <div
+                key={option.id}
+                className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-2"
+              >
+                <span className="grid size-8 place-items-center rounded-lg bg-white text-xs font-bold text-[#525252]">
+                  {index + 1}
+                </span>
+                <Input
+                  value={option.label}
+                  onChange={(e) => updateOption(option.id, e.target.value)}
+                  placeholder={`Option ${index + 1}`}
+                  className="h-9 rounded-lg border-0 bg-transparent shadow-none focus-visible:ring-0"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 rounded-lg text-[#737373]"
+                  disabled={q.options.length <= 2}
+                  onClick={() => removeOption(option.id)}
+                  aria-label="Remove option"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 w-fit rounded-xl"
+              disabled={q.options.length >= GAME_CONFIG.polls.maxOptions}
+              onClick={addOption}
+            >
+              <Plus className="mr-1 size-3.5" />
+              Add option
+            </Button>
+          </div>
+        )}
+
+        {q.type === "rating" && (
+          <div className="grid gap-3">
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "0-5", min: 0, max: 5 },
+                { label: "1-5", min: 1, max: 5 },
+                { label: "1-10", min: 1, max: 10 },
+              ].map((scale) => {
+                const active = q.min === scale.min && q.max === scale.max;
+                return (
+                  <button
+                    key={scale.label}
+                    type="button"
+                    onClick={() => setScale(scale.min, scale.max)}
+                    className={cn(
+                      "h-10 rounded-xl border text-sm font-bold transition-colors",
+                      active
+                        ? "border-orange-400 bg-orange-100 text-orange-900"
+                        : "border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[#525252]",
+                    )}
+                  >
+                    {scale.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                value={q.lowLabel ?? ""}
+                onChange={(e) => update({ lowLabel: e.target.value })}
+                placeholder="Low label"
+                className="h-10 rounded-xl"
+              />
+              <Input
+                value={q.highLabel ?? ""}
+                onChange={(e) => update({ highLabel: e.target.value })}
+                placeholder="High label"
+                className="h-10 rounded-xl"
+              />
+            </div>
+          </div>
+        )}
+
+        {(q.type === "short_text" || q.type === "long_text") && (
+          <div className="rounded-xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-3">
+            <Textarea
+              value=""
+              readOnly
+              placeholder={
+                q.type === "long_text" ? "Participant paragraph answer" : "Participant short answer"
+              }
+              className="min-h-20 resize-none rounded-xl bg-white text-sm"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <PollSettingToggle
+          label="Anonymous"
+          checked={settings.anonymous}
+          onChange={(checked) => setSettings((prev) => ({ ...prev, anonymous: checked }))}
+        />
+        <PollSettingToggle
+          label="Allow edits"
+          checked={settings.allowResubmission}
+          onChange={(checked) => setSettings((prev) => ({ ...prev, allowResubmission: checked }))}
+        />
+        <PollSettingToggle
+          label="Live results"
+          checked={settings.showLiveResults}
+          onChange={(checked) => setSettings((prev) => ({ ...prev, showLiveResults: checked }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PollSettingToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-3 py-2 text-sm font-semibold text-[#111111]">
+      <span>{label}</span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
   );
 }
 
@@ -1613,7 +2013,7 @@ function ConnectDotsPairEditor({
       <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-3 sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
-            Student preview
+            Participant preview
           </p>
           <Button
             type="button"
@@ -1637,7 +2037,7 @@ function ConnectDotsPairEditor({
           disabled
         />
         <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
-          Preview only — students hover dots to read text, then drag between matching pairs.
+          Preview only - participants hover dots to read text, then drag between matching pairs.
         </p>
       </div>
     </div>
@@ -1680,11 +2080,11 @@ function ReviewLaunchCard({
             </li>
             <li className="flex gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
-              QR code ready for students to scan
+              QR code ready for participants to scan
             </li>
             <li className="flex gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
-              Unlimited students can join with the room code or QR
+              Unlimited participants can join with the room code or QR
             </li>
             <li className="flex gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
@@ -1698,7 +2098,7 @@ function ReviewLaunchCard({
           </p>
           <p className="mt-2 text-sm leading-relaxed text-[#525252]">{instruction}</p>
           <p className="mt-3 inline-flex items-center rounded-full bg-[var(--gamibar-page)] px-3 py-1 text-[11px] font-semibold text-[#111111]">
-            Timer · {formatTimerLong(timeLimitSeconds)}
+            Timer - {formatTimerLong(timeLimitSeconds)}
           </p>
           {catalog && (
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -1716,8 +2116,8 @@ function ReviewLaunchCard({
       </div>
 
       <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-[var(--gamibar-border)]">
-        <div className="relative h-32 sm:h-36">
-          <img src={preview} alt="" className="size-full object-cover" />
+        <div className="relative aspect-video">
+          <FittedPreviewImage src={preview} alt="" />
           <div
             className={cn(
               "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent",
@@ -1742,5 +2142,25 @@ function ReviewLaunchCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function FittedPreviewImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <>
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-xl"
+        loading="lazy"
+      />
+      <img
+        src={src}
+        alt={alt}
+        className="relative z-10 size-full object-contain p-2"
+        loading="lazy"
+      />
+    </>
   );
 }

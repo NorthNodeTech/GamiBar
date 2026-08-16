@@ -8,7 +8,7 @@ export const Route = createFileRoute("/author/reports")({
   component: () => (
     <AuthorPlaceholder
       title="Reports"
-      description="Post-session analytics - participation, accuracy, and students needing support - will live here."
+      description="Post-session analytics - participation, accuracy, and participants needing support - will live here."
       icon={FileStack}
     />
   ),

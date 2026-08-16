@@ -24,8 +24,8 @@ export const authorNavItems: AuthorNavItem[] = [
   },
   {
     to: "/author/sessions",
-    label: "Sessions",
-    mobileLabel: "Sessions",
+    label: "My sessions",
+    mobileLabel: "My sessions",
     icon: Gamepad2,
     match: (pathname) => pathname.startsWith("/author/sessions"),
   },
@@ -38,8 +38,8 @@ export const authorNavItems: AuthorNavItem[] = [
   },
   {
     to: "/author/participated",
-    label: "History",
-    mobileLabel: "History",
+    label: "Participated games",
+    mobileLabel: "Participated",
     icon: Trophy,
     match: (pathname) => pathname.startsWith("/author/participated"),
   },

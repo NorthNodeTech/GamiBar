@@ -3,7 +3,7 @@ export const SITE_URL = "https://gamibar.com";
 export const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/og-gamibar.jpg`;
 
 export const DEFAULT_SEO_DESCRIPTION =
-  "GamiBar is a live gamified learning platform for interactive classrooms and training sessions. Create quizzes, jigsaw missions, and connect-the-dots games that participants join with a room code.";
+  "GamiBar is a live gamified learning platform for interactive classrooms, workshops, and sessions. Create quizzes, jigsaw missions, connect-the-dots games, and QR resource drops that participants join with a room code.";
 
 type RouteSeo = {
   title: string;
@@ -52,8 +52,9 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
     description: "Review participation and performance reports from GamiBar sessions.",
   },
   "/author/sessions": {
-    title: "My Games and Sessions | GamiBar",
-    description: "Manage your saved GamiBar games, live sessions, and completed activities.",
+    title: "My sessions | GamiBar",
+    description:
+      "Review the history of GamiBar rooms you created, including active sessions and completed results.",
   },
   "/author/templates": {
     title: "Classroom Game Templates | GamiBar",
@@ -61,7 +62,7 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
       "Browse reusable GamiBar templates for quizzes, revision, and classroom activities.",
   },
   "/dashboard": {
-    title: "Student Dashboard | GamiBar",
+    title: "Participant Dashboard | GamiBar",
     description: "Track your GamiBar XP, progress, streaks, achievements, and recent games.",
   },
   "/forgot-password": {
@@ -100,12 +101,12 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
 
 const PUBLIC_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
   "/": {
-    title: "GamiBar | Live Classroom Games, Quizzes & Activities",
+    title: "GamiBar | Live Session Tools, Quizzes & Activities",
     description:
-      "Create interactive classroom games with GamiBar. Run live quizzes, jigsaw missions, and connect-the-dots activities that students join with a room code.",
+      "Create interactive sessions with GamiBar. Run live quizzes, jigsaw missions, connect-the-dots activities, and QR file sharing that participants join with a room code.",
   },
   "/games": {
-    title: "Interactive Classroom Game Modes | GamiBar",
+    title: "Interactive Session Tools | GamiBar",
     description:
       "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, and Connect Dots for logic and speed.",
   },
@@ -117,12 +118,12 @@ const PUBLIC_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
   "/games/jigsaw": {
     title: "Jigsaw Classroom Game | GamiBar",
     description:
-      "Turn a classroom image into a live timed jigsaw mission. Students answer, reconstruct the visual puzzle, and compare results in GamiBar.",
+      "Turn a classroom image into a live timed jigsaw mission. Participants answer, reconstruct the visual puzzle, and compare results in GamiBar.",
   },
   "/games/quiz": {
     title: "Live Classroom Quiz Game | GamiBar",
     description:
-      "Run a live multiple-choice classroom quiz with instant feedback, streaks, and rankings. Create a GamiBar room and let students join by code.",
+      "Run a live multiple-choice quiz with instant feedback, streaks, and rankings. Create a GamiBar room and let participants join by code.",
   },
   "/join": {
     title: "Join a Live Classroom Game | GamiBar",

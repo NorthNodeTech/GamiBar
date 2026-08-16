@@ -25,7 +25,7 @@ export function ConnectDotsLayoutWarning({
         <p className="font-semibold">Board layout warning</p>
         <p className="mt-1 leading-relaxed text-amber-900/90">{assessment.warning}</p>
         <p className="mt-1.5 text-xs text-amber-800/80">
-          You can still launch — try shuffling answers or adjusting pairs if students struggle.
+          You can still launch - try shuffling answers or adjusting pairs if participants struggle.
         </p>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { GAME_CONFIG } from "@/lib/game/config";
+import { readPollResponses } from "@/lib/game/polls";
 import type { StoredRoom } from "@/lib/game/room-persistence";
 import type { LiveParticipantProgress } from "@/lib/game/types";
 
@@ -62,6 +63,20 @@ export function computeLiveParticipantProgress(stored: StoredRoom): LiveParticip
           completed,
           progressText: completed ? "Complete" : `${connected}/${totalPairs} connected`,
           progressPercent: totalPairs ? Math.round((connected / totalPairs) * 100) : 0,
+        };
+      }
+
+      if (room.mode === "polls" && room.payload.mode === "polls") {
+        const total = room.payload.questions.length;
+        const answered =
+          attempt?.correctCount ?? Object.keys(readPollResponses(attempt?.payload)).length;
+        return {
+          participantId: participant.id,
+          displayName: participant.displayName,
+          status: participant.status,
+          completed,
+          progressText: completed ? "Submitted" : `${answered}/${total} answered`,
+          progressPercent: completed ? 100 : total ? Math.round((answered / total) * 100) : 0,
         };
       }
 

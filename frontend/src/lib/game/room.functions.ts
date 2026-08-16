@@ -1,5 +1,5 @@
 import type { GameMode } from "@/lib/game/config";
-import type { GamePayload, QuizOptionId } from "@/lib/game/types";
+import type { GamePayload, PollResponseValue, QuizOptionId } from "@/lib/game/types";
 import { apiPost } from "@/lib/api-client";
 
 /** Browser room API. The database work is owned by the Express backend. */
@@ -106,6 +106,18 @@ export async function submitQuizAnswerFn({
   };
 }) {
   return gameAction("submit-quiz-answer", data, false);
+}
+
+export async function submitPollResponsesFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    responses: Record<string, PollResponseValue>;
+  };
+}) {
+  return gameAction("submit-poll-responses", data, false);
 }
 
 export async function submitQuizJigsawAnswerFn({

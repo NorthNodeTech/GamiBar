@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/sessions/$roomId")({
-  head: () => ({ meta: [{ title: "Game Results - GamiBAR" }] }),
+  head: () => ({ meta: [{ title: "Session Results - GamiBAR" }] }),
   component: SessionResultsPage,
 });
 
@@ -86,13 +86,13 @@ function SessionResultsPage() {
           className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
         >
           <ArrowLeft className="size-4" />
-          Back to My Games
+          Back to My sessions
         </Link>
 
         {resultsQuery.isLoading ? (
           <PageLoader
-            message="Loading results…"
-            description="Fetching leaderboard and completion data."
+            message="Loading session results..."
+            description="Fetching room history, leaderboard, and completion data."
             fullScreen={false}
             className="py-20"
           />
@@ -102,7 +102,7 @@ function SessionResultsPage() {
             message={
               resultsQuery.error instanceof Error
                 ? resultsQuery.error.message
-                : "Could not load game results."
+                : "Could not load session results."
             }
             onRetry={() => void resultsQuery.refetch()}
             retrying={resultsQuery.isFetching}
@@ -133,20 +133,21 @@ function SessionResultsPage() {
                     {data.room.name}
                   </h1>
                   <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                    {data.room.subject} · {formatCreatedDate(String(data.room.createdAt))}
+                    {data.room.subject} - {formatCreatedDate(String(data.room.createdAt))}
                   </p>
                 </div>
-                <RoomCodeDisplay code={data.room.code} size="default" className="w-full sm:w-auto" />
+                <RoomCodeDisplay
+                  code={data.room.code}
+                  size="default"
+                  className="w-full sm:w-auto"
+                />
               </div>
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:grid-cols-3 sm:gap-3">
               <StatChip label="Questions / pairs" value={String(data.questionCount)} />
               <StatChip label="Participants" value={String(data.participantCount)} />
-              <StatChip
-                label="Status"
-                value={statusLabel[data.room.status] ?? data.room.status}
-              />
+              <StatChip label="Status" value={statusLabel[data.room.status] ?? data.room.status} />
             </div>
 
             {data.leaderboard.length === 0 ? (
@@ -171,7 +172,9 @@ function SessionResultsPage() {
               data.room.status === "READY" ||
               data.room.status === "DRAFT") && (
               <div className="author-card mt-6 border-[var(--gamibar-brand)]/25 bg-[var(--gamibar-brand-soft)]/35 px-5 py-4">
-                <p className="text-sm text-[var(--muted-foreground)]">This session is still active.</p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  This session is still active.
+                </p>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <Button
                     type="button"
@@ -180,10 +183,14 @@ function SessionResultsPage() {
                     onClick={() => openLiveMutation.mutate()}
                   >
                     <Play className="mr-1.5 size-3.5 fill-current" />
-                    {openLiveMutation.isPending ? "Opening…" : "Open live control"}
+                    {openLiveMutation.isPending ? "Opening..." : "Open live control"}
                   </Button>
-                  <Button asChild variant="outline" className="h-11 rounded-xl sm:h-9 sm:px-3 sm:text-sm">
-                    <Link to="/author/sessions">Back to My Games</Link>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-11 rounded-xl sm:h-9 sm:px-3 sm:text-sm"
+                  >
+                    <Link to="/author/sessions">Back to My sessions</Link>
                   </Button>
                 </div>
               </div>
@@ -201,7 +208,9 @@ function StatChip({ label, value }: { label: string; value: string }) {
       <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
         {label}
       </p>
-      <p className="mt-0.5 font-display text-lg font-bold text-[var(--foreground)] sm:mt-1 sm:text-xl">{value}</p>
+      <p className="mt-0.5 font-display text-lg font-bold text-[var(--foreground)] sm:mt-1 sm:text-xl">
+        {value}
+      </p>
     </div>
   );
 }

@@ -45,7 +45,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/sessions")({
-  head: () => ({ meta: [{ title: "My Games - GamiBAR" }] }),
+  head: () => ({ meta: [{ title: "My sessions - GamiBAR" }] }),
   component: AuthorSessionsRoute,
 });
 
@@ -53,7 +53,7 @@ function AuthorSessionsRoute() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const normalizedPathname = pathname.replace(/\/+$/, "");
 
-  return normalizedPathname === "/author/sessions" ? <MyGamesPage /> : <Outlet />;
+  return normalizedPathname === "/author/sessions" ? <MySessionsPage /> : <Outlet />;
 }
 
 const statusLabel: Record<string, string> = {
@@ -85,7 +85,7 @@ function isActiveSession(status: string) {
   );
 }
 
-function MyGamesPage() {
+function MySessionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const savedRoom = loadAuthorRoom();
@@ -106,7 +106,7 @@ function MyGamesPage() {
   const deleteMutation = useMutation({
     mutationFn: (session: AuthorSessionSummary) => deleteAuthorSession(user!.id, session.id),
     onSuccess: () => {
-      toast.success("Game deleted.");
+      toast.success("Session deleted.");
       void queryClient.invalidateQueries({ queryKey: ["author-sessions", user?.id] });
       setDeleteTarget(null);
       setDeleteConfirmName("");
@@ -153,7 +153,7 @@ function MyGamesPage() {
         code: result.room.code,
         authorToken: result.authorToken,
       });
-      toast.success(`"${name}" created — new code ${result.room.code}`);
+      toast.success(`"${name}" created - new code ${result.room.code}`);
       void queryClient.invalidateQueries({ queryKey: ["author-sessions", user?.id] });
       setDuplicateTarget(null);
       setDuplicateName("");
@@ -189,7 +189,7 @@ function MyGamesPage() {
     <AuthorShell>
       <AuthorPageFrame width="md">
         <AuthorPageHeader
-          title="My Games"
+          title="My sessions"
           actions={
             <Button
               asChild
@@ -197,7 +197,7 @@ function MyGamesPage() {
             >
               <Link to="/author/create">
                 <Plus className="mr-2 size-4" />
-                Create Game
+                Create room
               </Link>
             </Button>
           }
@@ -234,7 +234,7 @@ function MyGamesPage() {
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, code, or mode…"
+                placeholder="Search by name, code, or mode..."
                 className="h-10 rounded-xl pl-9"
               />
             </div>
@@ -268,12 +268,12 @@ function MyGamesPage() {
           {sessionsQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#737373]">
               <Loader2 className="size-4 animate-spin" />
-              Loading games…
+              Loading sessions...
             </div>
           ) : sessionsQuery.isError ? (
             <InlineErrorBanner
               className="py-8 text-center"
-              message="Could not load your games. Check your connection and try again."
+              message="Could not load your sessions. Check your connection and try again."
               onRetry={() => void sessionsQuery.refetch()}
               retrying={sessionsQuery.isFetching}
             />
@@ -282,17 +282,19 @@ function MyGamesPage() {
               <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--gamibar-page)] text-[var(--muted-foreground)]">
                 <Gamepad2 className="size-7" />
               </div>
-              <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No games yet</p>
+              <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No sessions yet</p>
               <Button
                 asChild
                 className="mt-5 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]"
               >
-                <Link to="/author/create">Create Game</Link>
+                <Link to="/author/create">Create room</Link>
               </Button>
             </div>
           ) : filteredSessions.length === 0 ? (
             <div className="author-card border-dashed px-6 py-10 text-center">
-              <p className="text-sm text-[var(--muted-foreground)]">No games match your search.</p>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                No sessions match your search.
+              </p>
             </div>
           ) : (
             <ul className="grid gap-2.5 sm:gap-3">
@@ -328,19 +330,19 @@ function MyGamesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Duplicate game</AlertDialogTitle>
+            <AlertDialogTitle>Duplicate session</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-left text-sm text-muted-foreground">
                 <p>
-                  Same questions and settings, new join code and QR. Choose a name for this session.
+                  Same questions and settings, new join code and QR. Choose a name for this room.
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="duplicate-game-name">New game name</Label>
+                  <Label htmlFor="duplicate-game-name">New session name</Label>
                   <Input
                     id="duplicate-game-name"
                     value={duplicateName}
                     onChange={(e) => setDuplicateName(e.target.value)}
-                    placeholder="e.g. Period 2 — Connect Dots"
+                    placeholder="e.g. Period 2 - Connect Dots"
                     autoComplete="off"
                   />
                 </div>
@@ -361,7 +363,7 @@ function MyGamesPage() {
                 });
               }}
             >
-              {duplicateMutation.isPending ? "Creating…" : "Create duplicate"}
+              {duplicateMutation.isPending ? "Creating..." : "Create duplicate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -378,7 +380,7 @@ function MyGamesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this game?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-left text-sm text-muted-foreground">
                 <p>
@@ -410,7 +412,7 @@ function MyGamesPage() {
                 if (deleteTarget) deleteMutation.mutate(deleteTarget);
               }}
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete game"}
+              {deleteMutation.isPending ? "Deleting..." : "Delete session"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

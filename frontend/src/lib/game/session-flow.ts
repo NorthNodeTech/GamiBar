@@ -4,7 +4,7 @@
  */
 
 /** Primary live game modes supported by the unified architecture. */
-export const CORE_LIVE_GAME_MODES = ["quiz", "jigsaw", "connect_dots"] as const;
+export const CORE_LIVE_GAME_MODES = ["quiz", "polls", "jigsaw", "connect_dots"] as const;
 
 export type CoreLiveGameMode = (typeof CORE_LIVE_GAME_MODES)[number];
 
@@ -21,10 +21,10 @@ export const TEACHER_FLOW = [
 ] as const;
 
 export const STUDENT_FLOW = [
-  { id: "join_code", route: "/join", label: "Join with Code" },
+  { id: "join_code", route: "/join", label: "Join room" },
   { id: "enter_name", route: "/join/name", label: "Enter Name" },
   { id: "lobby", route: "/join/lobby", label: "Lobby" },
-  { id: "wait_for_teacher", route: "/join/lobby", label: "Wait for Teacher" },
+  { id: "wait_for_teacher", route: "/join/lobby", label: "Wait for host" },
   { id: "play", route: "/play/$roomId", label: "Play" },
   { id: "submit", route: "/play/$roomId", label: "Submit" },
   { id: "result", route: "/play/$roomId", label: "Result" },

@@ -7,10 +7,11 @@ import type { ConnectDotsBoardConfig, GamePayload, LeaderboardRow, Room } from "
 import { toPublicQuizQuestions } from "@/lib/game/validation";
 import type { StoredRoom } from "@/lib/game/room-persistence";
 import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
+import { normalizePollPayload } from "@/lib/game/polls";
 
 export { CORE_LIVE_GAME_MODES, type CoreLiveGameMode };
 
-type RankingKind = "quiz" | "jigsaw" | "connect_dots";
+type RankingKind = "quiz" | "jigsaw" | "connect_dots" | "polls";
 
 export type LiveModeDefinition = {
   mode: GameMode;
@@ -75,8 +76,7 @@ function quizLeaderboard(stored: StoredRoom, totalQuestions: number): Leaderboar
         correctCount,
         durationMs: attempt?.durationMs ?? null,
         completed: Boolean(attempt?.completed),
-        answeredCount:
-          stored.room.mode === "quiz_jigsaw" ? correctCount : (answers?.size ?? 0),
+        answeredCount: stored.room.mode === "quiz_jigsaw" ? correctCount : (answers?.size ?? 0),
         totalQuestions,
       };
     }),
@@ -98,9 +98,7 @@ function finalizeQuizAttempts(
     for (const a of answers.values()) if (a.isCorrect) correct += 1;
     attempt.correctCount = correct;
     attempt.score = correct * 100;
-    attempt.progress = progressFromAnswers
-      ? answers.size / questionCount
-      : correct / questionCount;
+    attempt.progress = progressFromAnswers ? answers.size / questionCount : correct / questionCount;
     if (stored.room.startedAt) {
       attempt.durationMs = finishedAt - stored.room.startedAt;
     }
@@ -128,7 +126,11 @@ const QUIZ_MODE: LiveModeDefinition = {
   toPublicPayload: (payload, opts) => {
     if (payload.mode !== "quiz") return payload;
     if (opts?.includeSecrets) return payload;
-    return { mode: "quiz", questions: toPublicQuizQuestions(payload.questions), timeLimitSeconds: payload.timeLimitSeconds };
+    return {
+      mode: "quiz",
+      questions: toPublicQuizQuestions(payload.questions),
+      timeLimitSeconds: payload.timeLimitSeconds,
+    };
   },
   computeLeaderboard: (stored) => quizLeaderboard(stored, quizQuestionTotal(stored)),
   isStudentFinished: ({ room, answeredCount, questionTotal, attemptCompleted }) => {
@@ -181,7 +183,12 @@ const JIGSAW_MODE: LiveModeDefinition = {
       libraryImageId: payload.jigsaw.libraryImageId ?? null,
     };
     if (opts?.includeSecrets) {
-      return { mode: "jigsaw", questions: payload.questions, jigsaw, timeLimitSeconds: payload.timeLimitSeconds };
+      return {
+        mode: "jigsaw",
+        questions: payload.questions,
+        jigsaw,
+        timeLimitSeconds: payload.timeLimitSeconds,
+      };
     }
     return {
       mode: "jigsaw",
@@ -287,6 +294,72 @@ const CONNECT_DOTS_MODE: LiveModeDefinition = {
   },
 };
 
+const POLLS_MODE: LiveModeDefinition = {
+  mode: "polls",
+  ranking: "polls",
+  usesQuestions: false,
+  usesJigsawAsset: false,
+  persistQuizAnswers: false,
+  normalizeCreatePayload: (payload) => {
+    if (payload.mode !== "polls") return payload;
+    return normalizePollPayload(payload);
+  },
+  toPublicPayload: (payload) => {
+    if (payload.mode !== "polls") return payload;
+    return normalizePollPayload(payload);
+  },
+  computeLeaderboard: (stored) => {
+    const rows = [...stored.participants.values()]
+      .map((participant) => {
+        const attempt = stored.attempts.get(participant.id);
+        const completed = Boolean(attempt?.completed);
+        return {
+          participant,
+          attempt,
+          completed,
+          completedAt: attempt?.completedAt ?? Number.MAX_SAFE_INTEGER,
+        };
+      })
+      .sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? -1 : 1;
+        if (a.completedAt !== b.completedAt) return a.completedAt - b.completedAt;
+        return a.participant.displayName.localeCompare(b.participant.displayName);
+      });
+
+    return rows.map(({ participant, attempt, completed }, index) => ({
+      rank: index + 1,
+      participantId: participant.id,
+      displayName: participant.displayName,
+      primaryMetric: attempt?.correctCount ?? 0,
+      primaryLabel: "responses",
+      secondaryMetric: attempt?.durationMs ?? null,
+      secondaryLabel: "time",
+      status: completed
+        ? "completed"
+        : attempt && attempt.progress > 0
+          ? "in_progress"
+          : "incomplete",
+      detail: completed ? "Submitted" : attempt && attempt.progress > 0 ? "Started" : "Waiting",
+      performanceText: completed
+        ? `${attempt?.correctCount ?? 0} answered`
+        : attempt && attempt.progress > 0
+          ? `${Math.round((attempt.progress ?? 0) * 100)}%`
+          : "No response",
+    }));
+  },
+  isStudentFinished: ({ attemptCompleted }) => attemptCompleted,
+  finalizeIncompleteAttempts: (stored, finishedAt) => {
+    for (const p of stored.participants.values()) {
+      const attempt = stored.attempts.get(p.id);
+      if (!attempt || attempt.completed) continue;
+      if (stored.room.startedAt && attempt.durationMs == null) {
+        attempt.durationMs = finishedAt - stored.room.startedAt;
+      }
+      if (p.status === "PLAYING") p.status = "ONLINE";
+    }
+  },
+};
+
 /** Extended mode — shares quiz ranking + jigsaw asset patterns. */
 const QUIZ_JIGSAW_MODE: LiveModeDefinition = {
   mode: "quiz_jigsaw",
@@ -323,8 +396,7 @@ const QUIZ_JIGSAW_MODE: LiveModeDefinition = {
       timeLimitSeconds: payload.timeLimitSeconds,
     };
   },
-  computeLeaderboard: (stored) =>
-    quizLeaderboard(stored, GAME_CONFIG.quiz_jigsaw.questionCount),
+  computeLeaderboard: (stored) => quizLeaderboard(stored, GAME_CONFIG.quiz_jigsaw.questionCount),
   isStudentFinished: ({ attemptCompleted }) => attemptCompleted,
   finalizeIncompleteAttempts: (stored) =>
     finalizeQuizAttempts(stored, GAME_CONFIG.quiz_jigsaw.questionCount, false),
@@ -335,6 +407,7 @@ const REGISTRY: Record<GameMode, LiveModeDefinition | undefined> = {
   jigsaw: JIGSAW_MODE,
   connect_dots: CONNECT_DOTS_MODE,
   quiz_jigsaw: QUIZ_JIGSAW_MODE,
+  polls: POLLS_MODE,
 };
 
 export function getLiveModeDefinition(mode: GameMode): LiveModeDefinition {
@@ -380,7 +453,9 @@ export function isStudentSessionFinished(input: {
         ? input.room.payload.questions.length
         : input.room.payload.mode === "jigsaw"
           ? input.room.payload.questions.length
-          : 0;
+          : input.room.payload.mode === "polls"
+            ? input.room.payload.questions.length
+            : 0;
   return def.isStudentFinished({
     room: input.room,
     answeredCount: input.answeredCount,

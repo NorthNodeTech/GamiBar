@@ -13,8 +13,10 @@ function statusLabel(status: ParticipantStatus, completed: boolean): string {
 
 function statusTone(status: ParticipantStatus, completed: boolean): string {
   if (completed) return "text-emerald-700 bg-emerald-50 border-emerald-200";
-  if (status === "PLAYING") return "text-[var(--gamibar-brand)] bg-[var(--gamibar-brand-soft)] border-[var(--gamibar-brand)]/20";
-  if (status === "DISCONNECTED") return "text-[var(--muted-foreground)] bg-[var(--gamibar-page)] border-[var(--gamibar-border)]";
+  if (status === "PLAYING")
+    return "text-[var(--gamibar-brand)] bg-[var(--gamibar-brand-soft)] border-[var(--gamibar-brand)]/20";
+  if (status === "DISCONNECTED")
+    return "text-[var(--muted-foreground)] bg-[var(--gamibar-page)] border-[var(--gamibar-border)]";
   return "text-[#525252] bg-white border-[var(--gamibar-border)]";
 }
 
@@ -22,6 +24,7 @@ function progressColumnLabel(mode: GameMode): string {
   if (mode === "quiz") return "Progress / score";
   if (mode === "jigsaw") return "Pieces earned";
   if (mode === "connect_dots") return "Connections";
+  if (mode === "polls") return "Responses";
   return "Progress";
 }
 
@@ -66,7 +69,7 @@ export function LiveGameDashboard({
                 Live game dashboard
               </h2>
               <p className="text-xs text-[var(--muted-foreground)]">
-                Track every student in real time — answers stay hidden from students.
+                Track every participant in real time - answers stay hidden from participants.
               </p>
             </div>
           </div>
@@ -80,14 +83,14 @@ export function LiveGameDashboard({
 
       {rows.length === 0 ? (
         <div className="px-6 py-12 text-center text-sm text-[var(--muted-foreground)]">
-          Waiting for students to join…
+          Waiting for participants to join...
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/60 text-[11px] font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
-                <th className="px-5 py-3 sm:px-6">Student</th>
+                <th className="px-5 py-3 sm:px-6">Participant</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">{progressColumnLabel(mode)}</th>
                 <th className="hidden px-3 py-3 sm:table-cell">Activity</th>
@@ -135,7 +138,11 @@ export function LiveGameDashboard({
                     </div>
                   </td>
                   <td className="hidden px-3 py-3.5 text-[var(--muted-foreground)] sm:table-cell">
-                    {row.completed ? "Finished" : row.progressPercent > 0 ? "In progress" : "Not started"}
+                    {row.completed
+                      ? "Finished"
+                      : row.progressPercent > 0
+                        ? "In progress"
+                        : "Not started"}
                   </td>
                 </tr>
               ))}

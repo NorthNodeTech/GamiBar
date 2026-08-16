@@ -1,4 +1,4 @@
-import { Clock, Infinity } from "lucide-react";
+import { Clock, Infinity as InfinityIcon } from "lucide-react";
 import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
 
 import { GAME_CONFIG, type GameMode } from "@/lib/game/config";
@@ -43,6 +43,13 @@ const MODE_STYLE: Record<
     glow: "shadow-[0_24px_60px_rgba(16,185,129,0.12)]",
     track: "stroke-[var(--game-connect-dots)]",
   },
+  polls: {
+    ring: "border-orange-400/25",
+    soft: "bg-orange-100",
+    text: "text-orange-800",
+    glow: "shadow-[0_24px_60px_rgba(249,115,22,0.12)]",
+    track: "stroke-orange-500",
+  },
 };
 
 type GameTimerSettingsProps = {
@@ -53,7 +60,7 @@ type GameTimerSettingsProps = {
 };
 
 function valueFromAngle(angleRad: number, min: number, max: number, step: number) {
-  let normalized = (angleRad + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  const normalized = (angleRad + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
   const ratio = normalized / (Math.PI * 2);
   const raw = min + ratio * (max - min);
   const stepped = Math.round(raw / step) * step;
@@ -171,15 +178,13 @@ function CircularTimerDial({
               style.text,
             )}
           >
-            {openEnded ? <Infinity className="size-4" /> : <Clock className="size-4" />}
+            {openEnded ? <InfinityIcon className="size-4" /> : <Clock className="size-4" />}
           </span>
           <p className="mt-1.5 font-display text-[2rem] font-extrabold leading-none tracking-tight text-[#111111] sm:text-[2.15rem]">
             {openEnded ? "Open" : formatTimerSeconds(value)}
           </p>
           {openEnded && (
-            <p className="mt-1.5 text-[10px] font-medium leading-tight text-[#737373]">
-              No limit
-            </p>
+            <p className="mt-1.5 text-[10px] font-medium leading-tight text-[#737373]">No limit</p>
           )}
         </div>
 
@@ -208,10 +213,12 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
     mode === "quiz"
       ? GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.defaultQuestionCount
       : mode === "quiz_jigsaw"
-        ? GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600
+        ? (GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600)
         : mode === "jigsaw"
           ? GAME_CONFIG.jigsaw.timeLimitSeconds
-          : GAME_CONFIG.connect_dots.timeLimitSeconds;
+          : mode === "polls"
+            ? GAME_CONFIG.polls.timeLimitSeconds
+            : GAME_CONFIG.connect_dots.timeLimitSeconds;
 
   return (
     <section
@@ -228,8 +235,8 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
         </p>
         <p className="mt-1 text-sm text-[#525252]">
           {openEnded
-            ? "Students play until they finish — no countdown on screen."
-            : `Students must finish before ${formatTimerLong(displayValue)}.`}
+            ? "Participants play until they finish - no countdown on screen."
+            : `Participants must finish before ${formatTimerLong(displayValue)}.`}
         </p>
       </div>
 

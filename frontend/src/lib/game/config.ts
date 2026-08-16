@@ -2,10 +2,7 @@
  * Central game timing & difficulty knobs.
  * Change values here - do not hardcode timers in UI components.
  */
-import {
-  CONNECT_DOTS_CONFIG,
-  type ConnectDotsDifficulty,
-} from "@/lib/connect-dots";
+import { CONNECT_DOTS_CONFIG, type ConnectDotsDifficulty } from "@/lib/connect-dots";
 
 export const GAME_CONFIG = {
   quiz: {
@@ -48,6 +45,14 @@ export const GAME_CONFIG = {
     defaultDifficulty: "medium" as ConnectDotsDifficulty,
     timeLimitSeconds: CONNECT_DOTS_CONFIG.medium.timeLimitSeconds,
   },
+  polls: {
+    minQuestions: 1,
+    maxQuestions: 25,
+    maxOptions: 10,
+    defaultRatingMin: 0,
+    defaultRatingMax: 5,
+    timeLimitSeconds: null as number | null,
+  },
   room: {
     codeLength: 6,
     /** 0 means unlimited players per room. */
@@ -76,7 +81,7 @@ export const JIGSAW_GRID = {
   pieceCount: GAME_CONFIG.jigsaw.cols * GAME_CONFIG.jigsaw.rows,
 } as const;
 
-export type GameMode = "quiz" | "quiz_jigsaw" | "jigsaw" | "connect_dots";
+export type GameMode = "quiz" | "quiz_jigsaw" | "jigsaw" | "connect_dots" | "polls";
 
 export const PUZZLE_QUEST_GRID = {
   cols: GAME_CONFIG.quiz_jigsaw.cols,
@@ -84,10 +89,7 @@ export const PUZZLE_QUEST_GRID = {
   pieceCount: GAME_CONFIG.quiz_jigsaw.cols * GAME_CONFIG.quiz_jigsaw.rows,
 } as const;
 
-export const GAME_MODE_META: Record<
-  GameMode,
-  { title: string; shortInstruction: string }
-> = {
+export const GAME_MODE_META: Record<GameMode, { title: string; shortInstruction: string }> = {
   quiz: {
     title: "Quiz Challenge",
     shortInstruction:
@@ -107,5 +109,10 @@ export const GAME_MODE_META: Record<
     title: "Connect Dots",
     shortInstruction:
       "Connect each question dot to its matching answer dot by drawing paths on the grid.",
+  },
+  polls: {
+    title: "Polls & Surveys",
+    shortInstruction:
+      "Answer quick polls, ratings, and survey questions. Results update live for the host.",
   },
 };

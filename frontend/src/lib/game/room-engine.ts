@@ -22,14 +22,19 @@ import {
 } from "@/lib/game/room-persistence";
 import { validateConnectDotsPaths, type PathMap } from "@/lib/connect-dots";
 import { generateRoomCode, isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
-import { assertTransition, canStudentEnterRoom, canStudentsJoin, canStudentsRejoin, type RoomStatus } from "@/lib/game/state-machine";
+import {
+  assertTransition,
+  canStudentEnterRoom,
+  canStudentsJoin,
+  canStudentsRejoin,
+  type RoomStatus,
+} from "@/lib/game/state-machine";
 import { gameInstruction, resolvePayloadTimeLimit } from "@/lib/game/timer";
 import { questionCountFromConfig } from "@/lib/supabase/author-sessions";
 import { incrementJigsawLibraryUsage } from "@/lib/supabase/jigsaw-library";
 import { computeLiveParticipantProgress } from "@/lib/game/live-dashboard";
-import {
-  sanitizeConnectDotsMatches,
-} from "@/lib/game/connect-dots-content";
+import { sanitizeConnectDotsMatches } from "@/lib/game/connect-dots-content";
+import { buildPollResults, sanitizePollResponses } from "@/lib/game/polls";
 import {
   isRouteCellInGrid,
   routingGridSize,
@@ -71,11 +76,7 @@ import type {
   Room,
   RoomEvent,
 } from "@/lib/game/types";
-import {
-  sanitizeDisplayName,
-  sanitizeRoomText,
-  validateGamePayload,
-} from "@/lib/game/validation";
+import { sanitizeDisplayName, sanitizeRoomText, validateGamePayload } from "@/lib/game/validation";
 
 function pushEvent(stored: StoredRoom, event: RoomEvent) {
   stored.events.push(event);
@@ -125,13 +126,28 @@ function computeLeaderboard(stored: StoredRoom): LeaderboardRow[] {
   return computeModeLeaderboard(stored);
 }
 
+function computePollResults(stored: StoredRoom) {
+  if (stored.room.mode !== "polls" || stored.room.payload.mode !== "polls") return undefined;
+  return buildPollResults(
+    stored.room.payload,
+    [...stored.participants.values()].map((participant) => {
+      const attempt = stored.attempts.get(participant.id);
+      return {
+        participantId: participant.id,
+        displayName: participant.displayName,
+        payload: attempt?.payload ?? {},
+        completed: Boolean(attempt?.completed),
+        completedAt: attempt?.completedAt ?? null,
+      };
+    }),
+  );
+}
+
 function isTimedOut(stored: StoredRoom): boolean {
   return stored.room.endsAt != null && Date.now() >= stored.room.endsAt;
 }
 
-function rejectIfNotAcceptingInput(
-  stored: StoredRoom,
-): { ok: false; error: string } | null {
+function rejectIfNotAcceptingInput(stored: StoredRoom): { ok: false; error: string } | null {
   if (stored.room.status !== "LIVE") {
     return { ok: false, error: "Game is not accepting answers." };
   }
@@ -304,7 +320,11 @@ export async function createRoom(input: {
   };
 }
 
-export async function joinRoom(input: { code: string; displayName: string; userId?: string | null }) {
+export async function joinRoom(input: {
+  code: string;
+  displayName: string;
+  userId?: string | null;
+}) {
   const code = normalizeRoomCode(input.code);
   if (!isValidRoomCodeFormat(code)) {
     return { ok: false as const, error: "Enter a valid 6-digit room code." };
@@ -496,8 +516,7 @@ export async function getRoomSnapshot(input: {
   }
 
   const leaderboard = computeLeaderboard(stored);
-  const gameFinished =
-    stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
+  const gameFinished = stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
   const myRank =
     participantId != null
       ? (leaderboard.find((row) => row.participantId === participantId)?.rank ?? null)
@@ -513,6 +532,12 @@ export async function getRoomSnapshot(input: {
       ? leaderboard.filter((row) => row.participantId === participantId)
       : []
     : leaderboard;
+  const pollResults =
+    stored.room.mode === "polls" &&
+    stored.room.payload.mode === "polls" &&
+    (isAuthor || gameFinished || stored.room.payload.settings.showLiveResults)
+      ? computePollResults(stored)
+      : undefined;
   const revealOwnAnswerCorrectness =
     stored.room.status === "FINISHED" || stored.room.status === "CANCELLED";
   const myAnswers =
@@ -538,9 +563,11 @@ export async function getRoomSnapshot(input: {
     participantId,
     myRank,
     leaderboard: visibleLeaderboard,
-    liveProgress: isAuthor && stored.room.status === "LIVE"
-      ? computeLiveParticipantProgress(stored)
-      : undefined,
+    liveProgress:
+      isAuthor && stored.room.status === "LIVE"
+        ? computeLiveParticipantProgress(stored)
+        : undefined,
+    pollResults,
     myAnswers,
     myAttempt: participantId ? (stored.attempts.get(participantId) ?? null) : null,
     recentEvents: stored.events.slice(-40),
@@ -557,7 +584,9 @@ export async function getAuthorRoomResults(input: { roomId: string; authorId: st
 
   const leaderboard = computeLeaderboard(stored);
   const completions = stored.events
-    .filter((e): e is Extract<RoomEvent, { type: "player_completed" }> => e.type === "player_completed")
+    .filter(
+      (e): e is Extract<RoomEvent, { type: "player_completed" }> => e.type === "player_completed",
+    )
     .map((e) => ({
       key: `${e.participantId}-${e.completedAt}`,
       displayName: e.displayName,
@@ -634,7 +663,7 @@ export async function startGame(input: { roomId: string; authorToken: string }) 
     return { ok: false as const, error: "Only the host can start the game." };
   }
   if (stored.participants.size < 1) {
-    return { ok: false as const, error: "Wait for at least one student to join." };
+    return { ok: false as const, error: "Wait for at least one participant to join." };
   }
 
   try {
@@ -701,7 +730,10 @@ export async function setShowLeaderboardToStudents(input: {
     return { ok: false as const, error: "Only the host can change this setting." };
   }
   if (stored.room.mode !== "quiz") {
-    return { ok: false as const, error: "Live leaderboard visibility applies to Quiz Challenge only." };
+    return {
+      ok: false as const,
+      error: "Live leaderboard visibility applies to Quiz Challenge only.",
+    };
   }
   if (stored.room.status !== "LIVE") {
     return { ok: false as const, error: "Enable this while the quiz is live." };
@@ -714,6 +746,94 @@ export async function setShowLeaderboardToStudents(input: {
     ok: true as const,
     room: publicRoom(stored),
     leaderboard: computeLeaderboard(stored),
+  };
+}
+
+export async function submitPollResponses(input: {
+  roomId: string;
+  reconnectToken: string;
+  responses: Record<string, unknown>;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
+  if (reject) return reject;
+  if (stored.room.mode !== "polls" || stored.room.payload.mode !== "polls") {
+    return { ok: false as const, error: "This room is not a poll or survey." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const attempt = ensureAttemptRecord(stored, participant.id);
+  if (attempt.completed && !stored.room.payload.settings.allowResubmission) {
+    return {
+      ok: true as const,
+      completed: true,
+      alreadySubmitted: true,
+      pollResults: computePollResults(stored),
+    };
+  }
+
+  const parsed = sanitizePollResponses(stored.room.payload, input.responses ?? {});
+  if (!parsed.ok) return parsed;
+
+  const now = Date.now();
+  const wasCompleted = attempt.completed;
+  const previousSubmittedAt =
+    typeof attempt.payload.submittedAt === "number" ? attempt.payload.submittedAt : now;
+
+  attempt.correctCount = parsed.answeredCount;
+  attempt.progress = stored.room.payload.questions.length
+    ? parsed.answeredCount / stored.room.payload.questions.length
+    : 1;
+  attempt.score = null;
+  attempt.completed = true;
+  attempt.completedAt = wasCompleted ? attempt.completedAt : now;
+  attempt.durationMs = stored.room.startedAt ? now - stored.room.startedAt : null;
+  attempt.payload = {
+    ...attempt.payload,
+    responses: parsed.responses,
+    requiredAnswered: parsed.requiredAnswered,
+    requiredTotal: parsed.requiredTotal,
+    submittedAt: previousSubmittedAt,
+    updatedAt: now,
+  };
+  participant.status = "COMPLETED";
+
+  pushEvent(stored, {
+    type: "player_progress",
+    participantId: participant.id,
+    displayName: participant.displayName,
+    progress: attempt.progress,
+    detail: `${parsed.answeredCount}/${stored.room.payload.questions.length}`,
+  });
+
+  if (!wasCompleted) {
+    pushEvent(stored, {
+      type: "player_completed",
+      participantId: participant.id,
+      displayName: participant.displayName,
+      completedAt: now,
+      durationMs: attempt.durationMs ?? 0,
+    });
+  }
+
+  const pollResults = computePollResults(stored);
+  if (pollResults) {
+    pushEvent(stored, {
+      type: "poll_results_updated",
+      submittedCount: pollResults.submittedCount,
+      totalParticipants: pollResults.totalParticipants,
+    });
+  }
+
+  await persist(stored);
+  return {
+    ok: true as const,
+    completed: true,
+    answeredCount: parsed.answeredCount,
+    pollResults,
   };
 }
 
@@ -734,9 +854,10 @@ export async function submitQuizAnswer(input: {
   const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
   if (!participant) return { ok: false as const, error: "Participant not found." };
 
-  const question = stored.room.payload.mode === "quiz"
-    ? stored.room.payload.questions.find((q) => q.id === input.questionId)
-    : undefined;
+  const question =
+    stored.room.payload.mode === "quiz"
+      ? stored.room.payload.questions.find((q) => q.id === input.questionId)
+      : undefined;
   if (!question) return { ok: false as const, error: "Invalid question." };
 
   let map = stored.quizAnswers.get(participant.id);
@@ -964,9 +1085,7 @@ export async function submitJigsawMissionAnswer(input: {
     mission = initialJigsawMissionPayload();
   }
 
-  const correctIds = new Set(
-    [...map.values()].filter((a) => a.isCorrect).map((a) => a.questionId),
-  );
+  const correctIds = new Set([...map.values()].filter((a) => a.isCorrect).map((a) => a.questionId));
 
   const expectedQuestionId = resolveJigsawMissionQuestionId(questions, correctIds, mission);
   if (!expectedQuestionId || expectedQuestionId !== input.questionId) {
@@ -1134,12 +1253,16 @@ export async function submitJigsawMissionAnswer(input: {
     retryRemaining: poolAfter.length,
     firstRoundComplete,
     completed: false,
-    nextQuestionId: resolveJigsawMissionQuestionId(questions, new Set([...correctIds, input.questionId]), {
-      phase: allPiecesUnlocked ? "assemble" : "quiz",
-      firstRoundIndex,
-      firstRoundComplete,
-      retryQuestionId,
-    }),
+    nextQuestionId: resolveJigsawMissionQuestionId(
+      questions,
+      new Set([...correctIds, input.questionId]),
+      {
+        phase: allPiecesUnlocked ? "assemble" : "quiz",
+        firstRoundIndex,
+        firstRoundComplete,
+        retryQuestionId,
+      },
+    ),
   };
 }
 
@@ -1237,7 +1360,10 @@ export async function submitJigsawProgress(input: {
   const total = Math.max(1, input.totalPieces);
   const prevLocked =
     typeof attempt.payload.lockedCount === "number" ? attempt.payload.lockedCount : 0;
-  const locked = Math.min(total, Math.max(prevLocked, Math.min(total, Math.max(0, input.lockedCount))));
+  const locked = Math.min(
+    total,
+    Math.max(prevLocked, Math.min(total, Math.max(0, input.lockedCount))),
+  );
   attempt.payload = {
     ...attempt.payload,
     lockedCount: locked,

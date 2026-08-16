@@ -36,7 +36,7 @@ export const Route = createFileRoute("/join/")({
         path: "/join/",
         breadcrumbs: [
           { name: "Home", path: "/" },
-          { name: "Join Game", path: "/join/" },
+          { name: "Join room", path: "/join/" },
         ],
       }),
     }),

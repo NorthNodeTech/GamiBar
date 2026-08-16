@@ -25,7 +25,7 @@ export const Route = createFileRoute("/games/connect-dots")({
         path: "/games/connect-dots",
         breadcrumbs: [
           { name: "Home", path: "/" },
-          { name: "Game Modes", path: "/games/" },
+          { name: "Tools", path: "/games/" },
           { name: "Connect Dots", path: "/games/connect-dots" },
         ],
       }),

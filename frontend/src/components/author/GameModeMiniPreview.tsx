@@ -1,5 +1,6 @@
 import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
 import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import type { GameMode } from "@/lib/game/config";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,7 @@ const previews: Partial<Record<GameMode, string>> = {
   quiz_jigsaw: gameJigsawPreview,
   jigsaw: gameJigsawPreview,
   connect_dots: gameConnectDotsPreview,
+  polls: gamePollsPreview,
 };
 
 type GameModeMiniPreviewProps = {
@@ -31,7 +33,14 @@ export function GameModeMiniPreview({ mode, className, size = "sm" }: GameModeMi
         className,
       )}
     >
-      <img src={src} alt="" className="size-full object-cover object-center" loading="lazy" />
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-lg"
+        loading="lazy"
+      />
+      <img src={src} alt="" className="relative z-10 size-full object-contain p-1" loading="lazy" />
       <ModeDecor mode={mode} />
     </div>
   );
@@ -46,6 +55,8 @@ function modeTint(mode: GameMode): string {
       return "bg-[var(--game-jigsaw-soft)]";
     case "connect_dots":
       return "bg-[var(--game-connect-dots-soft)]";
+    case "polls":
+      return "bg-orange-100";
     default:
       return "bg-[var(--gamibar-page)]";
   }
@@ -70,6 +81,22 @@ function ModeDecor({ mode }: { mode: GameMode }) {
       </svg>
     );
   }
+  if (mode === "polls") {
+    return (
+      <div
+        className="pointer-events-none absolute inset-x-2 bottom-2 flex items-end justify-center gap-1 opacity-45"
+        aria-hidden
+      >
+        {[0.45, 0.7, 0.55, 0.85].map((height, index) => (
+          <span
+            key={index}
+            className="w-1.5 rounded-full bg-orange-500"
+            style={{ height: `${height * 1.7}rem` }}
+          />
+        ))}
+      </div>
+    );
+  }
   if (mode === "jigsaw" || mode === "quiz_jigsaw") {
     return (
       <div
@@ -83,7 +110,10 @@ function ModeDecor({ mode }: { mode: GameMode }) {
     );
   }
   return (
-    <div className="pointer-events-none absolute bottom-1 left-1 right-1 flex justify-center gap-0.5 opacity-40" aria-hidden>
+    <div
+      className="pointer-events-none absolute bottom-1 left-1 right-1 flex justify-center gap-0.5 opacity-40"
+      aria-hidden
+    >
       {["A", "B", "C", "D"].map((l) => (
         <span
           key={l}
@@ -106,6 +136,8 @@ export function modeLabel(mode: GameMode): string {
       return "Jigsaw";
     case "connect_dots":
       return "Connect Dots";
+    case "polls":
+      return "Polls";
     default:
       return mode;
   }

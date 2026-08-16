@@ -36,6 +36,13 @@ export const TIMER_PRESETS: Record<GameMode, TimerPreset[]> = {
     { id: "90", label: "1:30", seconds: 90 },
     { id: "120", label: "2 min", seconds: 120 },
   ],
+  polls: [
+    { id: "open", label: "No limit", seconds: null },
+    { id: "60", label: "1 min", seconds: 60 },
+    { id: "3m", label: "3 min", seconds: 180 },
+    { id: "5m", label: "5 min", seconds: 300 },
+    { id: "10m", label: "10 min", seconds: 600 },
+  ],
 };
 
 export const TIMER_BOUNDS: Record<GameMode, { min: number; max: number; step: number }> = {
@@ -43,12 +50,14 @@ export const TIMER_BOUNDS: Record<GameMode, { min: number; max: number; step: nu
   quiz_jigsaw: { min: 120, max: 1200, step: 60 },
   jigsaw: { min: 30, max: 300, step: 15 },
   connect_dots: { min: 30, max: 180, step: 15 },
+  polls: { min: 30, max: 900, step: 30 },
 };
 
 export function defaultTimerSeconds(mode: GameMode): number | null {
   if (mode === "quiz") return GAME_CONFIG.quiz.timeLimitSeconds;
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.timeLimitSeconds;
   if (mode === "jigsaw") return GAME_CONFIG.jigsaw.timeLimitSeconds;
+  if (mode === "polls") return GAME_CONFIG.polls.timeLimitSeconds;
   return GAME_CONFIG.connect_dots.timeLimitSeconds;
 }
 
@@ -107,6 +116,11 @@ export function gameInstruction(
     return timeLimitSeconds == null
       ? "Answer questions to unlock pieces. Missed questions return in retry rounds until every piece is earned, then rebuild the image."
       : `Answer questions to unlock pieces. Missed questions return in retry rounds until every piece is earned, then rebuild the image before ${formatTimerLong(timeLimitSeconds)} runs out.`;
+  }
+  if (mode === "polls") {
+    return timeLimitSeconds == null
+      ? "Answer the poll or survey. Results update live as responses arrive."
+      : `Answer the poll or survey within ${formatTimerLong(timeLimitSeconds)}. Results update live as responses arrive.`;
   }
   return timeLimitSeconds == null
     ? "Connect each question dot to its matching answer dot. Complete all pairs to finish."

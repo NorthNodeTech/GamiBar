@@ -153,8 +153,7 @@ export function buildGameCompletionViewModel(input: BuildCompletionInput): GameC
         : typeof myAttempt?.payload?.wrongCount === "number"
           ? myAttempt.payload.wrongCount
           : (myRow?.incorrectAttempts ?? 0);
-    const accuracy =
-      questionTotal > 0 ? Math.round((correctCount / questionTotal) * 100) : null;
+    const accuracy = questionTotal > 0 ? Math.round((correctCount / questionTotal) * 100) : null;
 
     return {
       mode,
@@ -215,6 +214,31 @@ export function buildGameCompletionViewModel(input: BuildCompletionInput): GameC
         },
         ...(durationMs != null
           ? [{ label: "Completion time", value: formatDuration(durationMs) }]
+          : []),
+      ],
+    };
+  }
+
+  if (mode === "polls") {
+    const answered =
+      typeof myAttempt?.correctCount === "number"
+        ? myAttempt.correctCount
+        : (myRow?.primaryMetric ?? 0);
+    return {
+      mode,
+      modeTitle,
+      roomName,
+      displayName,
+      rank: null,
+      durationMs,
+      metrics: [
+        {
+          label: "Responses",
+          value: totalQuestions > 0 ? `${answered}/${totalQuestions}` : String(answered),
+          emphasis: true,
+        },
+        ...(durationMs != null
+          ? [{ label: "Submission time", value: formatDuration(durationMs) }]
           : []),
       ],
     };

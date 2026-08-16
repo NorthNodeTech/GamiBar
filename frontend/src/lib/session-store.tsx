@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-export type ActivityMode = "quiz" | "jigsaw" | "connect_dots";
+export type ActivityMode = "quiz" | "jigsaw" | "connect_dots" | "polls";
 
 export type SessionActivity = {
   id: string;
@@ -46,7 +46,10 @@ type SessionContextValue = {
     hostName: string;
     activities?: SessionActivity[];
   }) => LiveSession;
-  joinSession: (code: string, nickname: string) => { ok: true; session: LiveSession } | { ok: false; error: string };
+  joinSession: (
+    code: string,
+    nickname: string,
+  ) => { ok: true; session: LiveSession } | { ok: false; error: string };
   getByCode: (code: string) => LiveSession | undefined;
   setLive: (id: string) => void;
   endSession: (id: string) => void;
@@ -170,7 +173,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!name) return { ok: false as const, error: "Enter a nickname." };
       const session = sessions.find((s) => s.code === clean);
       if (!session) return { ok: false as const, error: "Room code not found." };
-      if (session.status === "ended") return { ok: false as const, error: "This session has ended." };
+      if (session.status === "ended")
+        return { ok: false as const, error: "This session has ended." };
       if (session.players.length >= session.maxPlayers) {
         return { ok: false as const, error: "Lobby is full." };
       }
@@ -187,15 +191,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const setLive = useCallback((id: string) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "live" as const } : s)),
-    );
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: "live" as const } : s)));
   }, []);
 
   const endSession = useCallback((id: string) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "ended" as const } : s)),
-    );
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: "ended" as const } : s)));
   }, []);
 
   const activeSession = useMemo(

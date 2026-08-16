@@ -104,7 +104,7 @@ export function SharedFilesDownloadPage({ shareSlug }: SharedFilesDownloadPagePr
               <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
                 {summary.files.length === 1
                   ? "Your download should start automatically. Use the button below if the browser blocks it."
-                  : "Choose the document your teacher shared for this session."}
+                  : "Choose the document the host shared for this session."}
               </p>
             </div>
             <Button
@@ -162,7 +162,7 @@ export function SharedFilesDownloadPage({ shareSlug }: SharedFilesDownloadPagePr
                   No active files
                 </p>
                 <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                  Files may have expired or your teacher may remove them after sharing.
+                  Files may have expired or the host may remove them after sharing.
                 </p>
               </div>
             )}

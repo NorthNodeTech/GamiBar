@@ -66,6 +66,76 @@ export type ConnectDotsBoardConfig = {
   solution?: Record<string, ConnectDotsEndpoint[]>;
 };
 
+export type PollQuestionType =
+  "single_choice" | "multiple_choice" | "rating" | "short_text" | "long_text" | "yes_no";
+
+export type PollOptionDraft = {
+  id: string;
+  label: string;
+};
+
+export type PollQuestionDraft = {
+  id: string;
+  prompt: string;
+  type: PollQuestionType;
+  required: boolean;
+  options: PollOptionDraft[];
+  min?: number;
+  max?: number;
+  lowLabel?: string;
+  highLabel?: string;
+};
+
+export type PollSettings = {
+  anonymous: boolean;
+  allowResubmission: boolean;
+  showLiveResults: boolean;
+};
+
+export type PollResponseValue = string | string[] | number | null;
+
+export type PollQuestionResults = {
+  questionId: string;
+  prompt: string;
+  type: PollQuestionType;
+  required: boolean;
+  responseCount: number;
+  skippedCount: number;
+  options?: Array<{
+    id: string;
+    label: string;
+    count: number;
+    percent: number;
+  }>;
+  rating?: {
+    min: number;
+    max: number;
+    average: number | null;
+    distribution: Array<{ value: number; count: number; percent: number }>;
+  };
+  textResponses?: Array<{
+    participantId: string;
+    displayName: string;
+    value: string;
+    submittedAt: number | null;
+  }>;
+};
+
+export type PollResponseRow = {
+  participantId: string;
+  displayName: string;
+  submittedAt: number | null;
+  responses: Record<string, PollResponseValue>;
+};
+
+export type PollResults = {
+  totalParticipants: number;
+  submittedCount: number;
+  completionRate: number;
+  questions: PollQuestionResults[];
+  responseRows: PollResponseRow[];
+};
+
 export type GamePayload =
   | { mode: "quiz"; questions: QuizQuestionDraft[]; timeLimitSeconds: number | null }
   | {
@@ -76,10 +146,21 @@ export type GamePayload =
       rewardCode: string;
       timeLimitSeconds: number | null;
     }
-  | { mode: "jigsaw"; questions: QuizQuestionDraft[]; jigsaw: JigsawConfig; timeLimitSeconds: number | null }
+  | {
+      mode: "jigsaw";
+      questions: QuizQuestionDraft[];
+      jigsaw: JigsawConfig;
+      timeLimitSeconds: number | null;
+    }
   | {
       mode: "connect_dots";
       connectDots: ConnectDotsBoardConfig;
+      timeLimitSeconds: number | null;
+    }
+  | {
+      mode: "polls";
+      questions: PollQuestionDraft[];
+      settings: PollSettings;
       timeLimitSeconds: number | null;
     };
 
@@ -167,14 +248,30 @@ export type LeaderboardRow = {
 
 /** Realtime event envelope (channel payloads stay small). */
 export type RoomEvent =
-  | { type: "participant_joined"; participant: Pick<Participant, "id" | "displayName" | "status" | "joinedAt"> }
+  | {
+      type: "participant_joined";
+      participant: Pick<Participant, "id" | "displayName" | "status" | "joinedAt">;
+    }
   | { type: "participant_left"; participantId: string }
   | { type: "participant_status"; participantId: string; status: ParticipantStatus }
   | { type: "room_updated"; status: RoomStatus }
   | { type: "game_starting"; startsAt: number; countdownSeconds: number }
   | { type: "game_started"; startedAt: number; endsAt: number | null }
-  | { type: "player_progress"; participantId: string; displayName: string; progress: number; detail?: string }
-  | { type: "player_completed"; participantId: string; displayName: string; completedAt: number; durationMs: number }
+  | {
+      type: "player_progress";
+      participantId: string;
+      displayName: string;
+      progress: number;
+      detail?: string;
+    }
+  | {
+      type: "player_completed";
+      participantId: string;
+      displayName: string;
+      completedAt: number;
+      durationMs: number;
+    }
+  | { type: "poll_results_updated"; submittedCount: number; totalParticipants: number }
   | { type: "leaderboard_updated"; rows: LeaderboardRow[] }
   | { type: "game_stopped"; finishedAt: number }
   | { type: "game_finished"; finishedAt: number; rows: LeaderboardRow[] };

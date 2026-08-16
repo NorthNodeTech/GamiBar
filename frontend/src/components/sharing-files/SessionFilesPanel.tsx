@@ -138,7 +138,7 @@ export function SessionFilesPanel({ roomId, authorToken, className }: SessionFil
               QR document drop
             </h2>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              Upload once, show the QR, and students download without chasing chat links.
+              Upload once, show the QR, and participants download without chasing chat links.
             </p>
           </div>
           {loading ? <Loader2 className="size-5 animate-spin text-[var(--gamibar-brand)]" /> : null}

@@ -9,15 +9,15 @@ type FooterItem = {
 };
 
 const productItems: FooterItem[] = [
-  { label: "Game Modes", to: "/games" },
-  { label: "Play Quiz", to: "/games/quiz" },
-  { label: "Join with Code", to: "/join" },
+  { label: "Tools", to: "/games" },
+  { label: "Quiz Battle", to: "/games/quiz" },
+  { label: "Join with code", to: "/join" },
   { label: "Leaderboard", to: "/leaderboard" },
 ];
 
 const accountItems: FooterItem[] = [
-  { label: "Create Game", to: "/author/create" },
-  { label: "Join Game", to: "/join" },
+  { label: "Create room", to: "/author/create" },
+  { label: "Join room", to: "/join" },
 ];
 
 const activityItems: FooterItem[] = [
@@ -39,7 +39,7 @@ export function SiteFooter() {
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#A3A3A3]">
             Where learning becomes a game. Live quizzes, collaborative puzzles and connect-the-dots
-            challenges for classrooms.
+            challenges for classrooms, workshops and sessions.
           </p>
           <div className="mt-5 flex items-center gap-2.5">
             <span className="text-[11px] text-[#A3A3A3]">by</span>
@@ -71,10 +71,10 @@ export function SiteFooter() {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-6 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <p className="text-xs text-[#A3A3A3]">
-            © {new Date().getFullYear()} GamiBAR. All rights reserved.
+            (c) {new Date().getFullYear()} GamiBAR. All rights reserved.
           </p>
           <div className="flex flex-col gap-3 sm:items-end">
-            <span className="text-xs text-[#A3A3A3]">Built for teachers and students</span>
+            <span className="text-xs text-[#A3A3A3]">Built for hosts and participants</span>
             <p className="text-[11px] text-[#A3A3A3]">
               Powered by{" "}
               <a

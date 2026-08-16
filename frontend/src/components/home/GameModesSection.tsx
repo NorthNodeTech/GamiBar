@@ -34,7 +34,7 @@ export function GameModesSection() {
         />
       </div>
 
-      <div className="hidden gap-5 sm:gap-6 md:grid md:grid-cols-3 md:items-stretch">
+      <div className="hidden gap-5 sm:gap-6 md:grid md:grid-cols-2 md:items-stretch lg:grid-cols-4">
         {games.map((game, i) => (
           <motion.div
             key={game.id}
@@ -56,68 +56,54 @@ function GameModeCard({ game }: { game: GameCard }) {
   const Icon = game.icon;
 
   return (
-    <article className="flex h-full w-full flex-col rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 hover:shadow-[var(--shadow-lift)]">
-      <div className="p-3 pb-0 sm:p-4 sm:pb-0 md:p-5 md:pb-0">
-        <div
+    <article className="group relative flex h-full min-h-[19rem] w-full flex-col justify-end overflow-hidden rounded-lg border border-white/10 bg-[#0b0b0f] shadow-[var(--shadow-soft)] transition-shadow duration-300 hover:shadow-[var(--shadow-lift)]">
+      <img
+        src={game.image}
+        alt=""
+        aria-hidden
+        width={800}
+        height={500}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full scale-110 object-cover opacity-35 blur-xl"
+      />
+      <img
+        src={game.image}
+        alt={game.imageAlt}
+        width={800}
+        height={500}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.02] sm:p-5"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,10,0.06)_0%,rgba(8,8,10,0.34)_42%,rgba(8,8,10,0.95)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.2),transparent_42%)]" />
+
+      <div className="absolute left-3 top-3 flex items-center gap-2">
+        <span
           className={cn(
-            "relative overflow-hidden rounded-2xl border border-[var(--gamibar-border)]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]",
+            "grid size-9 place-items-center rounded-lg shadow-sm",
             game.tint,
+            game.accent,
           )}
         >
-          <div className="flex aspect-[16/10] items-center justify-center p-2.5 sm:p-3 md:p-4">
-            <img
-              src={game.image}
-              alt={game.imageAlt}
-              width={800}
-              height={500}
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-contain object-center"
-            />
-          </div>
-          <span
-            className={cn(
-              "absolute left-2.5 top-2.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-sm ring-1 ring-black/5 sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[10px]",
-              game.tint,
-              game.accent,
-            )}
-          >
-            {game.tag}
-          </span>
-        </div>
+          <Icon className="size-4" />
+        </span>
+        <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#111111] shadow-sm backdrop-blur-sm">
+          {game.tag}
+        </span>
       </div>
 
-      <div className="flex flex-1 flex-col p-3 sm:p-4 md:p-5">
-        <div className="flex items-start gap-2.5 sm:gap-3">
-          <span
-            className={cn(
-              "grid size-9 shrink-0 place-items-center rounded-xl sm:size-10",
-              game.tint,
-              game.accent,
-            )}
-          >
-            <Icon className="size-4 sm:size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-display text-base font-bold text-[var(--foreground)] sm:text-lg">
-              {game.title}
-            </h3>
-            <p className="mt-0.5 text-[10px] font-medium text-[var(--gamibar-text-tertiary)] sm:text-[11px]">
-              {game.meta}
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-2.5 flex-1 text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:mt-3 sm:text-sm">
-          {game.copy}
-        </p>
-
+      <div className="relative z-10 p-4 text-white sm:p-5">
+        <h3 className="font-display text-xl font-black leading-tight">{game.title}</h3>
+        <p className="mt-1 text-[11px] font-semibold text-white/62">{game.meta}</p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/78">{game.copy}</p>
         <div
           aria-hidden
-          className="mt-3 inline-flex h-10 w-full cursor-default select-none items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground pointer-events-none sm:mt-4 sm:h-11"
+          className="mt-4 inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-xs font-black text-[#111111]"
         >
           {game.cta}
-          <ArrowRight className="size-4" />
+          <ArrowRight className="size-3.5" />
         </div>
       </div>
     </article>

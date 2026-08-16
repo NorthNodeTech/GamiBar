@@ -71,7 +71,7 @@ export function RoomJoinShare({ code, className, prominent = false }: RoomJoinSh
               Scan to join
             </span>
             <p className="mt-3 text-sm font-medium text-[var(--muted-foreground)]">
-              Students scan the QR or type the 6-digit code
+              Participants scan the QR or type the 6-digit code
             </p>
           </div>
           <div className="grid size-10 shrink-0 place-items-center rounded-2xl border border-[var(--gamibar-border)] bg-[var(--surface)] text-[var(--gamibar-brand)]">

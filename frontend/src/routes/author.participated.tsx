@@ -48,7 +48,7 @@ function ParticipatedGamesPage() {
           {participatedQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--muted-foreground)]">
               <Loader2 className="size-4 animate-spin" />
-              Loading…
+              Loading participated games...
             </div>
           ) : participatedQuery.isError ? (
             <InlineErrorBanner
@@ -60,8 +60,13 @@ function ParticipatedGamesPage() {
           ) : games.length === 0 ? (
             <div className="author-card border-dashed px-6 py-12 text-center">
               <Trophy className="mx-auto size-8 text-[var(--muted-foreground)]" />
-              <p className="mt-3 text-sm text-[var(--muted-foreground)]">No games yet</p>
-              <Button asChild className="mt-4 h-11 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]">
+              <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+                No participated games yet
+              </p>
+              <Button
+                asChild
+                className="mt-4 h-11 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]"
+              >
                 <Link to="/join">Join a game</Link>
               </Button>
             </div>
@@ -87,7 +92,7 @@ function ParticipatedGamesPage() {
                     </div>
                     <div className="shrink-0 pl-1 text-right">
                       <p className="font-display text-lg font-bold tabular-nums leading-none text-[var(--foreground)] sm:text-xl">
-                        {game.score != null ? game.score : "—"}
+                        {game.score != null ? game.score : "-"}
                       </p>
                       <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
                         Score

@@ -13,7 +13,7 @@ type Participant = {
 };
 
 function studentCountLabel(count: number) {
-  return count === 1 ? "1 student in the lobby" : `${count} students in the lobby`;
+  return count === 1 ? "1 participant in the lobby" : `${count} participants in the lobby`;
 }
 
 export function StudentLobbyView({
@@ -74,11 +74,15 @@ export function StudentLobbyView({
                 <Users className="size-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-[#111111]">{studentCountLabel(participants.length)}</p>
-                <p className="text-xs text-[#737373]">More classmates appear as they join</p>
+                <p className="text-sm font-semibold text-[#111111]">
+                  {studentCountLabel(participants.length)}
+                </p>
+                <p className="text-xs text-[#737373]">More participants appear as they join</p>
               </div>
             </div>
-            <p className="font-display text-3xl font-bold tabular-nums text-[#111111]">{participants.length}</p>
+            <p className="font-display text-3xl font-bold tabular-nums text-[#111111]">
+              {participants.length}
+            </p>
           </div>
 
           <div className="mt-5">
@@ -92,7 +96,9 @@ export function StudentLobbyView({
         </div>
 
         <div className="mt-5 rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 shadow-[var(--shadow-soft)]">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">How to play</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
+            How to play
+          </p>
           <p className="mt-2 text-sm leading-relaxed text-[#525252]">{instruction}</p>
         </div>
 
@@ -100,7 +106,9 @@ export function StudentLobbyView({
           <Loader2 className="size-5 animate-spin text-[var(--gamibar-brand)]" />
           <div>
             <p className="text-sm font-semibold text-[#111111]">Waiting for the host to start</p>
-            <p className="text-xs text-[#525252]">Stay on this screen - the game launches automatically</p>
+            <p className="text-xs text-[#525252]">
+              Stay on this screen - the game launches automatically
+            </p>
           </div>
         </div>
 

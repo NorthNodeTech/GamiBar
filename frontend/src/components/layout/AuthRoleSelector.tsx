@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/auth-store";
 
 const roles = [
-  { id: "student" as const, label: "Student", icon: GraduationCap },
+  { id: "student" as const, label: "Participant", icon: GraduationCap },
   { id: "author" as const, label: "Host", icon: BookOpen },
 ];
 
@@ -45,15 +45,16 @@ export function AuthRoleSelector({
   );
 }
 
-export const ROLE_DEFAULTS: Record<UserRole, { email: string; password: string; portal: string }> = {
-  student: {
-    email: "student@gmail.com",
-    password: "123456",
-    portal: "Student Portal - games, XP & leaderboard",
-  },
-  author: {
-    email: "author@gmail.com",
-    password: "123456",
-    portal: "GamiBAR — quiz management & live games",
-  },
-};
+export const ROLE_DEFAULTS: Record<UserRole, { email: string; password: string; portal: string }> =
+  {
+    student: {
+      email: "student@gmail.com",
+      password: "123456",
+      portal: "Participant portal - games, XP & leaderboard",
+    },
+    author: {
+      email: "author@gmail.com",
+      password: "123456",
+      portal: "GamiBAR - quiz management & live games",
+    },
+  };

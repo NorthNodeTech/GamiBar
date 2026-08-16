@@ -1,8 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { Blocks, CircleDot, Puzzle, Timer, Users, Zap } from "lucide-react";
+import { Blocks, CircleDot, Puzzle, Radio, Timer, Users, Zap } from "lucide-react";
 
 import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
 import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
@@ -38,14 +39,20 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     preview: gameQuizPreview,
     icon: Zap,
     tagline: "Speed, accuracy, and live rankings",
-    specs: [
-      "Unlimited MCQs",
-      "Live leaderboard",
-      "One attempt per question",
-    ],
+    specs: ["Unlimited MCQs", "Live leaderboard", "One attempt per question"],
     accentClass: "from-[var(--game-quiz)] to-[var(--game-quiz-deep)]",
     glowClass: "shadow-[0_20px_60px_rgba(239,68,68,0.25)]",
     badgeClass: "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]",
+  },
+  {
+    mode: "polls",
+    preview: gamePollsPreview,
+    icon: Radio,
+    tagline: "Live polls, ratings, and surveys with instant results",
+    specs: ["Rating scales", "Choice polls", "Text feedback"],
+    accentClass: "from-[#F97316] to-[#EF4444]",
+    glowClass: "shadow-[0_20px_60px_rgba(249,115,22,0.24)]",
+    badgeClass: "bg-orange-100 text-orange-800",
   },
   {
     mode: "jigsaw",
@@ -68,8 +75,8 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     tagline: "Connect each question to its matching answer on the grid",
     specs: [
       "2-10 question/answer pairs",
-      "Teacher writes every match",
-      "Same board for every student",
+      "Host writes every match",
+      "Same board for every participant",
     ],
     accentClass: "from-[var(--game-connect-dots)] to-[var(--game-connect-dots-deep)]",
     glowClass: "shadow-[0_20px_60px_rgba(16,185,129,0.25)]",
@@ -82,10 +89,11 @@ export function getModeCatalog(mode: GameMode | null) {
   return GAME_MODE_CATALOG.find((item) => item.mode === mode) ?? null;
 }
 
-/** Catalog entries for the three core live games (Quiz, Jigsaw, Connect Dots). */
+/** Catalog entries for the core live room modes shown in Create. */
 export function getCoreModeCatalog() {
-  return GAME_MODE_CATALOG.filter((item): item is GameModeCatalogItem & { mode: CoreLiveGameMode } =>
-    (CORE_LIVE_GAME_MODES as readonly string[]).includes(item.mode),
+  return GAME_MODE_CATALOG.filter(
+    (item): item is GameModeCatalogItem & { mode: CoreLiveGameMode } =>
+      (CORE_LIVE_GAME_MODES as readonly string[]).includes(item.mode),
   );
 }
 
@@ -97,19 +105,19 @@ export function getModeTitle(mode: GameMode | null) {
 export const CREATE_STEP_COPY = {
   details: {
     title: "Name your session",
-    hint: "Students will see this title when they join the lobby.",
+    hint: "Participants see this title when they join the lobby.",
   },
   mode: {
     title: "Choose a game mode",
-    hint: "Each mode is built for a different classroom moment.",
+    hint: "Each mode is built for a different live-session moment.",
   },
   configure: {
     title: "Build your content",
-    hint: "This is what students will play once you hit Start.",
+    hint: "This is what participants play once you hit Start.",
   },
   review: {
     title: "Ready to launch",
-    hint: "We will generate a room code and QR for your class.",
+    hint: "We will generate a room code and QR for your audience.",
   },
 } as const;
 

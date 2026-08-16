@@ -2,9 +2,9 @@ import {
   BarChart3,
   Blocks,
   CircleDot,
-  FileText,
   MonitorSmartphone,
   QrCode,
+  Radio,
   Timer,
   Trophy,
   Users,
@@ -13,7 +13,11 @@ import {
 } from "lucide-react";
 
 import connectDotsPreview from "@/assets/tool-connect-dots.webp";
+import homeLiveRoom from "@/assets/home-live-room.webp";
+import homeResourceShare from "@/assets/home-resource-share.webp";
+import homeToolsHub from "@/assets/home-tools-hub.webp";
 import jigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import pollsPreview from "@/assets/tool-polls-survey.webp";
 import quizPreview from "@/assets/tool-quiz-battle.webp";
 import testimonialCorporate from "@/assets/testimonial-corporate-learning.webp";
 import testimonialMath from "@/assets/testimonial-math-classroom.webp";
@@ -22,38 +26,39 @@ import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
 import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, type GameMode } from "@/lib/game/config";
 
 export const HOMEPAGE_SEO = {
-  title: "GamiBar | Classroom Games, Quizzes and Teacher Tools",
+  title: "GamiBar | Live Session Tools, Quizzes and Interactive Games",
   description:
-    "Turn classrooms and sessions into interactive experiences with GamiBar. Run live quizzes, classroom games, leaderboards, and QR-based resource drops from one teacher workspace.",
+    "Turn classrooms, workshops and sessions into interactive experiences with GamiBar. Run live quizzes, games, leaderboards, QR file sharing, and session history from one workspace.",
 } as const;
 
 export const HOMEPAGE_HERO = {
   badge: "No more boring classrooms, no more boring sessions",
-  headlinePrefix: "Turn Every Session Into an",
-  headlineAccent: "Interactive Experience.",
-  lede: "Create a room, choose an activity, share a QR, and keep students involved with quizzes, games, live rankings, and downloadable class resources.",
-  primaryCta: "Open Teacher Workspace",
-  secondaryCta: "Join with Code",
+  headlinePrefix: "GamiBar",
+  headlineAccent: "Run the room. Keep them playing.",
+  lede: "Create a room, pick a tool, share a QR, and keep everyone involved with quizzes, games, live rankings, and downloadable resources.",
+  primaryCta: "Open workspace",
+  secondaryCta: "Join room",
+  image: homeLiveRoom,
   imageAlt:
-    "GamiBar teacher workspace with classroom activities, resource sharing, and live leaderboard",
+    "GamiBar live room with a quiz dashboard, QR code, participants on phones, and leaderboard visuals",
 } as const;
 
 export const HOMEPAGE_HERO_STATS = [
   {
     icon: Users,
-    label: "Active learners",
+    label: "Active participants",
     value: 50000,
     suffix: "+",
   },
   {
     icon: Zap,
-    label: "Live sessions hosted",
+    label: "Rooms hosted",
     value: 12800,
     suffix: "+",
   },
   {
     icon: Trophy,
-    label: "Educator satisfaction",
+    label: "Host rating",
     value: 98,
     suffix: "%",
   },
@@ -80,6 +85,24 @@ const MODE_PRESENTATION: Record<
     imageAlt: "Quiz Challenge - multiple-choice question with four answers and live ranking",
     cta: "Set Up Quiz",
   },
+  quiz_jigsaw: {
+    tag: "Puzzle quiz",
+    tint: "bg-[#EDE9FE]",
+    accent: "text-[#5B21B6]",
+    icon: Blocks,
+    preview: jigsawPreview,
+    imageAlt: "Puzzle Quest - quiz questions unlocking puzzle pieces",
+    cta: "Set Up Puzzle Quest",
+  },
+  polls: {
+    tag: "Live feedback",
+    tint: "bg-orange-100",
+    accent: "text-orange-700",
+    icon: Radio,
+    preview: pollsPreview,
+    imageAlt: "Polls and Surveys - live rating scale, vote bars, and QR response card",
+    cta: "Set Up Poll",
+  },
   jigsaw: {
     tag: "Visual puzzle",
     tint: "bg-[var(--game-jigsaw-soft)]",
@@ -104,6 +127,10 @@ function gameModeMetaLine(mode: GameMode): string {
   switch (mode) {
     case "quiz":
       return "Unlimited MCQs - accuracy-first ranking";
+    case "quiz_jigsaw":
+      return `${GAME_CONFIG.quiz_jigsaw.questionCount} MCQs - puzzle unlocks`;
+    case "polls":
+      return "Ratings, votes, and feedback - instant results";
     case "jigsaw":
       return `${JIGSAW_GRID.pieceCount} pieces - ${GAME_CONFIG.jigsaw.timeLimitSeconds}s timer`;
     case "connect_dots":
@@ -115,8 +142,12 @@ function gameModeCopy(mode: GameMode): string {
   switch (mode) {
     case "quiz":
       return "Run normal quizzes for revision, recaps, checks for understanding, and leaderboard-based classroom energy.";
+    case "quiz_jigsaw":
+      return "Mix quiz questions with puzzle unlocks for a more visual recap round.";
+    case "polls":
+      return "Collect session ratings, quick votes, exit tickets, and survey feedback with live result bars.";
     case "jigsaw":
-      return "Turn an image or concept into a puzzle mission where students unlock and place pieces as they answer.";
+      return "Turn an image or concept into a puzzle mission where participants unlock and place pieces as they answer.";
     case "connect_dots":
       return "Make matching, definitions, formulas, or concepts more physical with a path-building challenge.";
   }
@@ -136,47 +167,49 @@ export type HomepageGameModeCard = {
   cta: string;
 };
 
-export const HOMEPAGE_GAME_MODES = (["quiz", "jigsaw", "connect_dots"] as const).map((mode) => {
-  const presentation = MODE_PRESENTATION[mode];
-  return {
-    id: mode,
-    title: GAME_MODE_META[mode].title,
-    tag: presentation.tag,
-    copy: gameModeCopy(mode),
-    meta: gameModeMetaLine(mode),
-    image: presentation.preview,
-    imageAlt: presentation.imageAlt,
-    icon: presentation.icon,
-    tint: presentation.tint,
-    accent: presentation.accent,
-    cta: presentation.cta,
-  } satisfies HomepageGameModeCard;
-});
+export const HOMEPAGE_GAME_MODES = (["quiz", "polls", "jigsaw", "connect_dots"] as const).map(
+  (mode) => {
+    const presentation = MODE_PRESENTATION[mode];
+    return {
+      id: mode,
+      title: GAME_MODE_META[mode].title,
+      tag: presentation.tag,
+      copy: gameModeCopy(mode),
+      meta: gameModeMetaLine(mode),
+      image: presentation.preview,
+      imageAlt: presentation.imageAlt,
+      icon: presentation.icon,
+      tint: presentation.tint,
+      accent: presentation.accent,
+      cta: presentation.cta,
+    } satisfies HomepageGameModeCard;
+  },
+);
 
 export const HOMEPAGE_GAME_MODES_SECTION = {
-  eyebrow: "Teacher toolkit",
-  title: "Activities now, more classroom tools next",
+  eyebrow: "Tools shelf",
+  title: "Pick the right room tool",
   description:
-    "Start with live quizzes and game-based activities. Add Resource Drops when students need documents from a QR instead of a chat group.",
+    "Start fast with quiz battles, polls, visual puzzles, matching games, and QR file sharing.",
 } as const;
 
 export const HOMEPAGE_JOURNEY_SECTION = {
-  eyebrow: "Classroom flow",
-  title: "One room for play, sharing, and follow-up",
+  eyebrow: "Room flow",
+  title: "One room from launch to history",
   description:
-    "GamiBar should feel like a teacher control room: create the session, invite students, run the activity, share resources, and review what happened.",
+    "Create the session, invite participants, run the activity, share resources, and review your created-room history.",
 } as const;
 
 export const HOMEPAGE_JOURNEY_MILESTONES = [
   {
-    title: "01. Create a classroom room",
-    desc: "Name the session, pick an activity, attach your content, and optionally prepare documents students can download by QR.",
-    badge: "Teacher setup",
+    title: "01. Create a room",
+    desc: "Name the session, pick a tool, attach your content, and prepare files participants can download by QR.",
+    badge: "Host setup",
     icon: Zap,
   },
   {
-    title: "02. Students join with a room code",
-    desc: `Share a ${GAME_CONFIG.room.codeLength}-digit code or QR link. Learners enter a nickname - no account required to play.`,
+    title: "02. Participants join",
+    desc: `Share a ${GAME_CONFIG.room.codeLength}-digit code or QR link. People enter a nickname - no account required to play.`,
     badge: "Instant join",
     icon: Users,
   },
@@ -188,7 +221,7 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
   },
   {
     title: "04. Watch the live leaderboard",
-    desc: "Scores and completion times update in real time on the author screen and student devices as the round progresses.",
+    desc: "Scores and completion times update in real time on the host screen and participant devices as the round progresses.",
     badge: "Live rankings",
     icon: BarChart3,
   },
@@ -201,59 +234,62 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
 ] as const;
 
 export const HOMEPAGE_INFRASTRUCTURE_SECTION = {
-  eyebrow: "Built for teachers",
-  title: "A better home for session tools",
+  eyebrow: "Workspace",
+  title: "Everything in one visual hub",
   description:
-    "The workspace is structured around real classroom jobs: run activities, manage live rooms, share documents, and track outcomes.",
+    "Tools, QR resources, live rooms, reports, and your created-room history live together.",
 } as const;
 
 export const HOMEPAGE_INFRASTRUCTURE_FEATURES = [
   {
-    icon: Users,
-    title: "Synchronized live sessions",
-    copy: "Unlimited students can join each room with the code or QR. You control when the round starts and ends.",
-  },
-  {
-    icon: QrCode,
-    title: "Resource Drop",
-    copy: "Upload documents once, choose 7, 14, or 28 days, and show a QR that students can scan to download.",
-  },
-  {
-    icon: BarChart3,
-    title: "Real-time leaderboards",
-    copy: "Quiz ranks by accuracy and speed. Jigsaw and Connect Dots rank by completion and time - visible to the whole class.",
-  },
-  {
-    icon: FileText,
-    title: "Room for polls and more",
-    copy: "Quizzes, polls, games, files, and reports belong together as teacher tools instead of scattered one-off pages.",
+    icon: Zap,
+    title: "Launch live rooms",
+    copy: "Pick a tool, share a code, and control the round from one screen.",
+    image: homeLiveRoom,
+    imageAlt: "Live GamiBar room with participants joining by phone and QR code",
   },
   {
     icon: MonitorSmartphone,
-    title: "Works on any device",
-    copy: "Students play or download from phones, tablets, or laptops without installing an app.",
+    title: "All tools together",
+    copy: "Quiz Battle, Polls, Jigsaw, Connect Dots, files, and reports sit in one place.",
+    image: homeToolsHub,
+    imageAlt: "GamiBar tool hub with compact cards for quizzes, polls, puzzles, files, and reports",
+  },
+  {
+    icon: QrCode,
+    title: "Files by QR",
+    copy: "Upload PPT, PDF, and docs once. Share one QR and choose 7, 14, or 28 days.",
+    image: homeResourceShare,
+    imageAlt: "QR file sharing from a host tablet to participant phones",
+  },
+  {
+    icon: BarChart3,
+    title: "My sessions history",
+    copy: "Every room you create stays in My sessions with status, participants, and results.",
+    image: homeToolsHub,
+    imageAlt: "GamiBar workspace dashboard with reports and session history cards",
   },
 ] as const;
 
 export const HOMEPAGE_TESTIMONIALS_SECTION = {
-  eyebrow: "Educator feedback",
-  title: "Designed for real classrooms",
+  eyebrow: "Host feedback",
+  title: "Designed for rooms with energy",
   description:
-    "Teachers use GamiBar for revision sessions, unit reviews, energizers between lectures, and cleaner session follow-up.",
+    "Use GamiBar for revision, workshops, training sessions, energizers, and cleaner follow-up.",
 } as const;
 
 export const HOMEPAGE_TESTIMONIALS = [
   {
     quote:
-      "I share the room code and the whole cohort is in within a minute. The Connect Dots round keeps even quiet students competing.",
+      "I share the room code and the whole cohort is in within a minute. The Connect Dots round keeps even quiet participants competing.",
     name: "Dr. Priya Nair",
     role: "Head of Physics, Ashford College",
     image: testimonialPhysics,
-    imageAlt: "Physics classroom with students playing a live Connect Dots session",
+    imageAlt: "Physics classroom with participants playing a live Connect Dots session",
   },
   {
     quote:
-      "It feels like software students already use - not a clunky add-on. The live leaderboard changes the energy in the room immediately.",
+      "It feels like software participants already understand - not a clunky add-on. The live leaderboard changes the energy in the room immediately.",
     name: "Marcus Feld",
     role: "L&D Lead, Northline Group",
     image: testimonialCorporate,
@@ -278,7 +314,7 @@ export const HOMEPAGE_FAQ = [
   {
     question: "Is GamiBar only three games?",
     answer:
-      "No. The current app starts with Quiz Challenge, Jigsaw Mission, Connect Dots, and Resource Drop. The workspace is structured so polls, more activity types, and teacher utilities can be added cleanly.",
+      "No. The current app starts with Quiz Challenge, Polls, Jigsaw Mission, Connect Dots, and Resource Drop. The workspace is structured so more activity types and host utilities can be added cleanly.",
   },
   {
     question: "Can I use my own questions, images, and documents?",
@@ -286,14 +322,14 @@ export const HOMEPAGE_FAQ = [
       "Yes. Quiz Challenge uses your multiple-choice bank, Jigsaw Mission uses an image you upload or choose, Connect Dots uses your matching pairs, and Resource Drop accepts PDF, PPT, PPTX, DOC, and DOCX files.",
   },
   {
-    question: "Do students need an account to join?",
+    question: "Do participants need an account to join?",
     answer:
-      "No. Students join with the room code and a display name. Accounts are optional if you want learners to track XP and history over time.",
+      "No. Participants join with the room code and a display name. Accounts are optional if they want to track XP and history over time.",
   },
   {
     question: "How long are Resource Drop documents kept?",
     answer:
-      "Teachers choose 7, 14, or 28 days during upload. After expiry, the document is treated as inactive and the backend cleanup endpoint can remove the stored copy.",
+      "Hosts choose 7, 14, or 28 days during upload. After expiry, the document is treated as inactive and the backend cleanup endpoint can remove the stored copy.",
   },
   {
     question: "Which devices are supported?",
@@ -305,7 +341,7 @@ export const HOMEPAGE_FAQ = [
 export const HOMEPAGE_CTA = {
   title: "Build the next session from one place",
   description:
-    "Create a room, pick an activity, attach resources, and share the QR before the class loses attention.",
-  primaryCta: "Open Teacher Workspace",
-  secondaryCta: "Join with Code",
+    "Create a room, pick an activity, attach resources, and share the QR before the room loses attention.",
+  primaryCta: "Open workspace",
+  secondaryCta: "Join room",
 } as const;

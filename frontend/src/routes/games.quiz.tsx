@@ -14,7 +14,7 @@ import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
 
 const quizTitle = "Live Classroom Quiz Game | GamiBar";
 const quizDescription =
-  "Run a live multiple-choice classroom quiz with instant feedback, streaks, and rankings. Create a GamiBar room and let students join by code.";
+  "Run a live multiple-choice quiz with instant feedback, streaks, and rankings. Create a GamiBar room and let participants join by code.";
 
 export const Route = createFileRoute("/games/quiz")({
   head: () =>
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/games/quiz")({
         path: "/games/quiz",
         breadcrumbs: [
           { name: "Home", path: "/" },
-          { name: "Game Modes", path: "/games/" },
+          { name: "Tools", path: "/games/" },
           { name: "Quiz Challenge", path: "/games/quiz" },
         ],
       }),

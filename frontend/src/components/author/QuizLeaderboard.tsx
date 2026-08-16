@@ -45,7 +45,7 @@ export function QuizLeaderboard({
           </div>
           <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No scores yet</p>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Rankings appear once students start answering.
+            Rankings appear once participants start answering.
           </p>
         </div>
       ) : (
@@ -54,7 +54,7 @@ export function QuizLeaderboard({
             <thead>
               <tr className="border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/60 text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
                 <th className="px-4 py-3 sm:px-6">Rank</th>
-                <th className="px-4 py-3 sm:px-6">Student</th>
+                <th className="px-4 py-3 sm:px-6">Participant</th>
                 <th className="px-4 py-3 text-right sm:px-6">Score</th>
                 <th className="px-4 py-3 text-right sm:px-6">Accuracy</th>
                 <th className="px-4 py-3 text-right sm:px-6">Time</th>
@@ -82,7 +82,9 @@ export function QuizLeaderboard({
                   >
                     <td className="px-4 py-3 font-mono font-bold text-[var(--muted-foreground)] sm:px-6">
                       {row.rank <= 3 ? (
-                        <span aria-hidden>{row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : "🥉"}</span>
+                        <span aria-hidden>
+                          {row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : "🥉"}
+                        </span>
                       ) : (
                         row.rank
                       )}

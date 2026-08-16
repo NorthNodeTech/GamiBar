@@ -82,7 +82,9 @@ export function LobbyRing({
       </div>
 
       {participants.length === 0 ? (
-        <p className="text-center text-sm text-[#737373]">Waiting for the first student to join…</p>
+        <p className="text-center text-sm text-[#737373]">
+          Waiting for the first participant to join...
+        </p>
       ) : (
         <ul className="flex flex-wrap justify-center gap-3 sm:gap-4">
           {participants.map((participant, index) => {

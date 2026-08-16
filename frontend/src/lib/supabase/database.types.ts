@@ -540,7 +540,7 @@ export type Database = {
       };
     };
     Enums: {
-      gamibar_game_mode: "quiz" | "quiz_jigsaw" | "jigsaw" | "maze" | "connect_dots";
+      gamibar_game_mode: "quiz" | "quiz_jigsaw" | "jigsaw" | "maze" | "connect_dots" | "polls";
       gamibar_participant_status: "ONLINE" | "DISCONNECTED" | "PLAYING" | "COMPLETED";
       gamibar_room_status:
         "DRAFT" | "LOBBY" | "READY" | "COUNTDOWN" | "LIVE" | "FINISHED" | "CANCELLED";
@@ -666,7 +666,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      gamibar_game_mode: ["quiz", "quiz_jigsaw", "jigsaw", "maze", "connect_dots"],
+      gamibar_game_mode: ["quiz", "quiz_jigsaw", "jigsaw", "maze", "connect_dots", "polls"],
       gamibar_participant_status: ["ONLINE", "DISCONNECTED", "PLAYING", "COMPLETED"],
       gamibar_room_status: [
         "DRAFT",

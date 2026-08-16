@@ -12,6 +12,8 @@ export function leaderboardRankingHint(mode: GameMode): string {
       return "Ranked by fewest incorrect attempts, then fastest puzzle completion";
     case "connect_dots":
       return "Ranked by fastest successful completion, then fewest incorrect attempts";
+    case "polls":
+      return "Ordered by submitted responses";
     default:
       return "Rankings for this game mode only";
   }
@@ -46,6 +48,8 @@ export function formatLeaderboardPerformance(mode: GameMode, row: LeaderboardRow
         return wrong === 0 ? "All correct" : `${wrong} incorrect`;
       }
       return row.detail ?? `${row.primaryMetric} pairs`;
+    case "polls":
+      return row.performanceText ?? row.detail ?? `${row.primaryMetric} answered`;
     default:
       return row.detail ?? String(row.primaryMetric);
   }

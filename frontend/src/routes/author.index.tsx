@@ -28,11 +28,11 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/author/")({
   head: () => ({
     meta: [
-      { title: "Teacher Workspace - GamiBar" },
+      { title: "Workspace - GamiBar" },
       {
         name: "description",
         content:
-          "Create classroom activities, live sessions, resource drops, and reports from one GamiBar teacher workspace.",
+          "Create activities, live sessions, resource drops, and reports from one GamiBar workspace.",
       },
     ],
   }),
@@ -69,12 +69,12 @@ const startTools = [
   },
   {
     title: "Polls",
-    copy: "Quick pulse checks and opinion questions belong here next.",
+    copy: "Run ratings, live votes, surveys, and exit tickets without Google Forms.",
     icon: Radio,
-    status: "Planned",
-    action: "Coming next",
-    disabled: true,
-    tint: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+    status: "Ready",
+    action: "Create poll",
+    mode: "polls" as const,
+    tint: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-200",
   },
 ] as const;
 
@@ -111,8 +111,8 @@ const gameModes = [
 const opsLinks = [
   {
     to: "/author/sessions",
-    title: "Live sessions",
-    copy: "Open active rooms, duplicate past sessions, or review summaries.",
+    title: "My sessions",
+    copy: "Your created-room history: active rooms, duplicates, summaries, and results.",
     icon: Radio,
   },
   {
@@ -123,7 +123,7 @@ const opsLinks = [
   },
   {
     to: "/join",
-    title: "Student join",
+    title: "Join room",
     copy: "Open the join flow for testing QR and room-code entry.",
     icon: ScanLine,
   },
@@ -147,10 +147,10 @@ function AuthorHome() {
                 No more boring classrooms, no more boring sessions
               </span>
               <h1 className="mt-4 max-w-3xl font-display text-2xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-3xl">
-                Teacher workspace
+                Host workspace
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-                Start activities, share documents by QR, manage live rooms, and keep every classroom
+                Start activities, share documents by QR, manage live rooms, and keep every created
                 session in one place.
               </p>
             </div>
@@ -161,7 +161,7 @@ function AuthorHome() {
                 className="h-11 rounded-xl bg-[#111111] font-semibold text-white hover:bg-black"
               >
                 <Plus className="size-4" />
-                Create session
+                Create room
               </Button>
               <Button
                 type="button"
@@ -249,7 +249,7 @@ function AuthorHome() {
           <SectionTitle
             eyebrow="Session operations"
             title="Manage what happens around the activity"
-            copy="Live rooms, reports, and student entry are separated from creation so repeat work is easier to scan."
+            copy="Live rooms, reports, and participant entry are separated from creation so repeat work is easier to scan."
           />
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {opsLinks.map((item) => (

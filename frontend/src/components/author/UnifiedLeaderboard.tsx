@@ -55,7 +55,7 @@ export function UnifiedLeaderboard({
           </div>
           <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No scores yet</p>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Rankings appear once students start playing.
+            Rankings appear once participants start playing.
           </p>
         </div>
       ) : (
@@ -94,7 +94,7 @@ export function UnifiedLeaderboard({
               <thead>
                 <tr className="border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/60 text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
                   <th className="px-4 py-3 sm:px-6">Rank</th>
-                  <th className="px-4 py-3 sm:px-6">Student</th>
+                  <th className="px-4 py-3 sm:px-6">Participant</th>
                   <th className="px-4 py-3 text-right sm:px-6">{performanceHeader}</th>
                   <th className="px-4 py-3 text-right sm:px-6">Time</th>
                 </tr>

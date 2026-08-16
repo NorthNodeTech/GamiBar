@@ -19,6 +19,7 @@ import {
   submitJigsawMissionAnswer,
   submitJigsawMissionAssembly,
   submitJigsawProgress,
+  submitPollResponses,
   submitQuizAnswer,
   submitQuizJigsawAnswer,
 } from "../../frontend/src/lib/game/room-engine.ts";
@@ -65,6 +66,7 @@ const gameActions = {
     auth: false,
     handler: setShowLeaderboardToStudents,
   },
+  "submit-poll-responses": { auth: false, handler: submitPollResponses },
   "submit-quiz-answer": { auth: false, handler: submitQuizAnswer },
   "submit-quiz-jigsaw-answer": { auth: false, handler: submitQuizJigsawAnswer },
   "submit-jigsaw-mission-answer": {

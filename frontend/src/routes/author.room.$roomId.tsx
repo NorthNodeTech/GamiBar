@@ -14,6 +14,7 @@ import { UnifiedLeaderboard } from "@/components/author/UnifiedLeaderboard";
 import { LobbyWall, ParticipantStrip } from "@/components/author/LobbyWall";
 import { RoomCodeDisplay } from "@/components/author/RoomCodeDisplay";
 import { AuthorShell } from "@/components/layout/AuthorShell";
+import { PollResultsPanel } from "@/components/polls/PollResultsPanel";
 import { SessionFilesPanel } from "@/components/sharing-files/SessionFilesPanel";
 import { RoomJoinShare } from "@/components/session/RoomJoinShare";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { GAME_MODE_META } from "@/lib/game/config";
-import type { Room } from "@/lib/game/types";
+import type { PollResults, Room } from "@/lib/game/types";
 import { loadAuthorRoom } from "@/lib/game/client-session";
 import { friendlyGameError } from "@/lib/accessibility";
 import { assessConnectDotsContentSolvability } from "@/lib/game/connect-dots-solvability";
@@ -216,7 +217,9 @@ function AuthorRoomPage() {
         toast.error(message);
       } else {
         toast.success(
-          enabled ? "Students can see the live leaderboard" : "Leaderboard hidden from students",
+          enabled
+            ? "Participants can see the live leaderboard"
+            : "Leaderboard hidden from participants",
         );
         void refresh();
       }
@@ -234,9 +237,11 @@ function AuthorRoomPage() {
       ? Math.max(0, Math.ceil((room.endsAt - Date.now()) / 1000))
       : null;
   const liveProgress = snapshot.liveProgress ?? [];
+  const pollResults =
+    room.mode === "polls" ? (snapshot.pollResults as PollResults | undefined) : undefined;
 
   const statusHint = inLobby
-    ? "Share the QR or code below. Start when at least one student has joined."
+    ? "Share the QR or code below. Start when at least one participant has joined."
     : isLive
       ? "Round is live. Watch rankings below and stop when you are ready for final results."
       : "Session complete. Review the leaderboard and completions below.";
@@ -296,7 +301,7 @@ function AuthorRoomPage() {
                       ? "Starting game…"
                       : canStart
                         ? `Start game · ${room.participantCount} ready`
-                        : "Waiting for students"}
+                        : "Waiting for participants"}
                   </span>
                 </Button>
               )}
@@ -348,7 +353,7 @@ function AuthorRoomPage() {
               {room.participantCount < 1 && (
                 <div className="hidden items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)] lg:flex">
                   <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
-                  Share the QR or 6-digit code. Start unlocks as soon as one student joins.
+                  Share the QR or 6-digit code. Start unlocks as soon as one participant joins.
                 </div>
               )}
             </div>
@@ -367,6 +372,8 @@ function AuthorRoomPage() {
               />
             )}
 
+            {room.mode === "polls" && pollResults && <PollResultsPanel results={pollResults} />}
+
             {!isLive && (
               <div className="rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-5 shadow-[var(--shadow-soft)] sm:px-6">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
@@ -378,32 +385,34 @@ function AuthorRoomPage() {
               </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4">
-                {room.mode === "quiz" && isLive && (
-                  <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-4 shadow-[var(--shadow-soft)] sm:px-6">
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor="show-leaderboard"
-                        className="text-sm font-semibold text-[var(--foreground)]"
-                      >
-                        Show leaderboard to students
-                      </Label>
+            <div className={cn("grid gap-6", room.mode !== "polls" && "lg:grid-cols-2")}>
+              {room.mode !== "polls" && (
+                <div className="space-y-4">
+                  {room.mode === "quiz" && isLive && (
+                    <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-4 shadow-[var(--shadow-soft)] sm:px-6">
+                      <div className="min-w-0">
+                        <Label
+                          htmlFor="show-leaderboard"
+                          className="text-sm font-semibold text-[var(--foreground)]"
+                        >
+                          Show leaderboard to participants
+                        </Label>
+                      </div>
+                      <Switch
+                        id="show-leaderboard"
+                        checked={room.showLeaderboardToStudents}
+                        disabled={leaderboardBusy}
+                        onCheckedChange={(checked) => void handleLeaderboardVisibility(checked)}
+                      />
                     </div>
-                    <Switch
-                      id="show-leaderboard"
-                      checked={room.showLeaderboardToStudents}
-                      disabled={leaderboardBusy}
-                      onCheckedChange={(checked) => void handleLeaderboardVisibility(checked)}
-                    />
-                  </div>
-                )}
-                <UnifiedLeaderboard
-                  mode={room.mode}
-                  rows={leaderboard}
-                  finished={room.status === "FINISHED"}
-                />
-              </div>
+                  )}
+                  <UnifiedLeaderboard
+                    mode={room.mode}
+                    rows={leaderboard}
+                    finished={room.status === "FINISHED"}
+                  />
+                </div>
+              )}
               <CompletionTimeline items={completions} />
             </div>
 
@@ -416,7 +425,7 @@ function AuthorRoomPage() {
         {inLobby && room.participantCount < 1 && (
           <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)]">
             <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
-            Share the QR or 6-digit code - as soon as one student joins, you can start the game.
+            Share the QR or 6-digit code - as soon as one participant joins, you can start the game.
           </div>
         )}
       </div>
@@ -446,6 +455,11 @@ function RoomMetaChips({ room }: { room: Room }) {
     const pairs = contentPairs.length > 0 ? contentPairs.length : pairCount;
     chips.push(`${pairs} pair${pairs === 1 ? "" : "s"}`);
     chips.push(`${gridSize}×${gridSize}`);
+  }
+
+  if (room.mode === "polls" && room.payload.mode === "polls") {
+    const count = room.payload.questions.length;
+    chips.push(`${count} question${count === 1 ? "" : "s"}`);
   }
 
   if (room.subject) chips.push(room.subject);
