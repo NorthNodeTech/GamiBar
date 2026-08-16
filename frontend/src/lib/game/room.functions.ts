@@ -7,9 +7,8 @@ import { apiPost } from "@/lib/api-client";
 // The room engine returns mode-specific payloads. Keep the client wrapper loose so existing
 // screens preserve their previous inferred shapes while the transport moves to Express.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function gameAction(action: string, data: unknown, auth = true): Promise<any> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return apiPost<any>(`/api/game/${action}`, data, auth);
+function gameAction<T = any>(action: string, data: unknown, auth = true): Promise<T> {
+  return apiPost<T>(`/api/game/${action}`, data, auth);
 }
 
 export async function ensureDemoRoomFn() {
