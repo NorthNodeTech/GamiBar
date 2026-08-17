@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "tsx watch src/index.js",
     "start": "tsx src/index.js",
-    "check": "node --check src/index.js && node --check src/http-error.js && node --check src/supabase-admin.js && node --check src/auth.js && node --check src/game-api.js && node --check src/session-files.js"
+    "check": "node --check src/index.js && node --check src/http-error.js && node --check src/supabase-admin.js && node --check src/auth.js && node --check src/game-api.js && node --check src/session-files.js && node --check src/ai/gemini-client.js && node --check src/ai/option-generator.js && node --check src/ai/routes.js && node --check src/ai/providers/index.js && node --check src/ai/providers/gemini.js && node --check src/ai/providers/openai-compatible.js && node --check src/ai/providers/openrouter.js && node --check src/ai/providers/nvidia.js"
   },
   "dependencies": {
+    "@google/genai": "^2.17.1",
     "@supabase/supabase-js": "^2.112.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

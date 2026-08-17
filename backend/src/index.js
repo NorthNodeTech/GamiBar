@@ -5,6 +5,7 @@ import express from "express";
 import multer from "multer";
 
 import { HttpError } from "./http-error.js";
+import { registerAiRoutes } from "./ai/routes.js";
 import { registerGameRoutes } from "./game-api.js";
 import {
   registerSessionFileRoutes,
@@ -22,6 +23,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "gamibar-api" });
 });
 
+registerAiRoutes(app);
 registerSessionFileRoutes(app);
 registerGameRoutes(app);
 scheduleSessionFileCleanup();

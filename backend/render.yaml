@@ -19,6 +19,22 @@ services:
         sync: false
       - key: SESSION_FILES_CRON_SECRET
         generateValue: true
+      - key: AI_PROVIDER_ORDER
+        value: "gemini,openrouter,nvidia"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "nvidia/nemotron-3-super-120b-a12b:free"
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_MODEL
+        value: "nvidia/nemotron-3-super-120b-a12b"
+      - key: NVIDIA_BASE_URL
+        value: "https://integrate.api.nvidia.com/v1"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
       - key: CORS_ORIGIN
         sync: false
 

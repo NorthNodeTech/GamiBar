@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { AiGenerateOptionsButton } from "@/components/author/ai/AiGenerateOptionsButton";
 import { AuthorWizardSteps } from "@/components/author/AuthorWizardSteps";
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
 import { GameModePicker } from "@/components/author/GameModePicker";
@@ -110,6 +111,7 @@ import {
   validateSessionShareFiles,
 } from "@/lib/sharing-files/session-files";
 import { cn } from "@/lib/utils";
+import type { AiGenerationContext } from "@/lib/ai/option-generation";
 
 const createSearchSchema = z.object({
   mode: z.enum(["quiz", "polls", "jigsaw", "connect_dots"]).optional(),
@@ -180,6 +182,14 @@ function CreateRoomWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const aiGenerationContext = useMemo<AiGenerationContext>(
+    () => ({
+      roomName: name.trim(),
+      subject: subject.trim() || "General",
+      modeLabel: mode ? GAME_MODE_META[mode].title : "",
+    }),
+    [mode, name, subject],
+  );
   const [createError, setCreateError] = useState<string | null>(null);
   const [sessionFiles, setSessionFiles] = useState<File[]>([]);
   const [sessionFileRetentionDays, setSessionFileRetentionDays] =
@@ -755,11 +765,13 @@ function CreateRoomWizard() {
                       </div>
                     </div>
                     <QuizEditor
+                      mode="quiz"
                       questions={questions}
                       activeQ={activeQ}
                       setActiveQ={setActiveQ}
                       setQuestions={setQuestions}
                       progress={quizProgress}
+                      generationContext={aiGenerationContext}
                     />
                   </>
                 )}
@@ -773,6 +785,7 @@ function CreateRoomWizard() {
                     settings={pollSettings}
                     setSettings={setPollSettings}
                     progress={pollProgress}
+                    generationContext={aiGenerationContext}
                   />
                 )}
 
@@ -816,12 +829,14 @@ function CreateRoomWizard() {
                       </div>
                     )}
                     <QuizEditor
+                      mode="quiz_jigsaw"
                       questions={questions}
                       activeQ={activeQ}
                       setActiveQ={setActiveQ}
                       setQuestions={setQuestions}
                       progress={quizProgress}
                       accent="purple"
+                      generationContext={aiGenerationContext}
                     />
                     <JigsawUploader
                       jigsawUrl={jigsawUrl}
@@ -983,12 +998,14 @@ function CreateRoomWizard() {
                       </div>
                     </div>
                     <QuizEditor
+                      mode="jigsaw"
                       questions={questions}
                       activeQ={activeQ}
                       setActiveQ={setActiveQ}
                       setQuestions={setQuestions}
                       progress={quizProgress}
                       accent="jigsaw"
+                      generationContext={aiGenerationContext}
                     />
                     {!jigsawImageSource ? (
                       <JigsawImageSourceSelector onSelect={setJigsawImageSource} />
@@ -1071,6 +1088,7 @@ function CreateRoomWizard() {
                       setPairs={setConnectDotsPairs}
                       progress={connectDotsProgress}
                       board={connectDotsBoard}
+                      generationContext={aiGenerationContext}
                       onAddPair={addConnectDotsPair}
                       onRemovePair={removeConnectDotsPair}
                       onMovePair={moveConnectDotsPair}
@@ -1223,18 +1241,22 @@ function isQuizQuestionComplete(item: QuizQuestionDraft): boolean {
 }
 
 function QuizEditor({
+  mode,
   questions,
   activeQ,
   setActiveQ,
   setQuestions,
   progress,
+  generationContext,
   accent = "default",
 }: {
+  mode: Extract<GameMode, "quiz" | "quiz_jigsaw" | "jigsaw">;
   questions: QuizQuestionDraft[];
   activeQ: number;
   setActiveQ: (n: number) => void;
   setQuestions: Dispatch<SetStateAction<QuizQuestionDraft[]>>;
   progress: { done: number; total: number; complete: boolean };
+  generationContext: AiGenerationContext;
   accent?: "default" | "purple" | "jigsaw";
 }) {
   const q = questions[activeQ]!;
@@ -1310,12 +1332,33 @@ function QuizEditor({
         <Label className="text-xs uppercase tracking-wider text-[#737373]">
           Question {activeQ + 1}
         </Label>
-        <Input
-          value={q.prompt}
-          onChange={(e) => update({ prompt: e.target.value })}
-          placeholder="What should participants answer?"
-          className="mt-2 h-11 rounded-xl text-base"
-        />
+        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <Input
+            value={q.prompt}
+            onChange={(e) => update({ prompt: e.target.value })}
+            placeholder="What should participants answer?"
+            className="h-11 rounded-xl text-base"
+          />
+          <AiGenerateOptionsButton
+            request={{
+              kind: "quiz_options",
+              mode,
+              question: q.prompt,
+              context: {
+                ...generationContext,
+                existingOptions: q.options,
+                correctOption: q.correctOption,
+              },
+            }}
+            disabled={!q.prompt.trim()}
+            buttonLabel="Generate options"
+            dialogTitle="Review answer choices"
+            onApply={(response) => {
+              if (response.kind !== "quiz_options") return;
+              update({ options: response.options, correctOption: response.correctOption });
+            }}
+          />
+        </div>
 
         <div className="mt-4 grid gap-2.5">
           <p className="text-xs font-medium text-[#525252]">
@@ -1414,6 +1457,7 @@ function PollBuilder({
   settings,
   setSettings,
   progress,
+  generationContext,
 }: {
   questions: PollQuestionDraft[];
   activeQ: number;
@@ -1422,6 +1466,7 @@ function PollBuilder({
   settings: PollSettings;
   setSettings: Dispatch<SetStateAction<PollSettings>>;
   progress: { done: number; total: number; complete: boolean };
+  generationContext: AiGenerationContext;
 }) {
   const activeIndex = Math.min(activeQ, Math.max(0, questions.length - 1));
   const q = questions[activeIndex] ?? questions[0] ?? emptyPollQuestions()[0];
@@ -1495,6 +1540,8 @@ function PollBuilder({
   const setScale = (min: number, max: number) => {
     update({ min, max });
   };
+  const pollOptionType =
+    q.type === "single_choice" || q.type === "multiple_choice" ? q.type : null;
 
   return (
     <div className="grid gap-4">
@@ -1572,13 +1619,41 @@ function PollBuilder({
             >
               Question {activeIndex + 1}
             </Label>
-            <Input
-              id="poll-question-prompt"
-              value={q.prompt}
-              onChange={(e) => update({ prompt: e.target.value })}
-              placeholder="Ask anything"
-              className="h-11 rounded-xl text-base"
-            />
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <Input
+                id="poll-question-prompt"
+                value={q.prompt}
+                onChange={(e) => update({ prompt: e.target.value })}
+                placeholder="Ask anything"
+                className="h-11 rounded-xl text-base"
+              />
+              {pollOptionType && (
+                <AiGenerateOptionsButton
+                  request={{
+                    kind: "poll_options",
+                    mode: "polls",
+                    pollType: pollOptionType,
+                    question: q.prompt,
+                    context: {
+                      ...generationContext,
+                      existingOptions: q.options.map((option) => option.label),
+                    },
+                  }}
+                  disabled={!q.prompt.trim()}
+                  buttonLabel="Generate choices"
+                  dialogTitle="Review poll choices"
+                  onApply={(response) => {
+                    if (response.kind !== "poll_options") return;
+                    update({
+                      options: response.options.map((label, index) => ({
+                        id: q.options[index]?.id ?? `option-${index + 1}`,
+                        label,
+                      })),
+                    });
+                  }}
+                />
+              )}
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="poll-question-type">Type</Label>
@@ -1854,6 +1929,7 @@ function ConnectDotsPairEditor({
   setPairs,
   progress,
   board,
+  generationContext,
   onAddPair,
   onRemovePair,
   onMovePair,
@@ -1866,6 +1942,7 @@ function ConnectDotsPairEditor({
   setPairs: Dispatch<SetStateAction<ConnectDotsContentPair[]>>;
   progress: { done: number; total: number; complete: boolean };
   board: ConnectDotsBoardConfig;
+  generationContext: AiGenerationContext;
   onAddPair: () => void;
   onRemovePair: () => void;
   onMovePair: (from: number, to: number) => void;
@@ -1998,7 +2075,28 @@ function ConnectDotsPairEditor({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="connect-dots-answer">Answer</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="connect-dots-answer">Answer</Label>
+              <AiGenerateOptionsButton
+                request={{
+                  kind: "connect_dots_answer",
+                  mode: "connect_dots",
+                  question: pair.question,
+                  context: {
+                    ...generationContext,
+                    existingAnswer: pair.answer,
+                  },
+                }}
+                disabled={!pair.question.trim()}
+                buttonLabel="Generate answer"
+                dialogTitle="Review matching answer"
+                className="h-9"
+                onApply={(response) => {
+                  if (response.kind !== "connect_dots_answer") return;
+                  update({ answer: response.answer });
+                }}
+              />
+            </div>
             <Input
               id="connect-dots-answer"
               value={pair.answer}
