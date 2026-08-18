@@ -1,5 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Blocks, CircleDot, Flame, Sparkles, Timer, Trophy, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Blocks,
+  CircleDot,
+  Crosshair,
+  Flame,
+  Sparkles,
+  Timer,
+  Trophy,
+  Zap,
+} from "lucide-react";
 
 import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
@@ -7,7 +17,7 @@ import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
 
 const gamesTitle = "Interactive Session Tools | GamiBar";
 const gamesDescription =
-  "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, and Connect Dots for logic and speed.";
+  "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, Connect Dots for logic, and Target Hunt for image-based identification.";
 
 export const Route = createFileRoute("/games/")({
   head: () =>
@@ -68,6 +78,20 @@ const games = [
     iconBg: "bg-emerald-500/10 text-emerald-600",
     btnClass: "bg-emerald-600 hover:bg-emerald-700",
   },
+  {
+    to: "/author/create" as const,
+    search: { mode: "visual_point" as const },
+    icon: Crosshair,
+    name: "Target Hunt",
+    tagline: "TARGET HUNT",
+    copy: "Upload any image, place hidden-label targets, and validate selections.",
+    meta: "Any image or diagram",
+    xp: "500 XP",
+    difficulty: "Expert",
+    border: "hover:border-sky-500/40",
+    iconBg: "bg-sky-500/10 text-sky-700",
+    btnClass: "bg-sky-600 hover:bg-sky-700",
+  },
 ] as const;
 
 function GamesIndex() {
@@ -96,7 +120,7 @@ function GamesIndex() {
 
         <div className="mx-auto mt-10 flex max-w-2xl flex-wrap items-center justify-center gap-6 rounded-2xl border border-border bg-white/80 px-8 py-4">
           {[
-            { icon: Trophy, label: "3 Modes", value: "Available" },
+            { icon: Trophy, label: "4 Modes", value: "Available" },
             { icon: Zap, label: "Max Reward", value: "500 XP" },
             { icon: Flame, label: "Combo", value: "Streak Bonus" },
           ].map((s) => (
@@ -112,7 +136,7 @@ function GamesIndex() {
           ))}
         </div>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
+        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {games.map((g, i) => (
             <Reveal key={g.to} delay={i * 0.08}>
               <div
@@ -127,6 +151,7 @@ function GamesIndex() {
                     g.to === "/games/quiz" && "bg-red-500",
                     g.to === "/games/jigsaw" && "bg-blue-500",
                     g.to === "/games/connect-dots" && "bg-emerald-500",
+                    g.to === "/author/create" && "bg-sky-500",
                   )}
                 />
 
@@ -155,16 +180,7 @@ function GamesIndex() {
                     </span>
                   </div>
 
-                  <Link
-                    to={g.to}
-                    className={cn(
-                      "mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white transition-colors",
-                      g.btnClass,
-                    )}
-                  >
-                    Play {g.name.split(" ")[0]}
-                    <ArrowRight className="size-4" />
-                  </Link>
+                  <GameCta game={g} />
                 </div>
               </div>
             </Reveal>
@@ -172,5 +188,32 @@ function GamesIndex() {
         </div>
       </div>
     </div>
+  );
+}
+
+function GameCta({ game }: { game: (typeof games)[number] }) {
+  const className = cn(
+    "mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white transition-colors",
+    game.btnClass,
+  );
+  const content = (
+    <>
+      Play {game.name.split(" ")[0]}
+      <ArrowRight className="size-4" />
+    </>
+  );
+
+  if (game.to === "/author/create") {
+    return (
+      <Link to="/author/create" search={game.search} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <Link to={game.to} className={className}>
+      {content}
+    </Link>
   );
 }

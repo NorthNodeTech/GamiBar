@@ -24,9 +24,21 @@ function progressColumnLabel(mode: GameMode): string {
   if (mode === "quiz") return "Progress / score";
   if (mode === "jigsaw") return "Pieces earned";
   if (mode === "connect_dots") return "Connections";
+  if (mode === "visual_point") return "Targets selected";
   if (mode === "polls") return "Responses";
   return "Progress";
 }
+
+const DASHBOARD_ACCENT_CLASS: Record<GameMode, string> = {
+  quiz: "bg-gradient-to-br from-[var(--game-quiz)] to-[var(--game-quiz-deep)]",
+  quiz_jigsaw: "bg-gradient-to-br from-[#7C3AED] to-[#5B21B6]",
+  jigsaw: "bg-gradient-to-br from-[var(--game-jigsaw)] to-[var(--game-jigsaw-deep)]",
+  connect_dots:
+    "bg-gradient-to-br from-[var(--game-connect-dots)] to-[var(--game-connect-dots-deep)]",
+  visual_point:
+    "bg-gradient-to-br from-[var(--game-visual-point)] to-[var(--game-visual-point-deep)]",
+  polls: "bg-gradient-to-br from-orange-500 to-red-500",
+};
 
 export function LiveGameDashboard({
   mode,
@@ -44,7 +56,7 @@ export function LiveGameDashboard({
   className?: string;
 }) {
   const meta = GAME_MODE_META[mode];
-  const showScore = mode === "quiz" || mode === "quiz_jigsaw";
+  const showScore = mode === "quiz" || mode === "quiz_jigsaw" || mode === "visual_point";
 
   return (
     <section
@@ -59,7 +71,7 @@ export function LiveGameDashboard({
             <span
               className={cn(
                 "grid size-10 place-items-center rounded-xl text-white",
-                meta.accentClass,
+                DASHBOARD_ACCENT_CLASS[mode],
               )}
             >
               <Users className="size-4" />

@@ -12,6 +12,8 @@ import type {
   QuizQuestionDraft,
   Room,
   RoomEvent,
+  VisualPointAnswerRecord,
+  VisualPointQuestionDraft,
 } from "@/lib/game/types";
 import { createEntityId, hashToken, isUuid } from "@/lib/game/room-crypto";
 import { isValidRoomCodeFormat, normalizeRoomCode } from "@/lib/game/room-code";
@@ -59,6 +61,7 @@ export type StoredRoom = {
   room: Room;
   participants: Map<string, Participant>;
   quizAnswers: Map<string, Map<string, QuizAnswer>>;
+  visualPointAnswers: Map<string, Map<string, VisualPointAnswerRecord & { isCorrect: boolean }>>;
   attempts: Map<string, Attempt>;
   events: RoomEvent[];
   authorToken: string;
@@ -184,6 +187,16 @@ function parsePayload(mode: Room["mode"] | string, config: unknown): GamePayload
       timeLimitSeconds,
     });
   }
+  if (normalizedMode === "visual_point") {
+    const questions = Array.isArray(raw["questions"])
+      ? (raw["questions"] as VisualPointQuestionDraft[])
+      : [];
+    return {
+      mode: "visual_point",
+      questions,
+      timeLimitSeconds,
+    };
+  }
   const connectDots = parseConnectDotsConfig(raw);
   return {
     mode: "connect_dots",
@@ -218,6 +231,11 @@ function configFromPayload(
       settings: payload.settings,
       timeLimitSeconds: payload.timeLimitSeconds,
     };
+  } else if (payload.mode === "visual_point") {
+    base = {
+      questions: payload.questions,
+      timeLimitSeconds: payload.timeLimitSeconds,
+    };
   } else {
     base = {
       connectDots: payload.connectDots,
@@ -231,6 +249,21 @@ function configFromPayload(
     base.duplicatedFromName = settings.duplicatedFromName;
   }
   return base;
+}
+
+function stripVisualPointDataUrls(payload: GamePayload): GamePayload {
+  if (payload.mode !== "visual_point") return payload;
+  return {
+    ...payload,
+    questions: payload.questions.map((question) =>
+      question.imageUrl?.startsWith("data:")
+        ? {
+            ...question,
+            imageUrl: null,
+          }
+        : question,
+    ),
+  };
 }
 
 function readDuplicatedFromName(config: unknown): string | null {
@@ -341,6 +374,102 @@ async function hydrateJigsawPayload(roomId: string, payload: GamePayload): Promi
   };
 }
 
+async function visualPointPublicUrl(storagePath: string): Promise<string> {
+  const { data } = supabase.storage.from("gamibar-visual-point").getPublicUrl(storagePath);
+  return data.publicUrl;
+}
+
+function visualPointExt(mime: string): string {
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/webp") return "webp";
+  return "png";
+}
+
+async function uploadVisualPointAssets(roomId: string, payload: GamePayload): Promise<GamePayload> {
+  if (payload.mode !== "visual_point") return payload;
+
+  const questions: VisualPointQuestionDraft[] = [];
+  let changed = false;
+  for (const question of payload.questions) {
+    const hasDataUrl = question.imageUrl?.startsWith("data:");
+    if (!hasDataUrl) {
+      questions.push(question);
+      continue;
+    }
+
+    const mime = question.imageMime ?? "image/png";
+    const response = await fetch(question.imageUrl!);
+    if (!response.ok) {
+      throw new Error("Could not read Target Hunt image data.");
+    }
+    const blob = await response.blob();
+    const storagePath = `${roomId}/${question.id}.${visualPointExt(mime)}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("gamibar-visual-point")
+      .upload(storagePath, blob, { upsert: true, contentType: mime });
+    if (uploadError) {
+      throw new Error(uploadError.message || "Could not upload Target Hunt image.");
+    }
+
+    const { error: assetError } = await supabase.from("gamibar_visual_point_assets").upsert(
+      {
+        room_id: roomId,
+        question_id: question.id,
+        storage_path: storagePath,
+        mime_type: mime,
+        width: question.imageWidth ?? null,
+        height: question.imageHeight ?? null,
+        byte_size: blob.size,
+      },
+      { onConflict: "room_id,question_id" },
+    );
+    if (assetError) {
+      throw new Error(assetError.message || "Could not save Target Hunt asset metadata.");
+    }
+
+    questions.push({
+      ...question,
+      imageUrl: await visualPointPublicUrl(storagePath),
+      imageMime: mime,
+    });
+    changed = true;
+  }
+
+  return changed ? { ...payload, questions } : payload;
+}
+
+async function hydrateVisualPointPayload(
+  roomId: string,
+  payload: GamePayload,
+): Promise<GamePayload> {
+  if (payload.mode !== "visual_point") return payload;
+
+  const { data: assets } = await supabase
+    .from("gamibar_visual_point_assets")
+    .select("question_id, storage_path, mime_type, width, height")
+    .eq("room_id", roomId);
+
+  if (!assets?.length) return payload;
+
+  const byQuestion = new Map(assets.map((asset) => [asset.question_id, asset]));
+  const questions = await Promise.all(
+    payload.questions.map(async (question) => {
+      const asset = byQuestion.get(question.id);
+      if (!asset) return question;
+      return {
+        ...question,
+        imageUrl: await visualPointPublicUrl(asset.storage_path),
+        imageMime: asset.mime_type,
+        imageWidth: asset.width ?? question.imageWidth ?? null,
+        imageHeight: asset.height ?? question.imageHeight ?? null,
+      };
+    }),
+  );
+
+  return { ...payload, questions };
+}
+
 /** Copy jigsaw image metadata + storage blob when duplicating a room. */
 export async function copyJigsawAssetBetweenRooms(
   fromRoomId: string,
@@ -380,6 +509,43 @@ export async function copyJigsawAssetBetweenRooms(
   );
 }
 
+export async function copyVisualPointAssetsBetweenRooms(
+  fromRoomId: string,
+  toRoomId: string,
+): Promise<void> {
+  const { data: assets } = await supabase
+    .from("gamibar_visual_point_assets")
+    .select("question_id, storage_path, mime_type, width, height, byte_size")
+    .eq("room_id", fromRoomId);
+
+  for (const asset of assets ?? []) {
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from("gamibar-visual-point")
+      .download(asset.storage_path);
+    if (downloadError || !blob) continue;
+
+    const ext = asset.storage_path.split(".").pop() ?? visualPointExt(asset.mime_type);
+    const storagePath = `${toRoomId}/${asset.question_id}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("gamibar-visual-point")
+      .upload(storagePath, blob, { upsert: true, contentType: asset.mime_type });
+    if (uploadError) continue;
+
+    await supabase.from("gamibar_visual_point_assets").upsert(
+      {
+        room_id: toRoomId,
+        question_id: asset.question_id,
+        storage_path: storagePath,
+        mime_type: asset.mime_type,
+        width: asset.width,
+        height: asset.height,
+        byte_size: asset.byte_size ?? blob.size,
+      },
+      { onConflict: "room_id,question_id" },
+    );
+  }
+}
+
 function buildStoredRoom(
   row: {
     id: string;
@@ -415,6 +581,13 @@ function buildStoredRoom(
     is_correct: boolean;
     submitted_at: string;
   }>,
+  visualAnswers: Array<{
+    participant_id: string;
+    question_id: string;
+    selected_point_id: string;
+    is_correct: boolean;
+    submitted_at: string;
+  }>,
   attempts: Array<{
     id: string;
     participant_id: string;
@@ -441,6 +614,24 @@ function buildStoredRoom(
     map.set(answer.question_id, {
       questionId: answer.question_id,
       selectedOption: answer.selected_option as QuizAnswer["selectedOption"],
+      isCorrect: answer.is_correct,
+      submittedAt: ms(answer.submitted_at) ?? Date.now(),
+    });
+  }
+
+  const visualPointAnswers = new Map<
+    string,
+    Map<string, VisualPointAnswerRecord & { isCorrect: boolean }>
+  >();
+  for (const answer of visualAnswers) {
+    let map = visualPointAnswers.get(answer.participant_id);
+    if (!map) {
+      map = new Map();
+      visualPointAnswers.set(answer.participant_id, map);
+    }
+    map.set(answer.question_id, {
+      questionId: answer.question_id,
+      selectedPointId: answer.selected_point_id,
       isCorrect: answer.is_correct,
       submittedAt: ms(answer.submitted_at) ?? Date.now(),
     });
@@ -497,6 +688,7 @@ function buildStoredRoom(
     },
     participants: participantMap,
     quizAnswers,
+    visualPointAnswers,
     attempts: attemptMap,
     events: Array.isArray(row.events) ? (row.events as RoomEvent[]) : [],
     authorToken,
@@ -508,6 +700,10 @@ type LegacySerializedRoom = {
   room: Room;
   participants: Record<string, Participant>;
   quizAnswers: Record<string, Record<string, QuizAnswer>>;
+  visualPointAnswers?: Record<
+    string,
+    Record<string, VisualPointAnswerRecord & { isCorrect: boolean }>
+  >;
   attempts: Record<string, Omit<Attempt, "id"> & { id?: string }>;
   events: RoomEvent[];
   authorToken: string;
@@ -521,6 +717,14 @@ function deserializeLegacyState(state: unknown, authorToken = ""): StoredRoom | 
   const quizAnswers = new Map<string, Map<string, QuizAnswer>>();
   for (const [participantId, answers] of Object.entries(raw.quizAnswers ?? {})) {
     quizAnswers.set(participantId, new Map(Object.entries(answers)));
+  }
+
+  const visualPointAnswers = new Map<
+    string,
+    Map<string, VisualPointAnswerRecord & { isCorrect: boolean }>
+  >();
+  for (const [participantId, answers] of Object.entries(raw.visualPointAnswers ?? {})) {
+    visualPointAnswers.set(participantId, new Map(Object.entries(answers)));
   }
 
   const attempts = new Map<string, Attempt>();
@@ -554,6 +758,7 @@ function deserializeLegacyState(state: unknown, authorToken = ""): StoredRoom | 
     },
     participants,
     quizAnswers,
+    visualPointAnswers,
     attempts,
     events: raw.events ?? [],
     authorToken: token,
@@ -567,6 +772,11 @@ function serializeLegacyState(stored: StoredRoom): LegacySerializedRoom {
     quizAnswers[participantId] = Object.fromEntries(answers);
   }
 
+  const visualPointAnswers: NonNullable<LegacySerializedRoom["visualPointAnswers"]> = {};
+  for (const [participantId, answers] of stored.visualPointAnswers) {
+    visualPointAnswers[participantId] = Object.fromEntries(answers);
+  }
+
   const attempts: LegacySerializedRoom["attempts"] = {};
   for (const [participantId, attempt] of stored.attempts) {
     attempts[participantId] = attempt;
@@ -576,6 +786,7 @@ function serializeLegacyState(stored: StoredRoom): LegacySerializedRoom {
     room: stored.room,
     participants: Object.fromEntries(stored.participants),
     quizAnswers,
+    visualPointAnswers,
     attempts,
     events: stored.events,
     authorToken: stored.authorToken,
@@ -646,20 +857,23 @@ async function loadRoomBundle(roomId: string, authorToken = ""): Promise<StoredR
     .maybeSingle();
   if (error || !row) return null;
 
-  const [participantsRes, answersRes, attemptsRes] = await Promise.all([
+  const [participantsRes, answersRes, visualAnswersRes, attemptsRes] = await Promise.all([
     supabase.from("gamibar_participants").select("*").eq("room_id", roomId),
     supabase.from("gamibar_quiz_answers").select("*").eq("room_id", roomId),
+    supabase.from("gamibar_visual_point_answers").select("*").eq("room_id", roomId),
     supabase.from("gamibar_attempts").select("*").eq("room_id", roomId),
   ]);
 
   const normalizedMode = (row.mode === "maze" ? "connect_dots" : row.mode) as Room["mode"];
   let payload = parsePayload(normalizedMode, row.config);
   payload = await hydrateJigsawPayload(roomId, payload);
+  payload = await hydrateVisualPointPayload(roomId, payload);
 
   return buildStoredRoom(
     { ...row, mode: normalizedMode },
     participantsRes.data ?? [],
     answersRes.data ?? [],
+    visualAnswersRes.data ?? [],
     attemptsRes.data ?? [],
     payload,
     authorToken,
@@ -783,6 +997,7 @@ export async function persist(stored: StoredRoom) {
   stored.authorTokenHash = authorTokenHash;
 
   let payload = room.payload;
+  const initialPayload = stripVisualPointDataUrls(payload);
 
   const roomRow = {
     id: room.id,
@@ -794,7 +1009,7 @@ export async function persist(stored: StoredRoom) {
     author_token_hash: authorTokenHash,
     status: room.status,
     mode: room.mode,
-    config: configFromPayload(payload, {
+    config: configFromPayload(initialPayload, {
       showLeaderboardToStudents: room.showLeaderboardToStudents,
       duplicatedFromName: room.duplicatedFromName,
     }),
@@ -822,6 +1037,24 @@ export async function persist(stored: StoredRoom) {
       })
       .eq("id", room.id);
     if (configError) throw new Error(configError.message || "Could not save jigsaw config.");
+  }
+
+  if (room.mode === "visual_point" && payload.mode === "visual_point") {
+    payload = await uploadVisualPointAssets(room.id, payload);
+    room.payload = payload;
+
+    const { error: configError } = await supabase
+      .from("gamibar_rooms")
+      .update({
+        config: configFromPayload(payload, {
+          showLeaderboardToStudents: room.showLeaderboardToStudents,
+          duplicatedFromName: room.duplicatedFromName,
+        }),
+      })
+      .eq("id", room.id);
+    if (configError) {
+      throw new Error(configError.message || "Could not save Target Hunt config.");
+    }
   }
 
   for (const participant of stored.participants.values()) {
@@ -871,6 +1104,25 @@ export async function persist(stored: StoredRoom) {
           { onConflict: "participant_id,question_id" },
         );
         if (error) throw new Error(error.message || "Could not save quiz answer.");
+      }
+    }
+  }
+
+  if (room.mode === "visual_point") {
+    for (const [participantId, answers] of stored.visualPointAnswers) {
+      for (const answer of answers.values()) {
+        const { error } = await supabase.from("gamibar_visual_point_answers").upsert(
+          {
+            room_id: room.id,
+            participant_id: participantId,
+            question_id: answer.questionId,
+            selected_point_id: answer.selectedPointId,
+            is_correct: answer.isCorrect,
+            submitted_at: iso(answer.submittedAt) ?? new Date().toISOString(),
+          },
+          { onConflict: "participant_id,question_id" },
+        );
+        if (error) throw new Error(error.message || "Could not save Target Hunt answer.");
       }
     }
   }

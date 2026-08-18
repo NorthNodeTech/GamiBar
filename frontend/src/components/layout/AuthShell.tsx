@@ -7,7 +7,7 @@ import { Logo } from "@/components/layout/Logo";
 import { cn } from "@/lib/utils";
 
 const highlights = [
-  { icon: Gamepad2, text: "Quiz, Jigsaw, and Connect Dots in one live session" },
+  { icon: Gamepad2, text: "Quiz, Jigsaw, Connect Dots, and Target Hunt modes" },
   { icon: Users, text: "Unlimited participants join with a code or QR" },
   { icon: Trophy, text: "Real-time leaderboard and room energy" },
   { icon: Shield, text: "Secure accounts backed by Supabase" },

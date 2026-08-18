@@ -45,6 +45,18 @@ export const GAME_CONFIG = {
     defaultDifficulty: "medium" as ConnectDotsDifficulty,
     timeLimitSeconds: CONNECT_DOTS_CONFIG.medium.timeLimitSeconds,
   },
+  visual_point: {
+    minQuestions: 1,
+    maxQuestions: 20,
+    defaultQuestionCount: 1,
+    minPoints: 2,
+    maxPoints: 12,
+    maxUploadBytes: 8 * 1024 * 1024,
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"] as const,
+    minDimension: 256,
+    maxDimension: 4096,
+    timeLimitSeconds: null as number | null,
+  },
   polls: {
     minQuestions: 1,
     maxQuestions: 25,
@@ -81,7 +93,13 @@ export const JIGSAW_GRID = {
   pieceCount: GAME_CONFIG.jigsaw.cols * GAME_CONFIG.jigsaw.rows,
 } as const;
 
-export type GameMode = "quiz" | "quiz_jigsaw" | "jigsaw" | "connect_dots" | "polls";
+export type GameMode =
+  | "quiz"
+  | "quiz_jigsaw"
+  | "jigsaw"
+  | "connect_dots"
+  | "visual_point"
+  | "polls";
 
 export const PUZZLE_QUEST_GRID = {
   cols: GAME_CONFIG.quiz_jigsaw.cols,
@@ -109,6 +127,11 @@ export const GAME_MODE_META: Record<GameMode, { title: string; shortInstruction:
     title: "Connect Dots",
     shortInstruction:
       "Connect each question dot to its matching answer dot by drawing paths on the grid.",
+  },
+  visual_point: {
+    title: "Target Hunt",
+    shortInstruction:
+      "Read the prompt, inspect the image, select the correct target, and submit your answer.",
   },
   polls: {
     title: "Polls & Surveys",

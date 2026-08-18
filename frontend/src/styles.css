@@ -52,6 +52,7 @@
   --color-game-quiz: var(--game-quiz);
   --color-game-jigsaw: var(--game-jigsaw);
   --color-game-connect-dots: var(--game-connect-dots);
+  --color-game-visual-point: var(--game-visual-point);
   --animate-drift: drift 26s ease-in-out infinite;
   --animate-drift-slow: drift 40s ease-in-out infinite;
   --animate-spin-slow: spin 32s linear infinite;
@@ -291,6 +292,9 @@
   --game-connect-dots: #10b981;
   --game-connect-dots-deep: #059669;
   --game-connect-dots-soft: #ecfdf5;
+  --game-visual-point: #0ea5e9;
+  --game-visual-point-deep: #0369a1;
+  --game-visual-point-soft: #e0f2fe;
   /* Legacy aliases (removed Maze Connect) */
   --game-maze: var(--game-connect-dots);
   --game-maze-deep: var(--game-connect-dots-deep);
@@ -359,6 +363,9 @@
   --game-connect-dots: #34d399;
   --game-connect-dots-deep: #10b981;
   --game-connect-dots-soft: rgba(16, 185, 129, 0.12);
+  --game-visual-point: #38bdf8;
+  --game-visual-point-deep: #0ea5e9;
+  --game-visual-point-soft: rgba(14, 165, 233, 0.14);
 }
 
 @layer base {

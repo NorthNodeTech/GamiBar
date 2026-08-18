@@ -6,7 +6,7 @@ import {
   Blocks,
   CircleDot,
   ClipboardList,
-  FileText,
+  Crosshair,
   Gamepad2,
   Plus,
   QrCode,
@@ -22,7 +22,7 @@ import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
-import type { GameMode } from "@/lib/game/config";
+import type { CoreLiveGameMode } from "@/lib/game/session-flow";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/")({
@@ -51,7 +51,7 @@ const startTools = [
   },
   {
     title: "Interactive Games",
-    copy: "Use Jigsaw Mission or Connect Dots when the session needs movement and focus.",
+    copy: "Use Jigsaw Mission, Connect Dots, or Target Hunt when the session needs movement and focus.",
     icon: Gamepad2,
     status: "Ready",
     action: "Choose game",
@@ -106,6 +106,15 @@ const gameModes = [
     ring: "hover:border-[var(--game-connect-dots)]",
     iconTint: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots)]",
   },
+  {
+    mode: "visual_point" as const,
+    title: "Target Hunt",
+    copy: "Upload a diagram or image, place target dots, and let participants identify the right target.",
+    icon: Crosshair,
+    preview: gameJigsawPreview,
+    ring: "hover:border-[var(--game-visual-point)]",
+    iconTint: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point)]",
+  },
 ] as const;
 
 const opsLinks = [
@@ -132,7 +141,7 @@ const opsLinks = [
 function AuthorHome() {
   const navigate = useNavigate();
 
-  const openCreateWithMode = (mode: GameMode) => {
+  const openCreateWithMode = (mode: CoreLiveGameMode) => {
     navigate({ to: "/author/create", search: { mode } });
   };
 
@@ -200,7 +209,7 @@ function AuthorHome() {
             title="Live game modes"
             copy="These are the first playable activities. The structure now supports more tools and categories around them."
           />
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {gameModes.map((item, i) => {
               const Icon = item.icon;
               return (
@@ -285,7 +294,7 @@ function ToolCard({
 }: {
   tool: (typeof startTools)[number];
   index: number;
-  onMode: (mode: GameMode) => void;
+  onMode: (mode: CoreLiveGameMode) => void;
 }) {
   const Icon = tool.icon;
   const disabled = "disabled" in tool && tool.disabled;

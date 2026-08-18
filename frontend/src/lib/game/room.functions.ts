@@ -108,6 +108,19 @@ export async function submitQuizAnswerFn({
   return gameAction("submit-quiz-answer", data, false);
 }
 
+export async function submitVisualPointAnswerFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    questionId: string;
+    selectedPointId: string;
+  };
+}) {
+  return gameAction("submit-visual-point-answer", data, false);
+}
+
 export async function submitPollResponsesFn({
   data,
 }: {

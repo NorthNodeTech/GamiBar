@@ -43,7 +43,7 @@ function AuthorLoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      subtitle="Sign in to create live classroom sessions and host Quiz, Jigsaw, or Connect Dots games."
+      subtitle="Sign in to create live classroom sessions and host Quiz, Jigsaw, Connect Dots, or Target Hunt games."
       footer={
         <>
           New here?{" "}

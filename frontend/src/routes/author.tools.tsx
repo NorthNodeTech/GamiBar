@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Blocks,
   CircleDot,
+  Crosshair,
   Plus,
   QrCode,
   Radio,
@@ -21,7 +22,7 @@ import quizBattleArt from "@/assets/tool-quiz-battle.webp";
 import resourceDropArt from "@/assets/tool-resource-drop.webp";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
-import type { GameMode } from "@/lib/game/config";
+import type { CoreLiveGameMode } from "@/lib/game/session-flow";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/tools")({
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/author/tools")({
 });
 
 type PlayableTool = {
-  mode: GameMode;
+  mode: CoreLiveGameMode;
   title: string;
   status: string;
   copy: string;
@@ -114,6 +115,17 @@ const gamifiedTools = [
     accent: "bg-[var(--game-connect-dots)]",
     soft: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
     chips: ["Matching pairs", "Shared board", "Timer"],
+  },
+  {
+    mode: "visual_point" as const,
+    title: "Target Hunt",
+    status: "Available",
+    copy: "Ask learners to hunt for targets on images.",
+    icon: Crosshair,
+    image: jigsawMissionArt,
+    accent: "bg-[var(--game-visual-point)]",
+    soft: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]",
+    chips: ["Images", "Hidden labels", "Target selection"],
   },
 ] satisfies PlayableTool[];
 

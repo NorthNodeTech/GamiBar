@@ -43,6 +43,13 @@ const MODE_STYLE: Record<
     glow: "shadow-[0_24px_60px_rgba(16,185,129,0.12)]",
     track: "stroke-[var(--game-connect-dots)]",
   },
+  visual_point: {
+    ring: "border-[var(--game-visual-point)]/25",
+    soft: "bg-[var(--game-visual-point-soft)]",
+    text: "text-[var(--game-visual-point-deep)]",
+    glow: "shadow-[0_24px_60px_rgba(14,165,233,0.12)]",
+    track: "stroke-[var(--game-visual-point)]",
+  },
   polls: {
     ring: "border-orange-400/25",
     soft: "bg-orange-100",

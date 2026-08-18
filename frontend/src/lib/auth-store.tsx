@@ -135,12 +135,17 @@ export function AuthProvider({
     setLoading(true);
 
     const initializeAuth = async () => {
-      const [{ supabase }, { resolveAuthUserFromSession }] = await Promise.all([
+      const [{ isSupabaseConfigured, supabase }, { resolveAuthUserFromSession }] = await Promise.all([
         import("@/lib/supabase/client"),
         import("@/lib/supabase/auth"),
       ]);
 
       if (!mounted) return;
+      if (!isSupabaseConfigured) {
+        setUser(getStoredAuth());
+        setLoading(false);
+        return;
+      }
 
       const syncSession = async () => {
         try {

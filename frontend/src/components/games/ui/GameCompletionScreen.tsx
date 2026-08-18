@@ -30,6 +30,11 @@ const MODE_ACCENT: Record<
     metric: "text-[var(--game-connect-dots-deep)]",
     ring: "border-[var(--game-connect-dots)]/20",
   },
+  visual_point: {
+    badge: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]",
+    metric: "text-[var(--game-visual-point-deep)]",
+    ring: "border-[var(--game-visual-point)]/20",
+  },
   polls: {
     badge: "bg-orange-100 text-orange-800",
     metric: "text-orange-700",

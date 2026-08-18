@@ -4,7 +4,13 @@
  */
 
 /** Primary live game modes supported by the unified architecture. */
-export const CORE_LIVE_GAME_MODES = ["quiz", "polls", "jigsaw", "connect_dots"] as const;
+export const CORE_LIVE_GAME_MODES = [
+  "quiz",
+  "polls",
+  "jigsaw",
+  "connect_dots",
+  "visual_point",
+] as const;
 
 export type CoreLiveGameMode = (typeof CORE_LIVE_GAME_MODES)[number];
 

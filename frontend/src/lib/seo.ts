@@ -3,7 +3,7 @@ export const SITE_URL = "https://gamibar.com";
 export const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/og-gamibar.jpg`;
 
 export const DEFAULT_SEO_DESCRIPTION =
-  "GamiBar is a live gamified learning platform for interactive classrooms, workshops, and sessions. Create quizzes, jigsaw missions, connect-the-dots games, and QR resource drops that participants join with a room code.";
+  "GamiBar is a live gamified learning platform for interactive classrooms, workshops, and sessions. Create quizzes, jigsaw missions, Target Hunt image challenges, connect-the-dots games, and QR resource drops that participants join with a room code.";
 
 type RouteSeo = {
   title: string;
@@ -24,7 +24,7 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
   "/author/create": {
     title: "Create a Live Classroom Game | GamiBar",
     description:
-      "Build a GamiBar quiz, jigsaw mission, or connect-the-dots session for your class.",
+      "Build a GamiBar quiz, jigsaw mission, Target Hunt challenge, or connect-the-dots session for your class.",
   },
   "/author/tools": {
     title: "Tools | GamiBar",
@@ -103,12 +103,12 @@ const PUBLIC_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
   "/": {
     title: "GamiBar | Live Session Tools, Quizzes & Activities",
     description:
-      "Create interactive sessions with GamiBar. Run live quizzes, jigsaw missions, connect-the-dots activities, and QR file sharing that participants join with a room code.",
+      "Create interactive sessions with GamiBar. Run live quizzes, jigsaw missions, Target Hunt image challenges, connect-the-dots activities, and QR file sharing that participants join with a room code.",
   },
   "/games": {
     title: "Interactive Session Tools | GamiBar",
     description:
-      "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, and Connect Dots for logic and speed.",
+      "Explore GamiBar live classroom games: Quiz Challenge for recall, Jigsaw Mission for visual learning, Connect Dots for logic and speed, and Target Hunt for image-based identification.",
   },
   "/games/connect-dots": {
     title: "Connect Dots Classroom Game | GamiBar",

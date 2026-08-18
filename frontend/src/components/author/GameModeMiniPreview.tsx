@@ -10,6 +10,7 @@ const previews: Partial<Record<GameMode, string>> = {
   quiz_jigsaw: gameJigsawPreview,
   jigsaw: gameJigsawPreview,
   connect_dots: gameConnectDotsPreview,
+  visual_point: gameJigsawPreview,
   polls: gamePollsPreview,
 };
 
@@ -55,6 +56,8 @@ function modeTint(mode: GameMode): string {
       return "bg-[var(--game-jigsaw-soft)]";
     case "connect_dots":
       return "bg-[var(--game-connect-dots-soft)]";
+    case "visual_point":
+      return "bg-[var(--game-visual-point-soft)]";
     case "polls":
       return "bg-orange-100";
     default:
@@ -97,6 +100,19 @@ function ModeDecor({ mode }: { mode: GameMode }) {
       </div>
     );
   }
+  if (mode === "visual_point") {
+    return (
+      <div
+        className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-45"
+        aria-hidden
+      >
+        <span className="absolute left-3 top-3 size-1.5 rounded-full bg-[var(--game-visual-point)]" />
+        <span className="absolute right-3 top-4 size-1.5 rounded-full bg-[var(--game-visual-point)]" />
+        <span className="absolute bottom-3 left-4 size-1.5 rounded-full bg-[var(--game-visual-point)]" />
+        <span className="size-5 rounded-full border-2 border-[var(--game-visual-point)]" />
+      </div>
+    );
+  }
   if (mode === "jigsaw" || mode === "quiz_jigsaw") {
     return (
       <div
@@ -136,6 +152,8 @@ export function modeLabel(mode: GameMode): string {
       return "Jigsaw";
     case "connect_dots":
       return "Connect Dots";
+    case "visual_point":
+      return "Target Hunt";
     case "polls":
       return "Polls";
     default:

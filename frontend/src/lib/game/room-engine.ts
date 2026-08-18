@@ -18,6 +18,7 @@ import {
   persist,
   verifyAuthorToken,
   copyJigsawAssetBetweenRooms,
+  copyVisualPointAssetsBetweenRooms,
   type StoredRoom,
 } from "@/lib/game/room-persistence";
 import { validateConnectDotsPaths, type PathMap } from "@/lib/connect-dots";
@@ -297,6 +298,7 @@ export async function createRoom(input: {
     room,
     participants: new Map(),
     quizAnswers: new Map(),
+    visualPointAnswers: new Map(),
     attempts: new Map(),
     events: [],
     authorToken,
@@ -548,7 +550,14 @@ export async function getRoomSnapshot(input: {
           submittedAt: a.submittedAt,
           isCorrect: revealOwnAnswerCorrectness ? a.isCorrect : undefined,
         }))
-      : [];
+      : participantId && stored.room.mode === "visual_point"
+        ? [...(stored.visualPointAnswers.get(participantId)?.values() ?? [])].map((a) => ({
+            questionId: a.questionId,
+            selectedPointId: a.selectedPointId,
+            submittedAt: a.submittedAt,
+            isCorrect: revealOwnAnswerCorrectness ? a.isCorrect : undefined,
+          }))
+        : [];
 
   if (participantId && stored.room.mode === "jigsaw" && stored.room.payload.mode === "jigsaw") {
     if (backfillJigsawMissionTilePresentation(stored, participantId)) {
@@ -633,6 +642,7 @@ export async function duplicateRoom(input: {
   if (!created.ok) return created;
 
   await copyJigsawAssetBetweenRooms(input.sourceRoomId, created.room.id);
+  await copyVisualPointAssetsBetweenRooms(input.sourceRoomId, created.room.id);
   return created;
 }
 
@@ -905,6 +915,88 @@ export async function submitQuizAnswer(input: {
     attempt.completedAt = completedAt;
     attempt.durationMs = stored.room.startedAt ? completedAt - stored.room.startedAt : null;
     attempt.score = attempt.correctCount * 100;
+    participant.status = "COMPLETED";
+    pushEvent(stored, {
+      type: "player_completed",
+      participantId: participant.id,
+      displayName: participant.displayName,
+      completedAt,
+      durationMs: attempt.durationMs ?? 0,
+    });
+  }
+
+  const nextUnanswered = stored.room.payload.questions.find((q) => !map!.has(q.id));
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    locked: true,
+    answeredCount: map.size,
+    total: questionTotal,
+    completed: attempt.completed,
+    nextQuestionId: nextUnanswered?.id ?? null,
+  };
+}
+
+export async function submitVisualPointAnswer(input: {
+  roomId: string;
+  reconnectToken: string;
+  questionId: string;
+  selectedPointId: string;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  const reject = await rejectIfNotAcceptingInputAsync(stored);
+  if (reject) return reject;
+  if (stored.room.mode !== "visual_point" || stored.room.payload.mode !== "visual_point") {
+    return { ok: false as const, error: "This room is not a Target Hunt session." };
+  }
+
+  const participant = await findParticipantByReconnectToken(stored, input.reconnectToken);
+  if (!participant) return { ok: false as const, error: "Participant not found." };
+
+  const question = stored.room.payload.questions.find((q) => q.id === input.questionId);
+  if (!question) return { ok: false as const, error: "Invalid question." };
+
+  const selectedPoint = question.points.find((point) => point.id === input.selectedPointId);
+  if (!selectedPoint) return { ok: false as const, error: "Invalid target selection." };
+
+  let map = stored.visualPointAnswers.get(participant.id);
+  if (!map) {
+    map = new Map();
+    stored.visualPointAnswers.set(participant.id, map);
+  }
+  if (map.has(input.questionId)) {
+    return { ok: false as const, error: "This question was already answered." };
+  }
+
+  const isCorrect = selectedPoint.isCorrect === true;
+  map.set(input.questionId, {
+    questionId: input.questionId,
+    selectedPointId: selectedPoint.id,
+    isCorrect,
+    submittedAt: Date.now(),
+  });
+
+  const questionTotal = stored.room.payload.questions.length;
+  const attempt = ensureAttemptRecord(stored, participant.id);
+  attempt.progress = questionTotal ? map.size / questionTotal : 0;
+  attempt.correctCount = [...map.values()].filter((answer) => answer.isCorrect).length;
+  attempt.score = attempt.correctCount * 100;
+
+  pushEvent(stored, {
+    type: "player_progress",
+    participantId: participant.id,
+    displayName: participant.displayName,
+    progress: attempt.progress,
+    detail: `${map.size}/${questionTotal}`,
+  });
+
+  if (map.size >= questionTotal) {
+    const completedAt = Date.now();
+    attempt.completed = true;
+    attempt.completedAt = completedAt;
+    attempt.durationMs = stored.room.startedAt ? completedAt - stored.room.startedAt : null;
     participant.status = "COMPLETED";
     pushEvent(stored, {
       type: "player_completed",

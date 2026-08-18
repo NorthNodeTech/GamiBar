@@ -219,6 +219,37 @@ export function buildGameCompletionViewModel(input: BuildCompletionInput): GameC
     };
   }
 
+  if (mode === "visual_point") {
+    const score = myAttempt?.score ?? myRow?.score ?? correctCount * 100;
+    const answeredCorrect =
+      myAnswers.length > 0 && myAnswers.some((a) => a.isCorrect !== undefined)
+        ? myAnswers.filter((a) => a.isCorrect).length
+        : correctCount;
+    const accuracy =
+      myRow?.accuracyPercent ??
+      (totalQuestions > 0 ? Math.round((answeredCorrect / totalQuestions) * 100) : null);
+
+    return {
+      mode,
+      modeTitle,
+      roomName,
+      displayName,
+      rank,
+      durationMs,
+      metrics: [
+        { label: "Score", value: String(score), emphasis: true },
+        {
+          label: "Correct targets",
+          value: totalQuestions > 0 ? `${answeredCorrect}/${totalQuestions}` : String(answeredCorrect),
+        },
+        { label: "Accuracy", value: formatAccuracy(accuracy) },
+        ...(durationMs != null
+          ? [{ label: "Completion time", value: formatDuration(durationMs) }]
+          : []),
+      ],
+    };
+  }
+
   if (mode === "polls") {
     const answered =
       typeof myAttempt?.correctCount === "number"

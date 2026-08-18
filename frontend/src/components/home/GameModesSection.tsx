@@ -34,7 +34,7 @@ export function GameModesSection() {
         />
       </div>
 
-      <div className="hidden gap-5 sm:gap-6 md:grid md:grid-cols-2 md:items-stretch lg:grid-cols-4">
+      <div className="hidden gap-5 sm:gap-6 md:grid md:grid-cols-2 md:items-stretch xl:grid-cols-5">
         {games.map((game, i) => (
           <motion.div
             key={game.id}

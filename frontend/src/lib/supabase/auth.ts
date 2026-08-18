@@ -1,10 +1,17 @@
 import type { User } from "@supabase/supabase-js";
 
 import type { AuthUser, UserRole } from "@/lib/auth-store";
-import { clearSupabaseAuthSession, supabase } from "@/lib/supabase/client";
+import {
+  clearSupabaseAuthSession,
+  clearSupabaseAuthStorage,
+  isSupabaseConfigured,
+  supabase,
+} from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AuthorRow = Database["public"]["Tables"]["gamibar_authors"]["Row"];
+const SUPABASE_CONFIG_ERROR =
+  "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to frontend/.env, then restart the frontend dev server.";
 
 function authorAuthRedirectUrl(redirectPath = "/author/create") {
   if (typeof window === "undefined") return undefined;
@@ -48,6 +55,8 @@ export function mapProfileToAuthUser(user: User, profile: AuthorRow): AuthUser {
 }
 
 export async function fetchProfileForUser(userId: string) {
+  if (!isSupabaseConfigured) throw new Error(SUPABASE_CONFIG_ERROR);
+
   const { data, error } = await supabase
     .from("gamibar_authors")
     .select("id, display_name, role")
@@ -59,6 +68,8 @@ export async function fetchProfileForUser(userId: string) {
 }
 
 export async function resolveAuthUserFromSession() {
+  if (!isSupabaseConfigured) return null;
+
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) {
     if (isRecoverableSessionError(sessionError)) {
@@ -78,6 +89,10 @@ export async function resolveAuthUserFromSession() {
 }
 
 export async function signInWithPassword(email: string, password: string, expectedRole?: UserRole) {
+  if (!isSupabaseConfigured) {
+    return { ok: false as const, error: SUPABASE_CONFIG_ERROR };
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
@@ -120,6 +135,10 @@ export async function signUpAuthor(
   password: string,
   redirectPath = "/author/create",
 ) {
+  if (!isSupabaseConfigured) {
+    return { ok: false as const, error: SUPABASE_CONFIG_ERROR };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
     password,
@@ -180,6 +199,11 @@ export async function signUpAuthor(
 }
 
 export async function signOutSupabase() {
+  if (!isSupabaseConfigured) {
+    clearSupabaseAuthStorage();
+    return;
+  }
+
   const { error } = await supabase.auth.signOut({ scope: "local" });
   if (error) {
     if (isRecoverableSessionError(error)) {
@@ -194,6 +218,10 @@ export async function resendAuthorSignupConfirmation(
   email: string,
   redirectPath = "/author/create",
 ) {
+  if (!isSupabaseConfigured) {
+    return { ok: false as const, error: SUPABASE_CONFIG_ERROR };
+  }
+
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: email.trim().toLowerCase(),
@@ -210,6 +238,10 @@ export async function resendAuthorSignupConfirmation(
 }
 
 export async function requestPasswordReset(email: string) {
+  if (!isSupabaseConfigured) {
+    return { ok: false as const, error: SUPABASE_CONFIG_ERROR };
+  }
+
   const redirectTo =
     typeof window !== "undefined" ? `${window.location.origin}/author/login` : undefined;
 

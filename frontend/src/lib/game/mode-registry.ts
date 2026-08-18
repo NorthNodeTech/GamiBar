@@ -4,14 +4,18 @@ import { resolveJigsawGrid } from "@/lib/game/jigsaw-grid";
 import { normalizePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
 import { rankConnectDots, rankJigsaw, rankQuiz } from "@/lib/game/ranking";
 import type { ConnectDotsBoardConfig, GamePayload, LeaderboardRow, Room } from "@/lib/game/types";
-import { toPublicQuizQuestions } from "@/lib/game/validation";
+import {
+  toPublicQuizQuestions,
+  toPublicVisualPointQuestions,
+} from "@/lib/game/validation";
+import { normalizeVisualPointQuestion } from "@/lib/game/visual-point";
 import type { StoredRoom } from "@/lib/game/room-persistence";
 import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
 import { normalizePollPayload } from "@/lib/game/polls";
 
 export { CORE_LIVE_GAME_MODES, type CoreLiveGameMode };
 
-type RankingKind = "quiz" | "jigsaw" | "connect_dots" | "polls";
+type RankingKind = "quiz" | "jigsaw" | "connect_dots" | "visual_point" | "polls";
 
 export type LiveModeDefinition = {
   mode: GameMode;
@@ -294,6 +298,76 @@ const CONNECT_DOTS_MODE: LiveModeDefinition = {
   },
 };
 
+function visualPointQuestionTotal(stored: StoredRoom): number {
+  if (stored.room.mode !== "visual_point" || stored.room.payload.mode !== "visual_point") return 0;
+  return stored.room.payload.questions.length;
+}
+
+const VISUAL_POINT_MODE: LiveModeDefinition = {
+  mode: "visual_point",
+  ranking: "visual_point",
+  usesQuestions: false,
+  usesJigsawAsset: false,
+  persistQuizAnswers: false,
+  normalizeCreatePayload: (payload) => {
+    if (payload.mode !== "visual_point") return payload;
+    return {
+      mode: "visual_point",
+      questions: payload.questions.map(normalizeVisualPointQuestion),
+      timeLimitSeconds: payload.timeLimitSeconds ?? null,
+    };
+  },
+  toPublicPayload: (payload, opts) => {
+    if (payload.mode !== "visual_point") return payload;
+    if (opts?.includeSecrets) return payload;
+    return {
+      mode: "visual_point",
+      questions: toPublicVisualPointQuestions(payload.questions),
+      timeLimitSeconds: payload.timeLimitSeconds,
+    };
+  },
+  computeLeaderboard: (stored) => {
+    const { participants, attempts, visualPointAnswers } = stored;
+    const totalQuestions = visualPointQuestionTotal(stored);
+    return rankQuiz(
+      [...participants.values()].map((p) => {
+        const answers = visualPointAnswers.get(p.id);
+        const attempt = attempts.get(p.id);
+        const correctCount = attempt?.correctCount ?? 0;
+        const score = attempt?.score ?? correctCount * 100;
+        return {
+          participantId: p.id,
+          displayName: p.displayName,
+          score,
+          correctCount,
+          durationMs: attempt?.durationMs ?? null,
+          completed: Boolean(attempt?.completed),
+          answeredCount: answers?.size ?? 0,
+          totalQuestions,
+        };
+      }),
+    );
+  },
+  isStudentFinished: ({ answeredCount, questionTotal, attemptCompleted }) =>
+    attemptCompleted || (questionTotal > 0 && answeredCount >= questionTotal),
+  finalizeIncompleteAttempts: (stored, finishedAt) => {
+    const questionCount = visualPointQuestionTotal(stored);
+    for (const p of stored.participants.values()) {
+      const answers = stored.visualPointAnswers.get(p.id);
+      const attempt = stored.attempts.get(p.id);
+      if (!attempt || attempt.completed || !answers) continue;
+      const correct = [...answers.values()].filter((answer) => answer.isCorrect).length;
+      attempt.correctCount = correct;
+      attempt.score = correct * 100;
+      attempt.progress = questionCount ? answers.size / questionCount : 0;
+      if (stored.room.startedAt && attempt.durationMs == null) {
+        attempt.durationMs = finishedAt - stored.room.startedAt;
+      }
+      if (p.status === "PLAYING") p.status = "ONLINE";
+    }
+  },
+};
+
 const POLLS_MODE: LiveModeDefinition = {
   mode: "polls",
   ranking: "polls",
@@ -406,6 +480,7 @@ const REGISTRY: Record<GameMode, LiveModeDefinition | undefined> = {
   quiz: QUIZ_MODE,
   jigsaw: JIGSAW_MODE,
   connect_dots: CONNECT_DOTS_MODE,
+  visual_point: VISUAL_POINT_MODE,
   quiz_jigsaw: QUIZ_JIGSAW_MODE,
   polls: POLLS_MODE,
 };
@@ -453,9 +528,11 @@ export function isStudentSessionFinished(input: {
         ? input.room.payload.questions.length
         : input.room.payload.mode === "jigsaw"
           ? input.room.payload.questions.length
-          : input.room.payload.mode === "polls"
+          : input.room.payload.mode === "visual_point"
             ? input.room.payload.questions.length
-            : 0;
+            : input.room.payload.mode === "polls"
+              ? input.room.payload.questions.length
+              : 0;
   return def.isStudentFinished({
     room: input.room,
     answeredCount: input.answeredCount,

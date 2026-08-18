@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-export type ActivityMode = "quiz" | "jigsaw" | "connect_dots" | "polls";
+export type ActivityMode = "quiz" | "jigsaw" | "connect_dots" | "visual_point" | "polls";
 
 export type SessionActivity = {
   id: string;
@@ -77,6 +77,13 @@ const defaultActivities = (): SessionActivity[] => [
     mode: "connect_dots",
     title: "Connect Dots",
     detail: "Grid puzzle",
+    status: "upcoming",
+  },
+  {
+    id: "a4",
+    mode: "visual_point",
+    title: "Target Hunt",
+    detail: "Image challenge",
     status: "upcoming",
   },
 ];

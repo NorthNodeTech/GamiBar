@@ -1,10 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { Blocks, CircleDot, Puzzle, Radio, Timer, Users, Zap } from "lucide-react";
+import { Blocks, CircleDot, Crosshair, Puzzle, Radio, Timer, Users, Zap } from "lucide-react";
 
 import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
 import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
 import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
+import gameVisualPointPreview from "@/assets/tool-jigsaw-mission.webp";
 import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
 import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
 
@@ -81,6 +82,20 @@ export const GAME_MODE_CATALOG: GameModeCatalogItem[] = [
     accentClass: "from-[var(--game-connect-dots)] to-[var(--game-connect-dots-deep)]",
     glowClass: "shadow-[0_20px_60px_rgba(16,185,129,0.25)]",
     badgeClass: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
+  },
+  {
+    mode: "visual_point",
+    preview: gameVisualPointPreview,
+    icon: Crosshair,
+    tagline: "Upload any image and ask participants to hunt for the correct target",
+    specs: [
+      "Image-based questions",
+      "Student sees dots only",
+      "Server-validated answer",
+    ],
+    accentClass: "from-[var(--game-visual-point)] to-[var(--game-visual-point-deep)]",
+    glowClass: "shadow-[0_20px_60px_rgba(14,165,233,0.24)]",
+    badgeClass: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]",
   },
 ];
 

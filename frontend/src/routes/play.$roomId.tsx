@@ -77,6 +77,7 @@ import {
   submitJigsawProgressFn,
   submitQuizAnswerFn,
   submitQuizJigsawAnswerFn,
+  submitVisualPointAnswerFn,
 } from "@/lib/game/room.functions";
 import { readPollResponses, type PollsPayload } from "@/lib/game/polls";
 import type {
@@ -84,6 +85,7 @@ import type {
   PollResponseValue,
   PollResults,
   QuizOptionId,
+  VisualPointQuestionPublic,
 } from "@/lib/game/types";
 import { useRoomSync } from "@/lib/game/useRoomSync";
 import type { PathMap } from "@/lib/connect-dots";
@@ -191,7 +193,8 @@ function StudentPlayPage() {
     room.payload.mode === "quiz" ||
     room.payload.mode === "quiz_jigsaw" ||
     room.payload.mode === "jigsaw" ||
-    room.payload.mode === "polls"
+    room.payload.mode === "polls" ||
+    room.payload.mode === "visual_point"
       ? room.payload.questions.length
       : 0;
   const totalPairs = room.payload.mode === "connect_dots" ? room.payload.connectDots.pairCount : 0;
@@ -314,6 +317,26 @@ function StudentPlayPage() {
         endsAt={room.endsAt}
         savedResponses={readPollResponses(snapshot.myAttempt?.payload)}
         onSubmitted={() => void refresh()}
+      />,
+    );
+  }
+
+  if (room.mode === "visual_point" && room.payload.mode === "visual_point") {
+    return playShell(
+      <VisualPointPlay
+        roomId={roomId}
+        reconnectToken={reconnectToken}
+        questions={room.payload.questions as VisualPointQuestionPublic[]}
+        answeredIds={new Set(snapshot.myAnswers.map((a) => a.questionId))}
+        myAnswers={
+          snapshot.myAnswers as Array<{
+            questionId: string;
+            selectedPointId: string;
+            submittedAt: number;
+          }>
+        }
+        instruction={room.instruction}
+        endsAt={room.endsAt}
       />,
     );
   }
@@ -1160,6 +1183,305 @@ function hasPollValue(value: PollResponseValue | undefined): boolean {
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === "string") return value.trim().length > 0;
   return Number.isFinite(value);
+}
+
+function VisualPointPlay({
+  roomId,
+  reconnectToken,
+  questions,
+  answeredIds,
+  myAnswers,
+  instruction,
+  endsAt,
+}: {
+  roomId: string;
+  reconnectToken: string;
+  questions: VisualPointQuestionPublic[];
+  answeredIds: Set<string>;
+  myAnswers: Array<{ questionId: string; selectedPointId: string; submittedAt: number }>;
+  instruction: string;
+  endsAt: number | null;
+}) {
+  const answerByQuestion = useMemo(
+    () => new Map(myAnswers.map((answer) => [answer.questionId, answer.selectedPointId])),
+    [myAnswers],
+  );
+  const [localAnsweredIds, setLocalAnsweredIds] = useState(() => new Set(answeredIds));
+  const [localSelections, setLocalSelections] = useState<Map<string, string>>(
+    () => new Map(answerByQuestion),
+  );
+
+  useEffect(() => {
+    setLocalAnsweredIds(new Set(answeredIds));
+  }, [answeredIds]);
+
+  useEffect(() => {
+    setLocalSelections(new Map(answerByQuestion));
+  }, [answerByQuestion]);
+
+  const answeredCount = localAnsweredIds.size;
+  const firstUnansweredIndex = questions.findIndex((question) => !localAnsweredIds.has(question.id));
+  const maxViewIndex =
+    firstUnansweredIndex >= 0 ? firstUnansweredIndex : Math.max(0, questions.length - 1);
+  const [viewIndex, setViewIndex] = useState(() => maxViewIndex);
+  const prevAnsweredCountRef = useRef(answeredCount);
+
+  useEffect(() => {
+    if (answeredCount > prevAnsweredCountRef.current) {
+      const activeIndex =
+        firstUnansweredIndex >= 0 ? firstUnansweredIndex : Math.max(0, questions.length - 1);
+      setViewIndex(activeIndex);
+    }
+    prevAnsweredCountRef.current = answeredCount;
+  }, [answeredCount, firstUnansweredIndex, questions.length]);
+
+  const current = questions[viewIndex] ?? null;
+  const isAnswered = current ? localAnsweredIds.has(current.id) : false;
+  const isActive = viewIndex === firstUnansweredIndex && firstUnansweredIndex >= 0;
+  const storedSelection = current ? (localSelections.get(current.id) ?? null) : null;
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    setSelectedPointId(storedSelection);
+    setSubmitError(null);
+  }, [current?.id, storedSelection]);
+
+  const submit = async () => {
+    if (!current || !selectedPointId || timedOut || !isActive || isAnswered) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await submitVisualPointAnswerFn({
+        data: {
+          roomId,
+          reconnectToken,
+          questionId: current.id,
+          selectedPointId,
+        },
+      });
+      if (!res.ok) {
+        const message = friendlyGameError(res.error, "Could not submit your answer. Try again.");
+        setSubmitError(message);
+        toast.error(message);
+        return;
+      }
+      setLocalAnsweredIds((prev) => new Set([...prev, current.id]));
+      setLocalSelections((prev) => new Map(prev).set(current.id, selectedPointId));
+      setSelectedPointId(null);
+      if (res.completed) toast.success("Visual challenge complete!");
+    } catch {
+      const message = "Could not save your answer. Check your connection and try again.";
+      setSubmitError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!current) {
+    return (
+      <PageLoader
+        message={submitting ? "Saving your answer..." : "Loading Target Hunt round..."}
+        description="Please wait a moment."
+      />
+    );
+  }
+
+  const canGoBack = viewIndex > 0;
+  const canGoForward = viewIndex < maxViewIndex;
+  const goToQuestion = (index: number) => {
+    if (index <= maxViewIndex) setViewIndex(index);
+  };
+
+  if (!current.imageUrl) {
+    return (
+      <Centered>
+        <p className="text-sm text-[#525252]">The host has not uploaded this image yet.</p>
+      </Centered>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex min-h-dvh-screen w-full max-w-5xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+      <div className="flex items-center justify-between gap-3">
+        <Logo size={32} />
+        <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--game-visual-point-deep)]">
+            Target Hunt
+          </p>
+          <h1
+            id={`visual-point-question-${current.id}`}
+            className="mt-1 break-words font-display text-2xl font-extrabold leading-tight text-[var(--foreground)] sm:text-3xl"
+          >
+            {current.prompt}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {instruction}
+          </p>
+        </div>
+        <span className="rounded-full bg-[var(--game-visual-point-soft)] px-3 py-1 text-xs font-bold tabular-nums text-[var(--game-visual-point-deep)]">
+          {viewIndex + 1}/{questions.length}
+        </span>
+      </div>
+
+      {timedOut && isActive ? (
+        <p
+          className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800"
+          role="status"
+        >
+          Time&apos;s up - no more answers can be submitted.
+        </p>
+      ) : null}
+
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+        {questions.map((question, index) => {
+          const completed = localAnsweredIds.has(question.id);
+          const isCurrent = firstUnansweredIndex >= 0 && index === firstUnansweredIndex;
+          const reachable = index <= maxViewIndex;
+          return (
+            <button
+              key={question.id}
+              type="button"
+              disabled={!reachable}
+              onClick={() => goToQuestion(index)}
+              className={cn(
+                "grid size-9 place-items-center rounded-full text-base leading-none transition-transform active:scale-95",
+                !reachable && "cursor-not-allowed opacity-35",
+                completed && "text-[var(--game-visual-point-deep)]",
+                isCurrent && !completed && "text-[var(--foreground)]",
+                !completed && !isCurrent && "text-[var(--gamibar-border)]",
+              )}
+              aria-label={`Question ${index + 1}${completed ? ", completed" : ""}`}
+            >
+              {completed ? (
+                <span aria-hidden className="size-2.5 rounded-full bg-current" />
+              ) : isCurrent ? (
+                <span aria-hidden className="relative grid size-3.5 place-items-center">
+                  <Circle className="size-3.5 fill-current stroke-current" strokeWidth={2.5} />
+                  <span className="absolute size-1.5 rounded-full bg-[var(--gamibar-page)]" />
+                </span>
+              ) : (
+                <Circle className="size-3 stroke-current" strokeWidth={2} aria-hidden />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-3 shadow-[var(--shadow-soft)] sm:p-5">
+        <VisualPointStudentImage
+          question={current}
+          selectedPointId={selectedPointId}
+          disabled={isAnswered || !isActive || timedOut}
+          onSelect={setSelectedPointId}
+        />
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!canGoBack}
+          onClick={() => setViewIndex((index) => Math.max(0, index - 1))}
+          className="h-11 rounded-xl"
+        >
+          <ChevronLeft className="size-4" />
+          Back
+        </Button>
+        {isAnswered ? (
+          <p className="text-center text-sm font-medium text-[var(--muted-foreground)]">
+            You already answered this question.
+          </p>
+        ) : isActive ? (
+          <Button
+            className="h-12 rounded-xl bg-[#111111] font-bold hover:bg-black"
+            disabled={!selectedPointId || submitting || timedOut}
+            onClick={() => void submit()}
+          >
+            {submitting ? "Saving answer..." : "Submit answer"}
+          </Button>
+        ) : (
+          <span />
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!canGoForward}
+          onClick={() => setViewIndex((index) => Math.min(maxViewIndex, index + 1))}
+          className="h-11 rounded-xl"
+        >
+          Next
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
+
+      {submitError ? (
+        <InlineErrorBanner
+          className="mt-4 text-left"
+          message={submitError}
+          onRetry={() => void submit()}
+          retrying={submitting}
+          onDismiss={() => setSubmitError(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function VisualPointStudentImage({
+  question,
+  selectedPointId,
+  disabled,
+  onSelect,
+}: {
+  question: VisualPointQuestionPublic;
+  selectedPointId: string | null;
+  disabled: boolean;
+  onSelect: (pointId: string) => void;
+}) {
+  return (
+    <div className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)]">
+      <img
+        src={question.imageUrl ?? ""}
+        alt=""
+        draggable={false}
+        className="block h-auto w-full select-none"
+      />
+      {question.points.map((point, index) => {
+        const selected = selectedPointId === point.id;
+        return (
+          <button
+            key={point.id}
+            type="button"
+            disabled={disabled}
+            aria-label={`Point ${index + 1}`}
+            aria-pressed={selected}
+            onClick={() => onSelect(point.id)}
+            className={cn(
+              "absolute grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+              disabled ? "cursor-default" : "cursor-pointer active:scale-95",
+            )}
+            style={{ left: `${point.x}%`, top: `${point.y}%` }}
+          >
+            <span
+              className={cn(
+                "block size-4 rounded-full border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.35)] transition-all",
+                selected && "size-5 ring-4 ring-white/80",
+              )}
+              style={{ backgroundColor: point.color || "#111111" }}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function ConnectDotsCompletionCard({

@@ -1,9 +1,13 @@
 import { supabase } from "@/lib/supabase/client";
 
-const API_BASE_URL = (
+const rawApiBaseUrl =
   (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
-    ?.VITE_API_BASE_URL ?? ""
-).replace(/\/$/, "");
+    ?.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl);
+
+function normalizeApiBaseUrl(value: string): string {
+  return (value.split(",")[0] ?? "").trim().replace(/\/+$/, "");
+}
 
 type ApiFetchOptions = {
   method?: "GET" | "POST" | "DELETE";

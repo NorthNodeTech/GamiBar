@@ -2,10 +2,12 @@ import { Link } from "@tanstack/react-router";
 
 import northNodeLogo from "@/assets/northnode-optimized.webp";
 import { Logo } from "@/components/layout/Logo";
+import type { CoreLiveGameMode } from "@/lib/game/session-flow";
 
 type FooterItem = {
   label: string;
   to?: string;
+  search?: { mode: CoreLiveGameMode };
 };
 
 const productItems: FooterItem[] = [
@@ -24,6 +26,7 @@ const activityItems: FooterItem[] = [
   { label: "Quiz Challenge", to: "/games/quiz" },
   { label: "Jigsaw Mission", to: "/games/jigsaw" },
   { label: "Connect Dots", to: "/games/connect-dots" },
+  { label: "Target Hunt", to: "/author/create", search: { mode: "visual_point" } },
 ];
 
 export function SiteFooter() {
@@ -38,8 +41,8 @@ export function SiteFooter() {
             </span>
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#A3A3A3]">
-            Where learning becomes a game. Live quizzes, collaborative puzzles and connect-the-dots
-            challenges for classrooms, workshops and sessions.
+            Where learning becomes a game. Live quizzes, collaborative puzzles, Target Hunt
+            challenges and connect-the-dots games for classrooms, workshops and sessions.
           </p>
           <div className="mt-5 flex items-center gap-2.5">
             <span className="text-[11px] text-[#A3A3A3]">by</span>
@@ -103,6 +106,7 @@ function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
             {item.to ? (
               <Link
                 to={item.to}
+                {...(item.search ? { search: item.search } : {})}
                 className="text-sm text-[#A3A3A3] transition-colors hover:text-white"
               >
                 {item.label}

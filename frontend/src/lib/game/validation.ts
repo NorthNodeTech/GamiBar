@@ -12,13 +12,19 @@ import {
 } from "@/lib/game/connect-dots-content";
 import { validatePollQuestions } from "@/lib/game/polls";
 import { validatePieceUnlockAt, resolvePieceUnlockAt } from "@/lib/game/jigsaw-tile-rewards";
-import type { GamePayload, QuizOptionId, QuizQuestionDraft } from "@/lib/game/types";
+import type {
+  GamePayload,
+  QuizOptionId,
+  QuizQuestionDraft,
+  VisualPointQuestionDraft,
+} from "@/lib/game/types";
 import { isTimerValid } from "@/lib/game/timer";
 
 const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 
 export function questionCountForMode(mode: GameMode): number {
   if (mode === "polls") return GAME_CONFIG.polls.minQuestions;
+  if (mode === "visual_point") return GAME_CONFIG.visual_point.defaultQuestionCount;
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.questionCount;
   if (mode === "jigsaw") {
     return defaultQuestionCountForTemplate(jigsawTemplateById(DEFAULT_JIGSAW_TEMPLATE_ID));
@@ -79,6 +85,70 @@ export function validateJigsawFile(file: File): { ok: true } | { ok: false; erro
     return { ok: false, error: "Use JPG, PNG, or WEBP images only." };
   }
   if (file.size > GAME_CONFIG.jigsaw.maxUploadBytes) {
+    return { ok: false, error: "Image must be 8 MB or smaller." };
+  }
+  if (!file.name || file.size < 32) {
+    return { ok: false, error: "That file does not look like a valid image." };
+  }
+  return { ok: true };
+}
+
+export function emptyVisualPointQuestions(
+  count = GAME_CONFIG.visual_point.defaultQuestionCount,
+): VisualPointQuestionDraft[] {
+  return Array.from({ length: Math.max(1, count) }, (_, index) => ({
+    id: `vp-q-${index + 1}`,
+    prompt: "",
+    imageUrl: null,
+    imageMime: null,
+    imageWidth: null,
+    imageHeight: null,
+    points: [],
+  }));
+}
+
+export function isVisualPointQuestionComplete(q: VisualPointQuestionDraft): boolean {
+  if (!q.prompt.trim()) return false;
+  if (!q.imageUrl) return false;
+  if (q.points.length < GAME_CONFIG.visual_point.minPoints) return false;
+  if (q.points.length > GAME_CONFIG.visual_point.maxPoints) return false;
+  if (!q.points.some((point) => point.isCorrect)) return false;
+  return q.points.every(
+    (point) =>
+      typeof point.id === "string" &&
+      point.id.trim().length > 0 &&
+      Number.isFinite(point.x) &&
+      Number.isFinite(point.y) &&
+      point.x >= 0 &&
+      point.x <= 100 &&
+      point.y >= 0 &&
+      point.y <= 100,
+  );
+}
+
+export function visualPointCompletionCount(questions: VisualPointQuestionDraft[]): {
+  done: number;
+  total: number;
+  complete: boolean;
+} {
+  const total = questions.length;
+  const done = questions.filter(isVisualPointQuestionComplete).length;
+  return {
+    done,
+    total,
+    complete:
+      total >= GAME_CONFIG.visual_point.minQuestions &&
+      total <= GAME_CONFIG.visual_point.maxQuestions &&
+      done === total,
+  };
+}
+
+export function validateVisualPointFile(file: File): { ok: true } | { ok: false; error: string } {
+  const allowed = GAME_CONFIG.visual_point.allowedMimeTypes as readonly string[];
+  if (!allowed.includes(file.type)) {
+    return { ok: false, error: "Use JPG, PNG, or WEBP images only." };
+  }
+  if (file.size > GAME_CONFIG.visual_point.maxUploadBytes) {
     return { ok: false, error: "Image must be 8 MB or smaller." };
   }
   if (!file.name || file.size < 32) {
@@ -213,6 +283,31 @@ export function validateGamePayload(
     }
     return { ok: true };
   }
+  if (mode === "visual_point" && payload.mode === "visual_point") {
+    if (payload.questions.length < GAME_CONFIG.visual_point.minQuestions) {
+      return { ok: false, error: "Add at least one Target Hunt round." };
+    }
+    if (payload.questions.length > GAME_CONFIG.visual_point.maxQuestions) {
+      return {
+        ok: false,
+        error: `Use at most ${GAME_CONFIG.visual_point.maxQuestions} Target Hunt rounds.`,
+      };
+    }
+    const { complete, done, total } = visualPointCompletionCount(payload.questions);
+    if (!complete) {
+      return {
+        ok: false,
+        error: `Upload an image, write a prompt, place dots, and mark a correct dot (${done}/${total}).`,
+      };
+    }
+    if (!isTimerValid("visual_point", payload.timeLimitSeconds)) {
+      return {
+        ok: false,
+        error: "Choose a Target Hunt timer between 30 seconds and 15 minutes, or no limit.",
+      };
+    }
+    return { ok: true };
+  }
   if (mode === "polls" && payload.mode === "polls") {
     const questionsValid = validatePollQuestions(payload.questions);
     if (!questionsValid.ok) return questionsValid;
@@ -233,6 +328,25 @@ export function toPublicQuizQuestions(questions: QuizQuestionDraft[]) {
     id: q.id,
     prompt: q.prompt,
     options: { ...q.options },
+    order,
+  }));
+}
+
+/** Strip point correctness and teacher references before sending Target Hunt questions to students. */
+export function toPublicVisualPointQuestions(questions: VisualPointQuestionDraft[]) {
+  return questions.map((q, order) => ({
+    id: q.id,
+    prompt: q.prompt,
+    imageUrl: q.imageUrl,
+    imageMime: q.imageMime,
+    imageWidth: q.imageWidth ?? null,
+    imageHeight: q.imageHeight ?? null,
+    points: q.points.map((point) => ({
+      id: point.id,
+      x: point.x,
+      y: point.y,
+      color: point.color,
+    })),
     order,
   }));
 }

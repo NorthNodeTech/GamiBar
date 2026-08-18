@@ -6,13 +6,22 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Crosshair,
   Plus,
   Rocket,
   Trash2,
   Upload,
   Loader2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type PointerEvent as ReactPointerEvent,
+  type SetStateAction,
+} from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -95,14 +104,22 @@ import type {
   PollQuestionType,
   QuizOptionId,
   QuizQuestionDraft,
+  VisualPointQuestionDraft,
 } from "@/lib/game/types";
 import { prepareJigsawImage } from "@/lib/game/jigsaw-image";
 import {
   emptyQuizQuestions,
   emptyQuizQuestionsWithCount,
+  emptyVisualPointQuestions,
   quizCompletionCount,
   validateGamePayload,
+  visualPointCompletionCount,
 } from "@/lib/game/validation";
+import {
+  clampVisualCoordinate,
+  createVisualPointId,
+  prepareVisualPointImage,
+} from "@/lib/game/visual-point";
 import { listQuestionSets } from "@/lib/question-bank";
 import {
   SESSION_FILE_DEFAULT_RETENTION_DAYS,
@@ -113,8 +130,19 @@ import {
 import { cn } from "@/lib/utils";
 import type { AiGenerationContext } from "@/lib/ai/option-generation";
 
+const POINTER_COLORS = [
+  { label: "Dark Gray", value: "#111111" },
+  { label: "Red", value: "#ef4444" },
+  { label: "Orange", value: "#f97316" },
+  { label: "Yellow", value: "#eab308" },
+  { label: "Green", value: "#22c55e" },
+  { label: "Blue", value: "#3b82f6" },
+  { label: "Purple", value: "#a855f7" },
+  { label: "Pink", value: "#ec4899" },
+];
+
 const createSearchSchema = z.object({
-  mode: z.enum(["quiz", "polls", "jigsaw", "connect_dots"]).optional(),
+  mode: z.enum(["quiz", "polls", "jigsaw", "connect_dots", "visual_point"]).optional(),
 });
 
 export const Route = createFileRoute("/author/create")({
@@ -159,6 +187,9 @@ function CreateRoomWizard() {
     emptyPollQuestions(),
   );
   const [pollSettings, setPollSettings] = useState(DEFAULT_POLL_SETTINGS);
+  const [visualQuestions, setVisualQuestions] = useState<VisualPointQuestionDraft[]>(() =>
+    emptyVisualPointQuestions(),
+  );
   const [rewardCode, setRewardCode] = useState("");
   const [connectDotsPairs, setConnectDotsPairs] = useState<ConnectDotsContentPair[]>(() =>
     emptyConnectDotsPairs(),
@@ -182,6 +213,8 @@ function CreateRoomWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [visualImageBusyId, setVisualImageBusyId] = useState<string | null>(null);
+  const [visualImageError, setVisualImageError] = useState<string | null>(null);
   const aiGenerationContext = useMemo<AiGenerationContext>(
     () => ({
       roomName: name.trim(),
@@ -197,6 +230,7 @@ function CreateRoomWizard() {
 
   const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
   const pollProgress = pollCompletionCount(pollQuestions);
+  const visualProgress = visualPointCompletionCount(visualQuestions);
   const connectDotsProgress = connectDotsPairsProgress(connectDotsPairs);
   const modeCatalog = getModeCatalog(mode);
 
@@ -267,6 +301,13 @@ function CreateRoomWizard() {
         timeLimitSeconds: timerSeconds,
       };
     }
+    if (mode === "visual_point") {
+      return {
+        mode: "visual_point",
+        questions: visualQuestions,
+        timeLimitSeconds: timerSeconds,
+      };
+    }
     if (!connectDotsBoard) return null;
     return {
       mode: "connect_dots",
@@ -286,6 +327,7 @@ function CreateRoomWizard() {
     rewardCode,
     pollQuestions,
     pollSettings,
+    visualQuestions,
   ]);
 
   const configValid = payload && mode ? validateGamePayload(mode, payload).ok : false;
@@ -356,6 +398,12 @@ function CreateRoomWizard() {
     if (next === "polls") {
       setPollQuestions(emptyPollQuestions());
       setPollSettings(DEFAULT_POLL_SETTINGS);
+      setActiveQ(0);
+    }
+    if (next === "visual_point") {
+      setVisualQuestions(emptyVisualPointQuestions());
+      setVisualImageBusyId(null);
+      setVisualImageError(null);
       setActiveQ(0);
     }
     if (next === "jigsaw") {
@@ -439,6 +487,41 @@ function CreateRoomWizard() {
     }
   };
 
+  const handleVisualImage = async (questionId: string, file: File | undefined) => {
+    if (!file) return;
+    setVisualImageError(null);
+    setVisualImageBusyId(questionId);
+    try {
+      const result = await prepareVisualPointImage(file);
+      if (!result.ok) {
+        setVisualImageError(result.error);
+        toast.error(result.error);
+        return;
+      }
+      setVisualQuestions((prev) =>
+        prev.map((question) =>
+          question.id === questionId
+            ? {
+                ...question,
+                imageUrl: result.dataUrl,
+                imageMime: result.mime,
+                imageWidth: result.width,
+                imageHeight: result.height,
+                points: [],
+              }
+            : question,
+        ),
+      );
+      toast.success("Image ready. Place dots on the visual.");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Upload failed.";
+      setVisualImageError(message);
+      toast.error(message);
+    } finally {
+      setVisualImageBusyId(null);
+    }
+  };
+
   const addQuestion = (limits: { minQuestions: number; maxQuestions: number }) => {
     if (limits.maxQuestions > 0 && questions.length >= limits.maxQuestions) {
       toast.error(`Maximum ${limits.maxQuestions} questions.`);
@@ -488,6 +571,35 @@ function CreateRoomWizard() {
       { id: `pair-${prev.length + 1}`, question: "", answer: "" },
     ]);
     setActiveQ(connectDotsPairs.length);
+  };
+
+  const addVisualQuestion = () => {
+    if (visualQuestions.length >= GAME_CONFIG.visual_point.maxQuestions) {
+      toast.error(`Maximum ${GAME_CONFIG.visual_point.maxQuestions} Target Hunt rounds.`);
+      return;
+    }
+    setVisualQuestions((prev) => [
+      ...prev,
+      {
+        id: `vp-q-${prev.length + 1}`,
+        prompt: "",
+        imageUrl: null,
+        imageMime: null,
+        imageWidth: null,
+        imageHeight: null,
+        points: [],
+      },
+    ]);
+    setActiveQ(visualQuestions.length);
+  };
+
+  const removeVisualQuestion = () => {
+    if (visualQuestions.length <= GAME_CONFIG.visual_point.minQuestions) {
+      toast.error("Keep at least one Target Hunt round.");
+      return;
+    }
+    setVisualQuestions((prev) => prev.slice(0, -1));
+    setActiveQ((i) => Math.min(i, visualQuestions.length - 2));
   };
 
   const removeConnectDotsPair = () => {
@@ -653,6 +765,8 @@ function CreateRoomWizard() {
                   "In Puzzle setup, choose 2×2, 3×3, or 4×4 first, then add questions and upload the image."}
                 {mode === "connect_dots" &&
                   "Add matching question/answer pairs. Each pair becomes two dots participants connect on the grid."}
+                {mode === "visual_point" &&
+                  "Upload an image, write a prompt, place answer dots, and mark the correct dot."}
               </p>
             )}
             <AuthorWizardSteps current={step} compact className="mt-3 sm:mt-4" />
@@ -709,7 +823,7 @@ function CreateRoomWizard() {
               <div className="rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-6 text-center">
                 <p className="text-sm font-medium text-[#111111]">No game selected</p>
                 <p className="mt-1 text-sm text-[#525252]">
-                  Go back and pick Quiz, Polls, Jigsaw, or Connect Dots.
+                  Go back and pick Quiz, Polls, Jigsaw, Connect Dots, or Target Hunt.
                 </p>
                 <Button
                   type="button"
@@ -1078,6 +1192,56 @@ function CreateRoomWizard() {
                   </>
                 )}
 
+                {mode === "visual_point" && (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#111111]">
+                          {visualQuestions.length} Target Hunt round
+                          {visualQuestions.length === 1 ? "" : "s"}
+                        </p>
+                        <p className="text-xs text-[#737373]">
+                          Students see only the image, prompt, and unlabeled dots.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={visualQuestions.length <= GAME_CONFIG.visual_point.minQuestions}
+                          onClick={removeVisualQuestion}
+                        >
+                          Remove
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={visualQuestions.length >= GAME_CONFIG.visual_point.maxQuestions}
+                          onClick={addVisualQuestion}
+                        >
+                          Add question
+                        </Button>
+                      </div>
+                    </div>
+                    <VisualPointQuestionEditor
+                      questions={visualQuestions}
+                      activeQuestion={activeQ}
+                      setActiveQuestion={setActiveQ}
+                      setQuestions={setVisualQuestions}
+                      progress={visualProgress}
+                      imageBusyId={visualImageBusyId}
+                      uploadError={visualImageError}
+                      onDismissUploadError={() => setVisualImageError(null)}
+                      onFile={handleVisualImage}
+                      timerLabel={formatTimerLong(timerSeconds)}
+                    />
+                  </>
+                )}
+
                 {mode === "connect_dots" && connectDotsBoard && (
                   <>
                     <ConnectDotsLayoutWarning assessment={connectDotsSolvability} />
@@ -1116,12 +1280,13 @@ function CreateRoomWizard() {
                   accentClass={modeCatalog.accentClass}
                   badgeClass={modeCatalog.badgeClass}
                   timeLimitSeconds={payload.timeLimitSeconds}
-                  questionCount={
+                  {...(
                     (mode === "quiz" && payload.mode === "quiz") ||
-                    (mode === "polls" && payload.mode === "polls")
-                      ? payload.questions.length
-                      : undefined
-                  }
+                    (mode === "polls" && payload.mode === "polls") ||
+                    (mode === "visual_point" && payload.mode === "visual_point")
+                      ? { questionCount: payload.questions.length }
+                      : {}
+                  )}
                 />
                 <SessionFilesPicker
                   files={sessionFiles}
@@ -1916,8 +2081,474 @@ function JigsawUploader({
         </label>
       </div>
       {uploadError ? (
-        <InlineErrorBanner message={uploadError} onDismiss={onDismissUploadError} />
+        <InlineErrorBanner
+          message={uploadError}
+          {...(onDismissUploadError ? { onDismiss: onDismissUploadError } : {})}
+        />
       ) : null}
+    </div>
+  );
+}
+
+function VisualPointQuestionEditor({
+  questions,
+  activeQuestion,
+  setActiveQuestion,
+  setQuestions,
+  progress,
+  imageBusyId,
+  uploadError,
+  onDismissUploadError,
+  onFile,
+  timerLabel,
+}: {
+  questions: VisualPointQuestionDraft[];
+  activeQuestion: number;
+  setActiveQuestion: (n: number) => void;
+  setQuestions: Dispatch<SetStateAction<VisualPointQuestionDraft[]>>;
+  progress: { done: number; total: number; complete: boolean };
+  imageBusyId: string | null;
+  uploadError: string | null;
+  onDismissUploadError: () => void;
+  onFile: (questionId: string, file: File | undefined) => void;
+  timerLabel: string;
+}) {
+  const safeIndex = Math.min(activeQuestion, Math.max(0, questions.length - 1));
+  const question = questions[safeIndex];
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeQuestion !== safeIndex) setActiveQuestion(safeIndex);
+  }, [activeQuestion, safeIndex, setActiveQuestion]);
+
+  useEffect(() => {
+    setSelectedPointId(null);
+  }, [question?.id]);
+
+  if (!question) return null;
+
+  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  const updateQuestion = (patch: Partial<VisualPointQuestionDraft>) => {
+    setQuestions((prev) =>
+      prev.map((item, index) => (index === safeIndex ? { ...item, ...patch } : item)),
+    );
+  };
+
+  const updatePoint = (pointId: string, patch: Partial<VisualPointQuestionDraft["points"][number]>) => {
+    setQuestions((prev) =>
+      prev.map((item, index) =>
+        index === safeIndex
+          ? {
+              ...item,
+              points: item.points.map((point) =>
+                point.id === pointId ? { ...point, ...patch } : point,
+              ),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const addPoint = (x: number, y: number) => {
+    if (question.points.length >= GAME_CONFIG.visual_point.maxPoints) {
+      toast.error(`Maximum ${GAME_CONFIG.visual_point.maxPoints} dots per question.`);
+      return;
+    }
+
+    const id = createVisualPointId(question.points);
+    setSelectedPointId(id);
+    setQuestions((prev) =>
+      prev.map((item, index) =>
+        index === safeIndex
+          ? {
+              ...item,
+              points: [
+                ...item.points,
+                {
+                  id,
+                  x: clampVisualCoordinate(x),
+                  y: clampVisualCoordinate(y),
+                  isCorrect: item.points.length === 0,
+                  adminReference: "",
+                  color: "#111111",
+                },
+              ],
+            }
+          : item,
+      ),
+    );
+  };
+
+  const movePoint = (pointId: string, x: number, y: number) => {
+    updatePoint(pointId, {
+      x: clampVisualCoordinate(x),
+      y: clampVisualCoordinate(y),
+    });
+  };
+
+  const deletePoint = (pointId: string) => {
+    setQuestions((prev) =>
+      prev.map((item, index) => {
+        if (index !== safeIndex) return item;
+        const wasCorrect = item.points.find((point) => point.id === pointId)?.isCorrect;
+        const nextPoints = item.points.filter((point) => point.id !== pointId);
+        if (wasCorrect && nextPoints.length > 0 && !nextPoints.some((point) => point.isCorrect)) {
+          const firstPoint = nextPoints[0];
+          if (firstPoint) {
+            nextPoints[0] = { ...firstPoint, isCorrect: true };
+          }
+        }
+        return { ...item, points: nextPoints };
+      }),
+    );
+    setSelectedPointId((current) => (current === pointId ? null : current));
+  };
+
+  const markCorrect = (pointId: string) => {
+    setQuestions((prev) =>
+      prev.map((item, index) =>
+        index === safeIndex
+          ? {
+              ...item,
+              points: item.points.map((point) => ({
+                ...point,
+                isCorrect: point.id === pointId,
+              })),
+            }
+          : item,
+      ),
+    );
+  };
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-[#111111]">
+            Target Hunt rounds - {progress.done}/{progress.total}
+          </p>
+          <p className="text-xs text-[#737373]">
+            Timer: {timerLabel}. Correctness and references are host-only.
+          </p>
+        </div>
+        <span className="rounded-full bg-[var(--game-visual-point-soft)] px-3 py-1 text-xs font-bold text-[var(--game-visual-point-deep)]">
+          {pct}% ready
+        </span>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--gamibar-page)]">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-[var(--game-visual-point)] to-[var(--game-visual-point-deep)] transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {questions.map((item, index) => {
+          const done = visualPointCompletionCount([item]).complete;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveQuestion(index)}
+              className={cn(
+                "grid size-9 place-items-center rounded-xl text-xs font-bold transition-colors",
+                index === safeIndex
+                  ? "bg-[#111111] text-white"
+                  : done
+                    ? "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]"
+                    : "bg-[var(--gamibar-page)] text-[#737373]",
+              )}
+            >
+              {done ? <Check className="size-3.5" /> : index + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
+        <div className="grid content-start gap-4 rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
+          <div className="grid gap-2">
+            <Label htmlFor={`visual-point-prompt-${question.id}`}>Question</Label>
+            <Textarea
+              id={`visual-point-prompt-${question.id}`}
+              value={question.prompt}
+              onChange={(e) => updateQuestion({ prompt: e.target.value })}
+              placeholder="e.g. Identify the state located in the northeastern region."
+              className="min-h-24 resize-none rounded-xl text-base"
+            />
+          </div>
+
+          {question.imageUrl ? (
+            <VisualPointCanvas
+              question={question}
+              selectedPointId={selectedPointId}
+              onSelectPoint={setSelectedPointId}
+              onAddPoint={addPoint}
+              onMovePoint={movePoint}
+            />
+          ) : (
+            <label className="grid min-h-64 cursor-pointer place-items-center rounded-2xl border-2 border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-5 py-8 text-center transition-colors hover:border-[var(--game-visual-point)]">
+              {imageBusyId === question.id ? (
+                <span className="grid gap-2 text-sm font-semibold text-[#111111]">
+                  <Loader2 className="mx-auto size-7 animate-spin text-[var(--game-visual-point)]" />
+                  Preparing image...
+                </span>
+              ) : (
+                <span>
+                  <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]">
+                    <Upload className="size-6" />
+                  </span>
+                  <span className="mt-4 block font-display text-lg font-bold text-[#111111]">
+                    Upload image
+                  </span>
+                  <span className="mt-1 block text-sm text-[#525252]">
+                    JPG, PNG, or WEBP - max 8 MB
+                  </span>
+                </span>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={imageBusyId === question.id}
+                onChange={(e) => void onFile(question.id, e.target.files?.[0])}
+              />
+            </label>
+          )}
+
+          {uploadError && imageBusyId !== question.id ? (
+            <InlineErrorBanner
+              message={uploadError}
+              {...(onDismissUploadError ? { onDismiss: onDismissUploadError } : {})}
+            />
+          ) : null}
+
+          {question.imageUrl ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[#737373]">
+                {question.points.length}/{GAME_CONFIG.visual_point.maxPoints} dots placed
+              </p>
+              <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-xl border border-[var(--gamibar-border)] bg-white px-3 text-xs font-semibold text-[#111111] hover:bg-[var(--gamibar-page)]">
+                Replace image
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={imageBusyId === question.id}
+                  onChange={(e) => void onFile(question.id, e.target.files?.[0])}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid content-start gap-4">
+          <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-4">
+            <div className="flex items-center gap-2">
+              <span className="grid size-8 place-items-center rounded-lg bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]">
+                <Crosshair className="size-4" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[#111111]">Dot controls</p>
+                <p className="text-xs text-[#737373]">Drag dots on the image to move them.</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {question.points.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[var(--gamibar-border)] bg-white px-3 py-4 text-center text-xs text-[#737373]">
+                  Place at least {GAME_CONFIG.visual_point.minPoints} dots.
+                </p>
+              ) : (
+                question.points.map((point, index) => (
+                  <div
+                    key={point.id}
+                    className={cn(
+                      "grid gap-2 rounded-xl border bg-white p-3",
+                      selectedPointId === point.id
+                        ? "border-[var(--game-visual-point)] ring-2 ring-[var(--game-visual-point)]/15"
+                        : "border-[var(--gamibar-border)]",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPointId(point.id)}
+                        className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white transition-colors"
+                        style={{ backgroundColor: point.color || "#111111" }}
+                      >
+                        {index + 1}
+                      </button>
+                      <Input
+                        value={point.adminReference ?? ""}
+                        onChange={(e) =>
+                          updatePoint(point.id, { adminReference: e.target.value })
+                        }
+                        placeholder="Host reference"
+                        className="h-9 min-w-0 rounded-lg text-sm"
+                      />
+                    </div>
+                    {selectedPointId === point.id && (
+                      <div className="flex flex-col gap-1.5 mt-1 border-t border-[var(--gamibar-border)] pt-2">
+                        <span className="text-[10px] font-semibold text-[#737373] uppercase tracking-wider">
+                          Pointer Color
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {POINTER_COLORS.map((c) => (
+                            <button
+                              key={c.value}
+                              type="button"
+                              onClick={() => updatePoint(point.id, { color: c.value })}
+                              className={cn(
+                                "size-6 rounded-full border border-black/10 transition-transform active:scale-90",
+                                (point.color || "#111111") === c.value
+                                  ? "ring-2 ring-[var(--game-visual-point)] ring-offset-1"
+                                  : "hover:scale-105",
+                              )}
+                              style={{ backgroundColor: c.value }}
+                              title={c.label}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Button
+                        type="button"
+                        variant={point.isCorrect ? "default" : "outline"}
+                        size="sm"
+                        className={cn(
+                          "h-8 rounded-lg",
+                          point.isCorrect && "bg-emerald-600 text-white hover:bg-emerald-700",
+                        )}
+                        onClick={() => markCorrect(point.id)}
+                      >
+                        {point.isCorrect ? "Correct" : "Mark correct"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="size-8 rounded-lg text-red-600 hover:text-red-700"
+                        onClick={() => deletePoint(point.id)}
+                        aria-label={`Delete dot ${index + 1}`}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VisualPointCanvas({
+  question,
+  selectedPointId,
+  preview = false,
+  onSelectPoint,
+  onAddPoint,
+  onMovePoint,
+}: {
+  question: VisualPointQuestionDraft;
+  selectedPointId?: string | null;
+  preview?: boolean;
+  onSelectPoint?: (pointId: string) => void;
+  onAddPoint?: (x: number, y: number) => void;
+  onMovePoint?: (pointId: string, x: number, y: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const readPosition = (event: ReactPointerEvent): { x: number; y: number } | null => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+    return {
+      x: clampVisualCoordinate(((event.clientX - rect.left) / rect.width) * 100),
+      y: clampVisualCoordinate(((event.clientY - rect.top) / rect.height) * 100),
+    };
+  };
+
+  const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (preview || !onAddPoint) return;
+    if ((event.target as HTMLElement).closest("[data-vp-dot]")) return;
+    const position = readPosition(event);
+    if (!position) return;
+    onAddPoint(position.x, position.y);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (preview || !draggingId || !onMovePoint) return;
+    const position = readPosition(event);
+    if (!position) return;
+    onMovePoint(draggingId, position.x, position.y);
+  };
+
+  const stopDragging = () => setDraggingId(null);
+
+  if (!question.imageUrl) return null;
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative isolate mx-auto w-full max-w-3xl touch-none overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)]",
+        !preview && "cursor-crosshair",
+      )}
+      onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={stopDragging}
+      onPointerCancel={stopDragging}
+    >
+      <img
+        src={question.imageUrl}
+        alt=""
+        draggable={false}
+        className="block h-auto w-full select-none"
+      />
+      {question.points.map((point, index) => {
+        const selected = selectedPointId === point.id;
+        return (
+          <button
+            key={point.id}
+            type="button"
+            data-vp-dot
+            disabled={preview}
+            aria-label={`Dot ${index + 1}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelectPoint?.(point.id);
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              if (preview) return;
+              onSelectPoint?.(point.id);
+              setDraggingId(point.id);
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            className={cn(
+              "absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+              preview ? "cursor-default" : "cursor-grab active:cursor-grabbing",
+            )}
+            style={{ left: `${point.x}%`, top: `${point.y}%` }}
+          >
+            <span
+              className={cn(
+                "block size-4 rounded-full border-2 shadow-[0_2px_10px_rgba(0,0,0,0.35)] transition-all",
+                !preview && point.isCorrect ? "border-emerald-500 ring-2 ring-emerald-500/50" : "border-white",
+                !preview && selected && "ring-4 ring-[var(--game-visual-point)]/35",
+              )}
+              style={{ backgroundColor: point.color || "#111111" }}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }

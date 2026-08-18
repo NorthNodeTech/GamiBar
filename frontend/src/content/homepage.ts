@@ -2,6 +2,7 @@ import {
   BarChart3,
   Blocks,
   CircleDot,
+  Crosshair,
   MonitorSmartphone,
   QrCode,
   Radio,
@@ -121,6 +122,15 @@ const MODE_PRESENTATION: Record<
     imageAlt: "Connect Dots - colored dot pairs linked by paths on a grid",
     cta: "Set Up Connect Dots",
   },
+  visual_point: {
+    tag: "Image challenge",
+    tint: "bg-[var(--game-visual-point-soft)]",
+    accent: "text-[var(--game-visual-point-deep)]",
+    icon: Crosshair,
+    preview: jigsawPreview,
+    imageAlt: "Target Hunt - image-based prompt with answer dots over a diagram",
+    cta: "Set Up Target Hunt",
+  },
 };
 
 function gameModeMetaLine(mode: GameMode): string {
@@ -135,6 +145,8 @@ function gameModeMetaLine(mode: GameMode): string {
       return `${JIGSAW_GRID.pieceCount} pieces - ${GAME_CONFIG.jigsaw.timeLimitSeconds}s timer`;
     case "connect_dots":
       return `${CONNECT_DOTS_CONFIG.medium.gridSize}x${CONNECT_DOTS_CONFIG.medium.gridSize} grid - ${CONNECT_DOTS_CONFIG.medium.pairCount} pairs`;
+    case "visual_point":
+      return `Images with ${GAME_CONFIG.visual_point.minPoints}-${GAME_CONFIG.visual_point.maxPoints} target dots`;
   }
 }
 
@@ -150,6 +162,8 @@ function gameModeCopy(mode: GameMode): string {
       return "Turn an image or concept into a puzzle mission where participants unlock and place pieces as they answer.";
     case "connect_dots":
       return "Make matching, definitions, formulas, or concepts more physical with a path-building challenge.";
+    case "visual_point":
+      return "Upload a diagram, map, or image and ask participants to hunt for the right unlabeled target.";
   }
 }
 
@@ -167,24 +181,24 @@ export type HomepageGameModeCard = {
   cta: string;
 };
 
-export const HOMEPAGE_GAME_MODES = (["quiz", "polls", "jigsaw", "connect_dots"] as const).map(
-  (mode) => {
-    const presentation = MODE_PRESENTATION[mode];
-    return {
-      id: mode,
-      title: GAME_MODE_META[mode].title,
-      tag: presentation.tag,
-      copy: gameModeCopy(mode),
-      meta: gameModeMetaLine(mode),
-      image: presentation.preview,
-      imageAlt: presentation.imageAlt,
-      icon: presentation.icon,
-      tint: presentation.tint,
-      accent: presentation.accent,
-      cta: presentation.cta,
-    } satisfies HomepageGameModeCard;
-  },
-);
+export const HOMEPAGE_GAME_MODES = (
+  ["quiz", "polls", "jigsaw", "connect_dots", "visual_point"] as const
+).map((mode) => {
+  const presentation = MODE_PRESENTATION[mode];
+  return {
+    id: mode,
+    title: GAME_MODE_META[mode].title,
+    tag: presentation.tag,
+    copy: gameModeCopy(mode),
+    meta: gameModeMetaLine(mode),
+    image: presentation.preview,
+    imageAlt: presentation.imageAlt,
+    icon: presentation.icon,
+    tint: presentation.tint,
+    accent: presentation.accent,
+    cta: presentation.cta,
+  } satisfies HomepageGameModeCard;
+});
 
 export const HOMEPAGE_GAME_MODES_SECTION = {
   eyebrow: "Tools shelf",
@@ -251,7 +265,7 @@ export const HOMEPAGE_INFRASTRUCTURE_FEATURES = [
   {
     icon: MonitorSmartphone,
     title: "All tools together",
-    copy: "Quiz Battle, Polls, Jigsaw, Connect Dots, files, and reports sit in one place.",
+    copy: "Quiz Battle, Polls, Jigsaw, Connect Dots, Target Hunt, files, and reports sit in one place.",
     image: homeToolsHub,
     imageAlt: "GamiBar tool hub with compact cards for quizzes, polls, puzzles, files, and reports",
   },
@@ -312,14 +326,14 @@ export const HOMEPAGE_FAQ_SECTION = {
 
 export const HOMEPAGE_FAQ = [
   {
-    question: "Is GamiBar only three games?",
+    question: "Is GamiBar only four games?",
     answer:
-      "No. The current app starts with Quiz Challenge, Polls, Jigsaw Mission, Connect Dots, and Resource Drop. The workspace is structured so more activity types and host utilities can be added cleanly.",
+      "No. The current app starts with Quiz Challenge, Polls, Jigsaw Mission, Connect Dots, Target Hunt, and Resource Drop. The workspace is structured so more activity types and host utilities can be added cleanly.",
   },
   {
     question: "Can I use my own questions, images, and documents?",
     answer:
-      "Yes. Quiz Challenge uses your multiple-choice bank, Jigsaw Mission uses an image you upload or choose, Connect Dots uses your matching pairs, and Resource Drop accepts PDF, PPT, PPTX, DOC, and DOCX files.",
+      "Yes. Quiz Challenge uses your multiple-choice bank, Jigsaw Mission uses an image you upload or choose, Target Hunt uses any image with answer dots, Connect Dots uses your matching pairs, and Resource Drop accepts PDF, PPT, PPTX, DOC, and DOCX files.",
   },
   {
     question: "Do participants need an account to join?",

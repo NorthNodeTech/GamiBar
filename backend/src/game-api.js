@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env.js";
 
 import {
   claimAuthorSession,
@@ -22,6 +22,7 @@ import {
   submitPollResponses,
   submitQuizAnswer,
   submitQuizJigsawAnswer,
+  submitVisualPointAnswer,
 } from "../../frontend/src/lib/game/room-engine.ts";
 import {
   deleteAuthorSession,
@@ -68,6 +69,10 @@ const gameActions = {
   },
   "submit-poll-responses": { auth: false, handler: submitPollResponses },
   "submit-quiz-answer": { auth: false, handler: submitQuizAnswer },
+  "submit-visual-point-answer": {
+    auth: false,
+    handler: submitVisualPointAnswer,
+  },
   "submit-quiz-jigsaw-answer": { auth: false, handler: submitQuizJigsawAnswer },
   "submit-jigsaw-mission-answer": {
     auth: false,

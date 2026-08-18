@@ -48,6 +48,11 @@ export function questionCountFromConfig(mode: GameMode, config: unknown): number
     return 0;
   }
 
+  if (mode === "visual_point") {
+    const questions = raw.questions;
+    return Array.isArray(questions) ? questions.length : 0;
+  }
+
   const questions = raw.questions;
   return Array.isArray(questions) ? questions.length : 0;
 }
@@ -103,6 +108,10 @@ export async function deleteAuthorSession(authorId: string, roomId: string): Pro
     .select("storage_path")
     .eq("room_id", roomId)
     .maybeSingle();
+  const { data: visualAssets } = await supabase
+    .from("gamibar_visual_point_assets")
+    .select("storage_path")
+    .eq("room_id", roomId);
 
   const { error } = await supabase
     .from("gamibar_rooms")
@@ -116,6 +125,10 @@ export async function deleteAuthorSession(authorId: string, roomId: string): Pro
 
   if (asset?.storage_path) {
     await supabase.storage.from("gamibar-jigsaw").remove([asset.storage_path]);
+  }
+  const visualPaths = (visualAssets ?? []).map((row) => row.storage_path).filter(Boolean);
+  if (visualPaths.length > 0) {
+    await supabase.storage.from("gamibar-visual-point").remove(visualPaths);
   }
 }
 

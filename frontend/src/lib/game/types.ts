@@ -10,7 +10,7 @@ export type QuizQuestionDraft = {
   prompt: string;
   options: Record<QuizOptionId, string>;
   /** Author-only - never sent to students while LIVE. */
-  correctOption: QuizOptionId | null;
+  correctOption?: QuizOptionId | null;
 };
 
 export type QuizQuestionPublic = {
@@ -27,9 +27,9 @@ export type JigsawConfig = {
   cols: number;
   rows: number;
   /** Correct-answer counts at which each puzzle piece unlocks (length = cols × rows). */
-  pieceUnlockAt?: number[];
+  pieceUnlockAt?: number[] | undefined;
   /** Official library image id when the author used Auto Upload. */
-  libraryImageId?: string | null;
+  libraryImageId?: string | null | undefined;
 };
 
 export type ConnectDotsDifficulty = "easy" | "medium" | "hard";
@@ -43,9 +43,9 @@ export type ConnectDotsPair = {
   a: ConnectDotsEndpoint;
   b: ConnectDotsEndpoint;
   /** Teacher content shown on endpoint A. */
-  question?: string;
+  question?: string | undefined;
   /** Teacher content shown on endpoint B. */
-  answer?: string;
+  answer?: string | undefined;
 };
 
 /** Teacher-authored matching pair for Connect Dots. */
@@ -63,7 +63,44 @@ export type ConnectDotsBoardConfig = {
   pairs: ConnectDotsPair[];
   contentPairs: ConnectDotsContentPair[];
   /** Author/trusted only - never sent to students in public snapshots. */
-  solution?: Record<string, ConnectDotsEndpoint[]>;
+  solution?: Record<string, ConnectDotsEndpoint[]> | undefined;
+};
+
+export type VisualPoint = {
+  id: string;
+  /** 0-100 image-relative coordinate. */
+  x: number;
+  /** 0-100 image-relative coordinate. */
+  y: number;
+  /** Author/trusted only - never sent to students. Absent on public snapshots. */
+  isCorrect?: boolean;
+  /** Author-only teacher reference. Never sent to students. */
+  adminReference?: string | undefined;
+  color?: string | undefined;
+};
+
+export type VisualPointPublic = Pick<VisualPoint, "id" | "x" | "y" | "color">;
+
+export type VisualPointQuestionDraft = {
+  id: string;
+  prompt: string;
+  /** Storage path or data URL during draft; server URL once persisted. */
+  imageUrl: string | null;
+  imageMime: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  points: VisualPoint[];
+};
+
+export type VisualPointQuestionPublic = {
+  id: string;
+  prompt: string;
+  imageUrl: string | null;
+  imageMime: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  points: VisualPointPublic[];
+  order: number;
 };
 
 export type PollQuestionType =
@@ -158,6 +195,11 @@ export type GamePayload =
       timeLimitSeconds: number | null;
     }
   | {
+      mode: "visual_point";
+      questions: VisualPointQuestionDraft[];
+      timeLimitSeconds: number | null;
+    }
+  | {
       mode: "polls";
       questions: PollQuestionDraft[];
       settings: PollSettings;
@@ -201,6 +243,13 @@ export type QuizAnswerRecord = {
   questionId: string;
   selectedOption: QuizOptionId;
   submittedAt: number;
+};
+
+export type VisualPointAnswerRecord = {
+  questionId: string;
+  selectedPointId: string;
+  submittedAt: number;
+  isCorrect?: boolean;
 };
 
 export type QuizAttempt = {

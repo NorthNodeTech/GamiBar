@@ -27,6 +27,13 @@ const MODE_PRESENTATION = {
     soft: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
     selected: "border-[var(--game-connect-dots)] ring-2 ring-[var(--game-connect-dots)]/15",
   },
+  visual_point: {
+    moment: "Image identification",
+    useCase: "Maps, diagrams, anatomy, and circuits",
+    accent: "bg-[var(--game-visual-point)]",
+    soft: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]",
+    selected: "border-[var(--game-visual-point)] ring-2 ring-[var(--game-visual-point)]/15",
+  },
   polls: {
     moment: "Live feedback",
     useCase: "Polls, ratings, and quick surveys",
@@ -46,7 +53,11 @@ export function GameModePicker({
   const catalog = getCoreModeCatalog();
 
   return (
-    <div className="grid gap-3 md:grid-cols-4" role="radiogroup" aria-label="Game modes">
+    <div
+      className="grid gap-3 md:grid-cols-3 xl:grid-cols-5"
+      role="radiogroup"
+      aria-label="Game modes"
+    >
       {catalog.map((item) => (
         <PickerCard
           key={item.mode}

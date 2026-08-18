@@ -36,6 +36,13 @@ export const TIMER_PRESETS: Record<GameMode, TimerPreset[]> = {
     { id: "90", label: "1:30", seconds: 90 },
     { id: "120", label: "2 min", seconds: 120 },
   ],
+  visual_point: [
+    { id: "open", label: "No limit", seconds: null },
+    { id: "60", label: "1 min", seconds: 60 },
+    { id: "3m", label: "3 min", seconds: 180 },
+    { id: "5m", label: "5 min", seconds: 300 },
+    { id: "10m", label: "10 min", seconds: 600 },
+  ],
   polls: [
     { id: "open", label: "No limit", seconds: null },
     { id: "60", label: "1 min", seconds: 60 },
@@ -50,6 +57,7 @@ export const TIMER_BOUNDS: Record<GameMode, { min: number; max: number; step: nu
   quiz_jigsaw: { min: 120, max: 1200, step: 60 },
   jigsaw: { min: 30, max: 300, step: 15 },
   connect_dots: { min: 30, max: 180, step: 15 },
+  visual_point: { min: 30, max: 900, step: 30 },
   polls: { min: 30, max: 900, step: 30 },
 };
 
@@ -57,6 +65,7 @@ export function defaultTimerSeconds(mode: GameMode): number | null {
   if (mode === "quiz") return GAME_CONFIG.quiz.timeLimitSeconds;
   if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.timeLimitSeconds;
   if (mode === "jigsaw") return GAME_CONFIG.jigsaw.timeLimitSeconds;
+  if (mode === "visual_point") return GAME_CONFIG.visual_point.timeLimitSeconds;
   if (mode === "polls") return GAME_CONFIG.polls.timeLimitSeconds;
   return GAME_CONFIG.connect_dots.timeLimitSeconds;
 }
@@ -121,6 +130,11 @@ export function gameInstruction(
     return timeLimitSeconds == null
       ? "Answer the poll or survey. Results update live as responses arrive."
       : `Answer the poll or survey within ${formatTimerLong(timeLimitSeconds)}. Results update live as responses arrive.`;
+  }
+  if (mode === "visual_point") {
+    return timeLimitSeconds == null
+      ? "Select one target on each image. Labels stay hidden while the host validates answers."
+      : `Select the correct target on each image within ${formatTimerLong(timeLimitSeconds)}.`;
   }
   return timeLimitSeconds == null
     ? "Connect each question dot to its matching answer dot. Complete all pairs to finish."

@@ -66,6 +66,21 @@ export function computeLiveParticipantProgress(stored: StoredRoom): LiveParticip
         };
       }
 
+      if (room.mode === "visual_point" && room.payload.mode === "visual_point") {
+        const total = room.payload.questions.length;
+        const answered = stored.visualPointAnswers.get(participant.id)?.size ?? 0;
+        const score = attempt?.score ?? (attempt?.correctCount ?? 0) * 100;
+        return {
+          participantId: participant.id,
+          displayName: participant.displayName,
+          status: participant.status,
+          completed,
+          progressText: completed ? "Complete" : `${answered}/${total} answered`,
+          score,
+          progressPercent: total ? Math.round((answered / total) * 100) : 0,
+        };
+      }
+
       if (room.mode === "polls" && room.payload.mode === "polls") {
         const total = room.payload.questions.length;
         const answered =

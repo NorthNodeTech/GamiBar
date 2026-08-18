@@ -306,6 +306,95 @@ export type Database = {
           },
         ];
       };
+      gamibar_visual_point_answers: {
+        Row: {
+          id: string;
+          is_correct: boolean;
+          participant_id: string;
+          question_id: string;
+          room_id: string;
+          selected_point_id: string;
+          submitted_at: string;
+        };
+        Insert: {
+          id?: string;
+          is_correct: boolean;
+          participant_id: string;
+          question_id: string;
+          room_id: string;
+          selected_point_id: string;
+          submitted_at?: string;
+        };
+        Update: {
+          id?: string;
+          is_correct?: boolean;
+          participant_id?: string;
+          question_id?: string;
+          room_id?: string;
+          selected_point_id?: string;
+          submitted_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "gamibar_visual_point_answers_participant_id_fkey";
+            columns: ["participant_id"];
+            isOneToOne: false;
+            referencedRelation: "gamibar_participants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gamibar_visual_point_answers_room_id_fkey";
+            columns: ["room_id"];
+            isOneToOne: false;
+            referencedRelation: "gamibar_rooms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gamibar_visual_point_assets: {
+        Row: {
+          byte_size: number | null;
+          created_at: string;
+          height: number | null;
+          id: string;
+          mime_type: string;
+          question_id: string;
+          room_id: string;
+          storage_path: string;
+          width: number | null;
+        };
+        Insert: {
+          byte_size?: number | null;
+          created_at?: string;
+          height?: number | null;
+          id?: string;
+          mime_type: string;
+          question_id: string;
+          room_id: string;
+          storage_path: string;
+          width?: number | null;
+        };
+        Update: {
+          byte_size?: number | null;
+          created_at?: string;
+          height?: number | null;
+          id?: string;
+          mime_type?: string;
+          question_id?: string;
+          room_id?: string;
+          storage_path?: string;
+          width?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "gamibar_visual_point_assets_room_id_fkey";
+            columns: ["room_id"];
+            isOneToOne: false;
+            referencedRelation: "gamibar_rooms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       gamibar_rooms: {
         Row: {
           author_id: string | null;
@@ -540,7 +629,14 @@ export type Database = {
       };
     };
     Enums: {
-      gamibar_game_mode: "quiz" | "quiz_jigsaw" | "jigsaw" | "maze" | "connect_dots" | "polls";
+      gamibar_game_mode:
+        | "quiz"
+        | "quiz_jigsaw"
+        | "jigsaw"
+        | "maze"
+        | "connect_dots"
+        | "visual_point"
+        | "polls";
       gamibar_participant_status: "ONLINE" | "DISCONNECTED" | "PLAYING" | "COMPLETED";
       gamibar_room_status:
         "DRAFT" | "LOBBY" | "READY" | "COUNTDOWN" | "LIVE" | "FINISHED" | "CANCELLED";
@@ -666,7 +762,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      gamibar_game_mode: ["quiz", "quiz_jigsaw", "jigsaw", "maze", "connect_dots", "polls"],
+      gamibar_game_mode: [
+        "quiz",
+        "quiz_jigsaw",
+        "jigsaw",
+        "maze",
+        "connect_dots",
+        "visual_point",
+        "polls",
+      ],
       gamibar_participant_status: ["ONLINE", "DISCONNECTED", "PLAYING", "COMPLETED"],
       gamibar_room_status: [
         "DRAFT",
