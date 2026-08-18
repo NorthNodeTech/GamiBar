@@ -324,7 +324,7 @@ function ToolCard({
       </div>
       <span
         className={cn(
-          "mt-4 inline-flex items-center text-xs font-bold",
+          "mt-auto pt-4 inline-flex items-center text-xs font-bold",
           disabled ? "text-[var(--gamibar-text-tertiary)]" : "text-[var(--foreground)]",
         )}
       >
@@ -340,7 +340,7 @@ function ToolCard({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.04 + index * 0.04 }}
-        className="rounded-[20px] border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 opacity-85"
+        className="flex flex-col h-full rounded-[20px] border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 opacity-85"
       >
         {content}
       </motion.div>
@@ -353,10 +353,11 @@ function ToolCard({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.04 + index * 0.04 }}
+        className="h-full"
       >
         <Link
           to={tool.to}
-          className="block rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 text-left shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
+          className="flex flex-col h-full rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 text-left shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
         >
           {content}
         </Link>
@@ -371,7 +372,7 @@ function ToolCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.04 + index * 0.04 }}
       onClick={() => ("mode" in tool ? onMode(tool.mode) : undefined)}
-      className="rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 text-left shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
+      className="flex flex-col w-full h-full rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 text-left shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
     >
       {content}
     </motion.button>
