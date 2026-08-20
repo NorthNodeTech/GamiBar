@@ -288,28 +288,32 @@ function TestimonialsScene() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch">
         {HOMEPAGE_TESTIMONIALS.map((testimonial, index) => (
           <Reveal key={testimonial.name} delay={index * 0.08} className="h-full">
-            <article className="flex h-full flex-col overflow-hidden rounded-[20px] border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(16,24,40,0.08)]">
-              <div className="relative aspect-video w-full overflow-hidden border-b border-[#EEF0F3]">
-                <img
-                  src={testimonial.image}
-                  alt={testimonial.imageAlt}
-                  loading="lazy"
-                  decoding="async"
-                  className="size-full object-cover"
-                />
-              </div>
-              <div className="flex flex-1 flex-col p-6">
-                <Quote className="size-7 text-[#FF3B30]" aria-hidden />
-                <p className="mt-4 flex-1 text-base font-medium leading-relaxed text-[#33373D]">
+            <article className="flex h-full flex-col justify-between rounded-[24px] border border-[#E7E9ED] bg-white p-7 shadow-[0_2px_8px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:shadow-[0_20px_40px_rgba(16,24,40,0.08)]">
+              <div>
+                <div className="flex items-center justify-between">
+                  <Quote className="size-8 text-[#FF3B30] opacity-90" aria-hidden />
+                  <span className="rounded-full bg-[#FFF1F0] px-3 py-1 text-xs font-bold text-[#FF3B30]">
+                    {testimonial.tag}
+                  </span>
+                </div>
+                <p className="mt-5 text-base font-medium leading-relaxed text-[#2D3139]">
                   "{testimonial.quote}"
                 </p>
-                <div className="mt-6 border-t border-[#EEF0F3] pt-4">
-                  <p className="font-display text-base font-bold text-[#111111]">
-                    {testimonial.name}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#7A7F87]">
-                    {testimonial.role}
-                  </p>
+              </div>
+
+              <div className="mt-8 border-t border-[#EEF0F3] pt-5">
+                <div className="flex items-center gap-3.5">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FF3B30] to-[#FF7B72] font-display text-sm font-bold text-white shadow-sm">
+                    {testimonial.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display text-base font-bold text-[#111111] truncate">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-xs font-medium text-[#7A7F87] truncate">
+                      {testimonial.role}
+                    </p>
+                  </div>
                 </div>
               </div>
             </article>

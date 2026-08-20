@@ -332,27 +332,27 @@ export const HOMEPAGE_TESTIMONIALS_SECTION = {
 export const HOMEPAGE_TESTIMONIALS = [
   {
     quote:
-      "When I launch a quick quiz, the quiet students join from their phones and I can see where the class is stuck before moving on.",
-    name: "Biology instructor",
-    role: "Quiz Challenge",
-    image: testimonialPhysics,
-    imageAlt: "Physics classroom with participants playing a live GamiBar session",
+      "In a batch of 80 students, usually only the first bench answers. With GamiBar's Quiz Battle projected on screen, everyone joins on their phones and participates actively. The lecture energy is totally different now.",
+    name: "Dr. Ramesh Kulkarni",
+    role: "Professor, Engineering College (Pune)",
+    tag: "Quiz Battle",
+    initials: "RK",
   },
   {
     quote:
-      "Polls make the room easier to read. I can change the pace while people are still engaged instead of waiting for feedback later.",
-    name: "Training facilitator",
-    role: "Polls and Surveys",
-    image: testimonialCorporate,
-    imageAlt: "Corporate training room with live audience feedback on display",
+      "We replaced our boring post-lunch slides with Jigsaw and live Polls. Trainees don't need to download any app—just a quick QR scan from their seats and real-time responses show up on the main screen.",
+    name: "Sneha Nambiar",
+    role: "L&D Lead, Tech Mahindra (Bengaluru)",
+    tag: "Polls & Jigsaw",
+    initials: "SN",
   },
   {
     quote:
-      "Resource Drop solves the end-of-session file chase. The QR stays on the screen, and everyone leaves with the deck.",
-    name: "Math lecturer",
-    role: "Resource Drop",
-    image: testimonialMath,
-    imageAlt: "University mathematics classroom during a live quiz review",
+      "Earlier, sharing class slides and revision sheets via WhatsApp groups was chaotic. With Resource Drop, I keep the QR on the projector at the end of class and all students download the PDF notes instantly.",
+    name: "Prof. Arvind Seshadri",
+    role: "Faculty, Science & Math Academy (Chennai)",
+    tag: "Resource Drop",
+    initials: "AS",
   },
 ] as const;
 
