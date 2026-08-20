@@ -172,7 +172,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script
           dangerouslySetInnerHTML={{
-            __html: `if(location.pathname==="/"&&!location.hash){try{history.scrollRestoration="manual";scrollTo(0,0);}catch(e){}}`,
+            __html: `if("scrollRestoration" in history){try{history.scrollRestoration="manual";}catch(e){}}if(!location.hash){try{window.scrollTo(0,0);}catch(e){}}`,
           }}
         />
         <AnalyticsHeadScripts />

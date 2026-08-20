@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, Quote } from "lucide-react";
+import { useLayoutEffect } from "react";
 
 import { GameModesSection } from "@/components/home/GameModesSection";
 import { Hero3D } from "@/components/home/Hero3D";
@@ -132,6 +133,12 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  useLayoutEffect(() => {
+    if (!window.location.hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, []);
+
   return (
     <div className="relative min-h-screen text-[var(--foreground)]">
       <Hero3D />
