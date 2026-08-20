@@ -1,42 +1,81 @@
-import gamibarLogo from "@/assets/gamibar-logo-ui.webp";
+import logoBlack from "@/assets/gamibar-logo-black.png";
+import logoWhite from "@/assets/gamibar-logo-white.png";
 import { cn } from "@/lib/utils";
 
 type LogoProps = {
   size?: number;
-  /** `light` is an alias for `on-dark` (no drop shadow — for dark backgrounds). */
-  tone?: "default" | "on-dark" | "light";
+  /**
+   * - "default" / "auto": Adaptive (black on light theme, white on dark theme)
+   * - "on-dark" / "white" / "light": Always white logo (for dark/black backgrounds)
+   * - "on-light" / "black" / "dark": Always black logo (for light/white backgrounds)
+   */
+  tone?: "default" | "auto" | "on-dark" | "on-light" | "white" | "black" | "light" | "dark";
   className?: string;
 };
 
-/** Site-wide GamiBAR mark. */
+/** Site-wide GamiBAR brand logo mark. */
 export function Logo({ size = 40, tone = "default", className }: LogoProps) {
-  const onDark = tone === "on-dark" || tone === "light";
-  const pad = onDark ? Math.max(4, Math.round(size * 0.12)) : 0;
+  if (tone === "on-dark" || tone === "white" || tone === "light") {
+    return (
+      <span
+        className={cn("inline-flex shrink-0 items-center justify-center leading-none", className)}
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={logoWhite}
+          alt="GamiBar logo"
+          width={size}
+          height={size}
+          decoding="async"
+          draggable={false}
+          className="size-full object-contain object-center"
+        />
+      </span>
+    );
+  }
 
+  if (tone === "on-light" || tone === "black" || tone === "dark") {
+    return (
+      <span
+        className={cn("inline-flex shrink-0 items-center justify-center leading-none", className)}
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={logoBlack}
+          alt="GamiBar logo"
+          width={size}
+          height={size}
+          decoding="async"
+          draggable={false}
+          className="size-full object-contain object-center"
+        />
+      </span>
+    );
+  }
+
+  // Default: adaptive theme-aware (black on light background, white on dark background)
   return (
     <span
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center leading-none",
-        onDark && "rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]",
-        className,
-      )}
-      style={{
-        width: size + pad * 2,
-        height: size + pad * 2,
-        padding: onDark ? pad : undefined,
-      }}
+      className={cn("inline-flex shrink-0 items-center justify-center leading-none", className)}
+      style={{ width: size, height: size }}
     >
       <img
-        src={gamibarLogo}
-        alt="GamiBAR logo"
+        src={logoBlack}
+        alt="GamiBar logo"
         width={size}
         height={size}
         decoding="async"
         draggable={false}
-        className={cn(
-          "block object-contain object-center",
-          onDark ? "size-full" : "size-full drop-shadow-[0_1px_4px_rgba(0,0,0,0.08)]",
-        )}
+        className="block dark:hidden size-full object-contain object-center"
+      />
+      <img
+        src={logoWhite}
+        alt="GamiBar logo"
+        width={size}
+        height={size}
+        decoding="async"
+        draggable={false}
+        className="hidden dark:block size-full object-contain object-center"
       />
     </span>
   );
