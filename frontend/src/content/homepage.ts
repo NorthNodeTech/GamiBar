@@ -321,38 +321,6 @@ export const HOMEPAGE_AUDIENCES = [
   },
 ] as const;
 
-export const HOMEPAGE_FEATURE_SECTION = {
-  eyebrow: "Why GamiBar",
-  title: "Interactive enough for games. Simple enough for class.",
-  description:
-    "GamiBar keeps the product story focused: teacher to screen, screen to phones, phones back to live participation.",
-} as const;
-
-export const HOMEPAGE_FEATURES = [
-  {
-    title: "Fast room setup",
-    description:
-      "Pick a tool, attach your content, and get a shareable room code without building a whole course.",
-    icon: QrCode,
-  },
-  {
-    title: "Live participation",
-    description: "Answers, votes, progress, and rankings update while the room is still active.",
-    icon: Radio,
-  },
-  {
-    title: "Multiple formats",
-    description:
-      "Switch between quizzes, feedback, matching, image hunts, puzzles, and resource sharing.",
-    icon: Blocks,
-  },
-  {
-    title: "Education-first flow",
-    description:
-      "Designed for classrooms, workshops, and training rooms rather than generic meeting software.",
-    icon: GraduationCap,
-  },
-] as const;
 
 export const HOMEPAGE_TESTIMONIALS_SECTION = {
   eyebrow: "Testimonials",

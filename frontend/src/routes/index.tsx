@@ -21,8 +21,6 @@ import {
   HOMEPAGE_CTA,
   HOMEPAGE_FAQ,
   HOMEPAGE_FAQ_SECTION,
-  HOMEPAGE_FEATURES,
-  HOMEPAGE_FEATURE_SECTION,
   HOMEPAGE_HERO,
   HOMEPAGE_PROBLEM_POINTS,
   HOMEPAGE_PROBLEM_SECTION,
@@ -141,7 +139,6 @@ function Landing() {
       <JourneyTimeline />
       <GameModesSection />
       <AudienceScene />
-      <WhyScene />
       <TestimonialsScene />
       <FaqScene />
       <CtaScene />
@@ -273,74 +270,6 @@ function AudienceScene() {
   );
 }
 
-function WhyScene() {
-  return (
-    <LandingSection
-      id="why"
-      width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-[#080809] !py-16 text-white md:!py-24"
-    >
-      <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
-        <div>
-          <SectionHeading
-            eyebrow={HOMEPAGE_FEATURE_SECTION.eyebrow}
-            title={HOMEPAGE_FEATURE_SECTION.title}
-            description={HOMEPAGE_FEATURE_SECTION.description}
-            align="left"
-            titleClassName="text-white text-[clamp(2rem,5vw,3.6rem)] leading-[1.03]"
-            eyebrowClassName="text-[#FF6B62]"
-            className="max-w-2xl [&_p]:text-white/68"
-          />
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            {HOMEPAGE_FEATURES.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Reveal key={feature.title} delay={index * 0.06}>
-                  <div className="h-full rounded-[20px] border border-white/10 bg-white/[0.06] p-5">
-                    <div className="grid size-10 place-items-center rounded-2xl bg-[#FF3B30] text-white">
-                      <Icon className="size-5" />
-                    </div>
-                    <h3 className="mt-4 font-display text-base font-bold text-white">
-                      {feature.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/62">
-                      {feature.description}
-                    </p>
-                  </div>
-                </Reveal>
-              );
-            })}
-          </div>
-        </div>
-
-        <Reveal className="relative">
-          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.06] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
-            <img
-              src={HOMEPAGE_HERO.image}
-              alt={HOMEPAGE_HERO.imageAlt}
-              loading="lazy"
-              decoding="async"
-              className="aspect-[4/3] w-full rounded-[24px] object-cover opacity-90"
-            />
-            <div className="absolute inset-x-8 bottom-8 rounded-[22px] border border-white/12 bg-black/62 p-4 backdrop-blur-xl">
-              <div className="grid gap-3 sm:grid-cols-4">
-                {["Teacher", "GamiBar", "Students", "Interaction"].map((step, index) => (
-                  <div key={step} className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-                      0{index + 1}
-                    </p>
-                    <p className="mt-1 truncate text-sm font-bold text-white">{step}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Reveal>
-      </div>
-    </LandingSection>
-  );
-}
 
 function TestimonialsScene() {
   return (

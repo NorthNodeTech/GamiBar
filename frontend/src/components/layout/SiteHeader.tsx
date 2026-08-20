@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 const publicNav = [
   { to: "/#games", label: "Tools", hash: true },
   { to: "/#journey", label: "Flow", hash: true },
-  { to: "/#why", label: "Why GamiBar", hash: true },
   { to: "/#faq", label: "FAQ", hash: true },
 ] as const;
 
