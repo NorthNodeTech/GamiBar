@@ -325,37 +325,67 @@ function TestimonialsScene() {
 }
 
 function FaqScene() {
+  const midIndex = Math.ceil(HOMEPAGE_FAQ.length / 2);
+  const col1 = HOMEPAGE_FAQ.slice(0, midIndex);
+  const col2 = HOMEPAGE_FAQ.slice(midIndex);
+
   return (
     <LandingSection
       id="faq"
-      width="5xl"
+      width="7xl"
       className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_FAQ_SECTION.eyebrow}
         title={HOMEPAGE_FAQ_SECTION.title}
-        className="mb-10 text-center md:mb-12"
-        titleClassName="text-[clamp(1.75rem,4.5vw,2.5rem)]"
+        description="Everything you need to know about setting up rooms, running games, and engaging participants."
+        className="mb-10 text-center md:mb-14"
+        titleClassName="text-[clamp(2rem,5vw,3rem)]"
       />
 
-      <Reveal className="rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-5 shadow-[var(--shadow-soft)] sm:p-6">
-        <Accordion type="single" collapsible className="w-full">
-          {HOMEPAGE_FAQ.map((item) => (
-            <AccordionItem
-              key={item.question}
-              value={item.question}
-              className="border-b border-[var(--gamibar-border)] last:border-b-0"
-            >
-              <AccordionTrigger className="text-left text-sm font-semibold text-[var(--foreground)] hover:no-underline">
-                {item.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed text-[var(--muted-foreground)]">
-                {item.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </Reveal>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Reveal delay={0.05} className="h-full">
+          <div className="rounded-[24px] border border-[#E7E9ED] bg-[#FAFAFA] p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)] sm:p-6">
+            <Accordion type="single" collapsible className="w-full space-y-3">
+              {col1.map((item) => (
+                <AccordionItem
+                  key={item.question}
+                  value={item.question}
+                  className="rounded-2xl border border-[#E7E9ED] bg-white px-5 py-1 shadow-sm transition-colors last:border-b"
+                >
+                  <AccordionTrigger className="text-left text-sm font-bold text-[#111111] hover:no-underline">
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm leading-relaxed text-[#5F6368] pt-1 pb-3">
+                    {item.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.12} className="h-full">
+          <div className="rounded-[24px] border border-[#E7E9ED] bg-[#FAFAFA] p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)] sm:p-6">
+            <Accordion type="single" collapsible className="w-full space-y-3">
+              {col2.map((item) => (
+                <AccordionItem
+                  key={item.question}
+                  value={item.question}
+                  className="rounded-2xl border border-[#E7E9ED] bg-white px-5 py-1 shadow-sm transition-colors last:border-b"
+                >
+                  <AccordionTrigger className="text-left text-sm font-bold text-[#111111] hover:no-underline">
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm leading-relaxed text-[#5F6368] pt-1 pb-3">
+                    {item.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </Reveal>
+      </div>
     </LandingSection>
   );
 }
