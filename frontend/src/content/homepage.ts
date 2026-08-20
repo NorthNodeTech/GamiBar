@@ -56,27 +56,27 @@ export const HOMEPAGE_HERO = {
 
 export const HOMEPAGE_PROBLEM_SECTION = {
   eyebrow: "The problem",
-  title: "Passive rooms lose energy fast.",
+  title: "People are listening. But are they participating?",
   description:
-    "When a session is only slides and speech, the host cannot see who is following, phones become distractions, and useful feedback arrives too late.",
+    "Keeping a room engaged is hard. Some people answer, some stay quiet, and some are already checking their phones. GamiBar gives the whole room a way to take part.",
 } as const;
 
 export const HOMEPAGE_PROBLEM_POINTS = [
   {
-    title: "Questions wait until the end",
-    description: "By the time confusion surfaces, the class or workshop has already moved on.",
-    icon: Timer,
+    title: "Questions get lost",
+    description: "Not everyone wants to raise their hand. Ask the room and get answers instantly.",
+    icon: Users,
   },
   {
-    title: "Phones pull attention away",
+    title: "Phones can help",
     description:
-      "GamiBar turns the same device into the controller for the activity in front of the room.",
+      "Instead of asking people to put their phones away, give them something useful to do with them.",
     icon: MonitorSmartphone,
   },
   {
-    title: "Resources scatter after the session",
+    title: "Sharing takes too many steps",
     description:
-      "One room QR can carry the game, the feedback moment, and the files participants need later.",
+      "Skip the links, emails and WhatsApp messages. Show one QR and let everyone download what they need.",
     icon: FileDown,
   },
 ] as const;
