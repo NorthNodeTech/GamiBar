@@ -12,14 +12,13 @@ export function JourneyTimeline() {
     <LandingSection
       id="journey"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_JOURNEY_SECTION.eyebrow}
         title={HOMEPAGE_JOURNEY_SECTION.title}
         description={HOMEPAGE_JOURNEY_SECTION.description}
-        className="mb-10 text-center md:mb-14"
-        titleClassName="text-[clamp(2rem,5vw,3.5rem)]"
+        className="mb-8 text-center md:mb-12"
       />
 
       {/* Desktop Horizontal Flow (Hidden on Mobile) */}

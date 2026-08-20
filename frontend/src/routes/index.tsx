@@ -151,33 +151,33 @@ function ProblemScene() {
     <LandingSection
       id="problem"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
     >
-      <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+      <div className="grid items-center gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:gap-14">
         <div>
           <SectionHeading
             eyebrow={HOMEPAGE_PROBLEM_SECTION.eyebrow}
             title={HOMEPAGE_PROBLEM_SECTION.title}
             description={HOMEPAGE_PROBLEM_SECTION.description}
             align="left"
-            titleClassName="text-[clamp(2rem,5vw,3.75rem)] leading-[1.02]"
+            titleClassName="text-[clamp(1.5rem,3.4vw,2.4rem)] leading-[1.12]"
             className="max-w-2xl"
           />
 
-          <div className="mt-8 grid gap-4">
+          <div className="mt-6 grid gap-3">
             {HOMEPAGE_PROBLEM_POINTS.map((point, index) => {
               const Icon = point.icon;
               return (
                 <Reveal key={point.title} delay={index * 0.08}>
-                  <div className="grid grid-cols-[44px_1fr] gap-4 rounded-[20px] border border-[#E7E9ED] bg-[#FAFAFA] p-4">
-                    <div className="grid size-11 place-items-center rounded-2xl bg-white text-[#FF3B30] shadow-sm">
-                      <Icon className="size-5" />
+                  <div className="grid grid-cols-[38px_1fr] gap-3.5 rounded-[18px] border border-[#E7E9ED] bg-[#FAFAFA] p-3.5">
+                    <div className="grid size-9 place-items-center rounded-xl bg-white text-[#FF3B30] shadow-sm">
+                      <Icon className="size-4" />
                     </div>
                     <div>
-                      <h3 className="font-display text-base font-bold text-[#111111]">
+                      <h3 className="font-display text-sm font-bold text-[#111111]">
                         {point.title}
                       </h3>
-                      <p className="mt-1 text-sm leading-relaxed text-[#5F6368]">
+                      <p className="mt-0.5 text-xs sm:text-[13px] leading-relaxed text-[#5F6368]">
                         {point.description}
                       </p>
                     </div>
@@ -189,20 +189,20 @@ function ProblemScene() {
         </div>
 
         <Reveal className="relative">
-          <div className="relative overflow-hidden rounded-[32px] border border-[#E7E9ED] bg-[#111111] p-3 shadow-[0_28px_70px_rgba(16,24,40,0.14)]">
+          <div className="relative overflow-hidden rounded-[28px] border border-[#E7E9ED] bg-[#111111] p-2.5 shadow-[0_24px_60px_rgba(16,24,40,0.12)]">
             <img
               src={HOMEPAGE_HERO.image}
               alt={HOMEPAGE_HERO.imageAlt}
               loading="lazy"
               decoding="async"
-              className="aspect-[4/3] w-full rounded-[24px] object-cover"
+              className="aspect-[4/3] w-full rounded-[20px] object-cover"
             />
-            <div className="absolute inset-x-3 bottom-3 rounded-b-[24px] bg-gradient-to-t from-black/80 via-black/45 to-transparent p-5 pt-20">
-              <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-white sm:text-sm">
+            <div className="absolute inset-x-2.5 bottom-2.5 rounded-b-[20px] bg-gradient-to-t from-black/80 via-black/45 to-transparent p-4 pt-16">
+              <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-white sm:text-xs">
                 {["Teacher leads", "GamiBar room", "Phones respond"].map((label) => (
                   <span
                     key={label}
-                    className="rounded-full border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-md"
+                    className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1.5 backdrop-blur-md"
                   >
                     {label}
                   </span>
@@ -221,20 +221,20 @@ function AudienceScene() {
     <LandingSection
       id="audience"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_AUDIENCE_SECTION.eyebrow}
         title={HOMEPAGE_AUDIENCE_SECTION.title}
         description={HOMEPAGE_AUDIENCE_SECTION.description}
-        className="mb-10 md:mb-14"
+        className="mb-8 md:mb-12"
       />
 
-      <div className="grid gap-6">
+      <div className="grid gap-5">
         {HOMEPAGE_AUDIENCES.map((audience, index) => (
           <Reveal key={audience.title} delay={index * 0.08}>
-            <article className="grid overflow-hidden rounded-[28px] border border-[#E7E9ED] bg-[#FAFAFA] shadow-[0_1px_3px_rgba(16,24,40,0.04)] lg:grid-cols-2">
-              <div className={cn("relative min-h-72", index === 1 && "lg:order-last")}>
+            <article className="grid overflow-hidden rounded-[24px] border border-[#E7E9ED] bg-[#FAFAFA] shadow-[0_1px_3px_rgba(16,24,40,0.04)] lg:grid-cols-2">
+              <div className={cn("relative min-h-64", index === 1 && "lg:order-last")}>
                 <img
                   src={audience.image}
                   alt={audience.imageAlt}
@@ -243,20 +243,20 @@ function AudienceScene() {
                   className="absolute inset-0 size-full object-cover"
                 />
               </div>
-              <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#FF3B30]">
+              <div className="flex flex-col justify-center p-5 sm:p-7 lg:p-8">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#FF3B30]">
                   {audience.eyebrow}
                 </span>
-                <h3 className="mt-3 font-display text-[clamp(1.6rem,4vw,2.5rem)] font-black leading-tight text-[#111111]">
+                <h3 className="mt-2 font-display text-[clamp(1.25rem,2.8vw,1.85rem)] font-bold leading-tight text-[#111111]">
                   {audience.title}
                 </h3>
-                <p className="mt-4 text-base leading-relaxed text-[#5F6368]">
+                <p className="mt-2.5 text-xs sm:text-sm leading-relaxed text-[#5F6368]">
                   {audience.description}
                 </p>
-                <ul className="mt-6 grid gap-3">
+                <ul className="mt-4 grid gap-2.5">
                   {audience.points.map((point) => (
-                    <li key={point} className="flex gap-3 text-sm leading-relaxed text-[#3F444A]">
-                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#FF3B30]" />
+                    <li key={point} className="flex gap-2.5 text-xs sm:text-[13px] leading-relaxed text-[#3F444A]">
+                      <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-[#FF3B30]" />
                       <span>{point}</span>
                     </li>
                   ))}
@@ -276,41 +276,41 @@ function TestimonialsScene() {
     <LandingSection
       id="testimonials"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-[#FAFAFA] !py-16 md:!py-24"
+      className="flex min-h-[100svh] flex-col justify-center bg-[#FAFAFA] !py-12 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_TESTIMONIALS_SECTION.eyebrow}
         title={HOMEPAGE_TESTIMONIALS_SECTION.title}
         description={HOMEPAGE_TESTIMONIALS_SECTION.description}
-        className="mb-10 text-center md:mb-14"
+        className="mb-8 text-center md:mb-12"
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:items-stretch">
         {HOMEPAGE_TESTIMONIALS.map((testimonial, index) => (
           <Reveal key={testimonial.name} delay={index * 0.08} className="h-full">
-            <article className="flex h-full flex-col justify-between rounded-[24px] border border-[#E7E9ED] bg-white p-7 shadow-[0_2px_8px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:shadow-[0_20px_40px_rgba(16,24,40,0.08)]">
+            <article className="flex h-full flex-col justify-between rounded-[22px] border border-[#E7E9ED] bg-white p-5 sm:p-6 shadow-[0_2px_8px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:shadow-[0_20px_40px_rgba(16,24,40,0.08)]">
               <div>
                 <div className="flex items-center justify-between">
-                  <Quote className="size-8 text-[#FF3B30] opacity-90" aria-hidden />
-                  <span className="rounded-full bg-[#FFF1F0] px-3 py-1 text-xs font-bold text-[#FF3B30]">
+                  <Quote className="size-6 text-[#FF3B30] opacity-90" aria-hidden />
+                  <span className="rounded-full bg-[#FFF1F0] px-2.5 py-0.5 text-[11px] font-bold text-[#FF3B30]">
                     {testimonial.tag}
                   </span>
                 </div>
-                <p className="mt-5 text-base font-medium leading-relaxed text-[#2D3139]">
+                <p className="mt-4 text-xs sm:text-sm font-medium leading-relaxed text-[#2D3139]">
                   "{testimonial.quote}"
                 </p>
               </div>
 
-              <div className="mt-8 border-t border-[#EEF0F3] pt-5">
-                <div className="flex items-center gap-3.5">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FF3B30] to-[#FF7B72] font-display text-sm font-bold text-white shadow-sm">
+              <div className="mt-6 border-t border-[#EEF0F3] pt-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FF3B30] to-[#FF7B72] font-display text-xs font-bold text-white shadow-sm">
                     {testimonial.initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-display text-base font-bold text-[#111111] truncate">
+                    <p className="font-display text-sm font-bold text-[#111111] truncate">
                       {testimonial.name}
                     </p>
-                    <p className="text-xs font-medium text-[#7A7F87] truncate">
+                    <p className="text-[11px] font-medium text-[#7A7F87] truncate">
                       {testimonial.role}
                     </p>
                   </div>
@@ -333,30 +333,29 @@ function FaqScene() {
     <LandingSection
       id="faq"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_FAQ_SECTION.eyebrow}
         title={HOMEPAGE_FAQ_SECTION.title}
         description="Everything you need to know about setting up rooms, running games, and engaging participants."
-        className="mb-10 text-center md:mb-14"
-        titleClassName="text-[clamp(2rem,5vw,3rem)]"
+        className="mb-8 text-center md:mb-12"
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Reveal delay={0.05} className="h-full">
-          <div className="rounded-[24px] border border-[#E7E9ED] bg-[#FAFAFA] p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)] sm:p-6">
-            <Accordion type="single" collapsible className="w-full space-y-3">
+          <div className="rounded-[22px] border border-[#E7E9ED] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
+            <Accordion type="single" collapsible className="w-full space-y-2.5">
               {col1.map((item) => (
                 <AccordionItem
                   key={item.question}
                   value={item.question}
-                  className="rounded-2xl border border-[#E7E9ED] bg-white px-5 py-1 shadow-sm transition-colors last:border-b"
+                  className="rounded-xl border border-[#E7E9ED] bg-white px-4 py-0.5 shadow-sm transition-colors last:border-b"
                 >
-                  <AccordionTrigger className="text-left text-sm font-bold text-[#111111] hover:no-underline">
+                  <AccordionTrigger className="text-left text-xs sm:text-[13px] font-bold text-[#111111] hover:no-underline">
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed text-[#5F6368] pt-1 pb-3">
+                  <AccordionContent className="text-xs sm:text-[13px] leading-relaxed text-[#5F6368] pt-1 pb-2.5">
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -366,18 +365,18 @@ function FaqScene() {
         </Reveal>
 
         <Reveal delay={0.12} className="h-full">
-          <div className="rounded-[24px] border border-[#E7E9ED] bg-[#FAFAFA] p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)] sm:p-6">
-            <Accordion type="single" collapsible className="w-full space-y-3">
+          <div className="rounded-[22px] border border-[#E7E9ED] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
+            <Accordion type="single" collapsible className="w-full space-y-2.5">
               {col2.map((item) => (
                 <AccordionItem
                   key={item.question}
                   value={item.question}
-                  className="rounded-2xl border border-[#E7E9ED] bg-white px-5 py-1 shadow-sm transition-colors last:border-b"
+                  className="rounded-xl border border-[#E7E9ED] bg-white px-4 py-0.5 shadow-sm transition-colors last:border-b"
                 >
-                  <AccordionTrigger className="text-left text-sm font-bold text-[#111111] hover:no-underline">
+                  <AccordionTrigger className="text-left text-xs sm:text-[13px] font-bold text-[#111111] hover:no-underline">
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed text-[#5F6368] pt-1 pb-3">
+                  <AccordionContent className="text-xs sm:text-[13px] leading-relaxed text-[#5F6368] pt-1 pb-2.5">
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -393,34 +392,34 @@ function FaqScene() {
 function CtaScene() {
   return (
     <LandingSection
-      className="flex min-h-[85svh] flex-col justify-center bg-[#FAFAFA] !py-16 md:!py-24"
+      className="flex min-h-[85svh] flex-col justify-center bg-[#FAFAFA] !py-12 md:!py-18"
       width="6xl"
     >
-      <Reveal className="relative overflow-hidden rounded-[32px] border border-[var(--gamibar-border)] bg-[var(--foreground)] p-8 text-center shadow-lg sm:p-10 md:p-16 dark:bg-[var(--elevated)]">
+      <Reveal className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--foreground)] p-6 text-center shadow-lg sm:p-8 md:p-12 dark:bg-[var(--elevated)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.08),transparent_70%)]" />
 
         <FadeUp>
-          <h2 className="mx-auto max-w-3xl font-display text-[clamp(2rem,5vw,3.75rem)] font-black leading-tight text-[var(--background)] dark:text-[var(--foreground)]">
+          <h2 className="mx-auto max-w-3xl font-display text-[clamp(1.5rem,3.4vw,2.4rem)] font-black leading-tight text-[var(--background)] dark:text-[var(--foreground)]">
             {HOMEPAGE_CTA.title}
           </h2>
         </FadeUp>
         <FadeUp delay={0.08}>
-          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[var(--background)]/80 sm:text-lg dark:text-[var(--muted-foreground)]">
+          <p className="mx-auto mt-3 max-w-xl text-xs sm:text-sm leading-relaxed text-[var(--background)]/80 dark:text-[var(--muted-foreground)]">
             {HOMEPAGE_CTA.description}
           </p>
         </FadeUp>
         <FadeUp
           delay={0.16}
-          className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4"
+          className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-3.5"
         >
           <MagneticButton>
             <Button
               asChild
               size="lg"
-              className="h-12 rounded-xl bg-[var(--background)] px-8 text-base font-semibold text-[var(--foreground)] shadow-md transition-all hover:opacity-90 dark:bg-[var(--gamibar-brand)] dark:text-white dark:hover:bg-[var(--gamibar-brand-hover)]"
+              className="h-11 rounded-xl bg-[var(--background)] px-6 text-xs sm:text-sm font-semibold text-[var(--foreground)] shadow-md transition-all hover:opacity-90 dark:bg-[var(--gamibar-brand)] dark:text-white dark:hover:bg-[var(--gamibar-brand-hover)]"
             >
               <Link to="/author/create">
-                {HOMEPAGE_CTA.primaryCta} <ArrowRight className="ml-2 size-4" />
+                {HOMEPAGE_CTA.primaryCta} <ArrowRight className="ml-2 size-3.5" />
               </Link>
             </Button>
           </MagneticButton>
@@ -430,7 +429,7 @@ function CtaScene() {
               asChild
               size="lg"
               variant="outline"
-              className="h-12 rounded-xl border-[var(--background)]/20 bg-[var(--background)]/5 px-8 text-base font-semibold text-[var(--background)] transition-all hover:bg-[var(--background)]/10 dark:border-[var(--gamibar-border)] dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--surface)]"
+              className="h-11 rounded-xl border-[var(--background)]/20 bg-[var(--background)]/5 px-6 text-xs sm:text-sm font-semibold text-[var(--background)] transition-all hover:bg-[var(--background)]/10 dark:border-[var(--gamibar-border)] dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--surface)]"
             >
               <Link to="/join">{HOMEPAGE_CTA.secondaryCta}</Link>
             </Button>

@@ -62,7 +62,7 @@ export function SectionHeading({
           viewport={viewport}
           transition={{ duration: 0.45, ease: MOTION_EASE }}
           className={cn(
-            "inline-block text-xs font-semibold uppercase tracking-widest text-[var(--gamibar-text-tertiary)]",
+            "inline-block text-[11px] font-bold uppercase tracking-widest text-[#FF3B30]",
             eyebrowClassName,
           )}
         >
@@ -76,12 +76,12 @@ export function SectionHeading({
         viewport={viewport}
         transition={{ duration: 0.6, delay: 0.07, ease: MOTION_EASE }}
         className={cn(
-          "font-display font-bold tracking-tight text-[var(--foreground)]",
+          "font-display font-black tracking-tight text-[#111111]",
           !eyebrow && "mt-0",
           eyebrow && "mt-2",
           align === "center"
-            ? "mx-auto text-[clamp(1.75rem,4.5vw,3rem)]"
-            : "text-[clamp(1.5rem,4.5vw,1.875rem)]",
+            ? "mx-auto text-[clamp(1.4rem,3.2vw,2.25rem)]"
+            : "text-[clamp(1.3rem,3vw,2rem)]",
           titleClassName,
         )}
       >
@@ -95,7 +95,7 @@ export function SectionHeading({
           viewport={viewport}
           transition={{ duration: 0.55, delay: 0.14, ease: MOTION_EASE }}
           className={cn(
-            "mt-3 max-w-xl text-sm leading-relaxed text-[var(--muted-foreground)]",
+            "mt-2.5 max-w-xl text-[13px] sm:text-sm leading-relaxed text-[#5F6368]",
             align === "center" && "mx-auto",
           )}
         >
