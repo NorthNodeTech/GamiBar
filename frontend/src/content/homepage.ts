@@ -302,36 +302,36 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
 
 export const HOMEPAGE_AUDIENCE_SECTION = {
   eyebrow: "For the whole room",
-  title: "Built for hosts and participants.",
+  title: "For the person running the room. And everyone in it.",
   description:
-    "The host gets control and visibility. Participants get a simple way to join, answer, compete, and leave with the right resources.",
+    "Whether you're teaching a class, running a workshop, or speaking to a room, GamiBar gives the host the tools to keep everyone involved.",
 } as const;
 
 export const HOMEPAGE_AUDIENCES = [
   {
     eyebrow: "For educators and facilitators",
-    title: "Run the room without fighting the room.",
+    title: "Keep the room involved.",
     description:
-      "GamiBar keeps setup lightweight while giving you multiple ways to check understanding, collect feedback, and turn a quiet audience into an active one.",
+      "GamiBar gives you simple ways to ask questions, run games, collect feedback, and share resources — without jumping between different tools.",
     image: testimonialPhysics,
     imageAlt: "Educator leading a classroom through an interactive GamiBar session",
     points: [
-      "Launch quizzes, polls, puzzles, image hunts, and resource sharing from one workspace.",
-      "Use room codes and QR joins instead of account setup during the session.",
-      "Watch live answers and rankings while the activity is still happening.",
+      "Start a quiz, poll, game, or file share from one place.",
+      "Let everyone join with a room code or QR.",
+      "See answers and results while the session is still going.",
     ],
   },
   {
     eyebrow: "For learners and participants",
-    title: "Join from the phone already in hand.",
+    title: "Just scan. Join. Play.",
     description:
-      "Participants do not need a heavy app or long setup. They join, answer, play, see progress, and download the files they need from the same room.",
+      "No app to install and no long sign-up process. Participants join from the phone already in their hand and can answer, vote, play, and get the resources they need.",
     image: testimonialMath,
     imageAlt: "Students participating in a live GamiBar quiz from their devices",
     points: [
-      "Enter with a code, nickname, or QR link.",
-      "Answer, vote, drag, connect, and tap through activities built for touch.",
-      "Download shared resources before leaving the room.",
+      "Join with a room code, nickname, or QR.",
+      "Answer questions, vote, connect, and play from your phone.",
+      "Get shared files before you leave the room.",
     ],
   },
 ] as const;
