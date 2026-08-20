@@ -43,7 +43,9 @@ export function StudentLobbyView({
 
       <div className="relative mx-auto flex min-h-dvh-screen w-full max-w-lg flex-col px-4 pb-8 pt-5 sm:px-6">
         <header className="flex items-center justify-between">
-          <Logo size={36} />
+          <div className="grid size-10 place-items-center rounded-xl bg-[#111111] p-1.5 shadow-sm">
+            <Logo size={28} />
+          </div>
           <span
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider",

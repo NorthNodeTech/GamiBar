@@ -23,7 +23,9 @@ export function AppSidebar() {
     <aside className="flex h-full w-[252px] shrink-0 flex-col border-r border-[var(--gamibar-border)] bg-white">
       <div className="border-b border-[var(--gamibar-border)] px-5 py-5">
         <div className="flex items-center gap-3">
-          <Logo size={40} />
+          <div className="grid size-10 place-items-center rounded-xl bg-[#111111] p-1.5 shadow-sm">
+            <Logo size={28} />
+          </div>
           <div className="min-w-0">
             <span className="block font-display text-lg font-bold tracking-tight text-[#111111]">
               Gami<span className="text-[var(--gamibar-brand)]">BAR</span>
