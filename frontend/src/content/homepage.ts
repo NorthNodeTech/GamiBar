@@ -275,14 +275,6 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
     imageAlt: "Students in classroom scanning QR code to join live room",
   },
   {
-    title: "Start the round together",
-    desc: "When you press Start, every connected device enters the same game state. No one begins early or on a different puzzle.",
-    badge: "Synchronized play",
-    icon: Timer,
-    image: flowStep3,
-    imageAlt: "Students tapping colorful answer buttons on smartphones",
-  },
-  {
     title: "Watch the live leaderboard",
     desc: "Scores and completion times update in real time on the host screen and participant devices as the round progresses.",
     badge: "Live rankings",

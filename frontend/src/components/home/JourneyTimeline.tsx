@@ -24,7 +24,7 @@ export function JourneyTimeline() {
 
       {/* Desktop Horizontal Flow (Hidden on Mobile) */}
       <div className="hidden lg:block">
-        <div className="grid grid-cols-5 gap-4 items-stretch">
+        <div className="grid grid-cols-4 gap-5 items-stretch">
           {HOMEPAGE_JOURNEY_MILESTONES.map((m, i) => (
             <motion.div
               key={m.title}
