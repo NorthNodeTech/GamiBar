@@ -19,7 +19,6 @@ import type {
   VisualPointQuestionDraft,
 } from "@/lib/game/types";
 import { isTimerValid } from "@/lib/game/timer";
-import targetHuntHeartUrl from "@/assets/tool-target-hunt.webp";
 
 const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 

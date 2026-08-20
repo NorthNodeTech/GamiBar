@@ -1,15 +1,9 @@
-import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Logo } from "@/components/layout/Logo";
-
-const emptySubscribe = () => () => {};
+import { cn } from "@/lib/utils";
 
 export function SignatureIntroLoader() {
-  const isClient = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
+  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(true);
 
   useLayoutEffect(() => {
@@ -20,6 +14,7 @@ export function SignatureIntroLoader() {
   }, []);
 
   useEffect(() => {
+    setMounted(true);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -35,65 +30,36 @@ export function SignatureIntroLoader() {
     };
   }, []);
 
-  if (!isClient) {
-    return (
-      <div
-        suppressHydrationWarning
-        className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white text-[#111111]"
-      >
-        <div className="flex flex-col items-center text-center px-4">
-          <div className="grid size-24 place-items-center rounded-3xl bg-[#111111] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.12)]">
-            <Logo size={64} />
-          </div>
-          <h2 className="mt-5 font-display text-2xl font-black tracking-tight text-[#111111]">
-            Gami<span className="font-extrabold text-[#111111]">BAR</span>
-          </h2>
-          <div className="mt-4 h-1 w-32 overflow-hidden rounded-full bg-[#E5E7EB]">
-            <div className="h-full w-0 bg-[#111111] rounded-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!visible) return null;
 
   return (
-    <AnimatePresence>
-      {visible ? (
-        <motion.div
-          key="intro-loader"
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white text-[#111111]"
-          suppressHydrationWarning
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center text-center px-4"
-          >
-            {/* Center Logo Card */}
-            <div className="grid size-24 place-items-center rounded-3xl bg-[#111111] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.12)]">
-              <Logo size={64} />
-            </div>
+    <div
+      suppressHydrationWarning
+      className={cn(
+        "fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white text-[#111111] transition-opacity duration-300 pointer-events-none",
+        mounted ? "opacity-100" : "opacity-100",
+      )}
+    >
+      <div className="flex flex-col items-center text-center px-4">
+        {/* Center Logo Card */}
+        <div className="grid size-24 place-items-center rounded-3xl bg-[#111111] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.12)]">
+          <Logo size={64} />
+        </div>
 
-            <h2 className="mt-5 font-display text-2xl font-black tracking-tight text-[#111111]">
-              Gami<span className="font-extrabold text-[#111111]">BAR</span>
-            </h2>
+        <h2 className="mt-5 font-display text-2xl font-black tracking-tight text-[#111111]">
+          Gami<span className="font-extrabold text-[#111111]">BAR</span>
+        </h2>
 
-            {/* Minimalist neutral progress bar */}
-            <div className="mt-4 h-1 w-32 overflow-hidden rounded-full bg-[#E5E7EB]">
-              <motion.div
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="h-full bg-[#111111] rounded-full"
-              />
-            </div>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+        {/* Minimalist neutral progress bar */}
+        <div className="mt-4 h-1 w-32 overflow-hidden rounded-full bg-[#E5E7EB]">
+          <div
+            className={cn(
+              "h-full bg-[#111111] rounded-full transition-all duration-500 ease-out",
+              mounted ? "w-full" : "w-0",
+            )}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
