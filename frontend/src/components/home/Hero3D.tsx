@@ -68,21 +68,20 @@ export function Hero3D() {
 
   return (
     <section className="relative isolate -mt-20 flex min-h-[calc(100dvh+5rem)] h-[calc(100dvh+5rem)] items-center overflow-hidden bg-[#070707] pt-20 pb-8 text-white">
-      {/* Background Image & Dark Black Overlay */}
+      {/* Background Image & Balanced Contrast Overlay */}
       <div className="pointer-events-none absolute inset-0 z-0 select-none">
         <motion.img
           src={homeHeroBg}
           alt=""
           aria-hidden
-          className="absolute inset-0 size-full object-cover opacity-75"
+          className="absolute inset-0 size-full object-cover opacity-90"
           initial={reduceMotion ? false : { scale: 1.06 }}
           animate={reduceMotion ? undefined : { scale: 1 }}
           transition={{ duration: 7, ease: "easeOut" }}
         />
-        {/* Dark Black Overlays for maximum text contrast */}
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60" />
+        {/* Balanced Dark Gradient Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-black/15" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
       </div>
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-start px-4 sm:px-6 lg:px-8">
