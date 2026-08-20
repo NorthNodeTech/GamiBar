@@ -36,6 +36,8 @@ export const HOMEPAGE_SEO = {
 
 export const HOMEPAGE_HERO = {
   badge: "Play. Learn. Win.",
+  participantPrompt: "Joining as a participant?",
+  codePlaceholder: "Enter room code",
   headlinePrefix: "Make every session interactive.",
   headlineAccent: "Turn listeners into participants.",
   lede: "Create a room, share a QR, and bring your classroom, workshop, or presentation to life with games, polls, live answers, rankings, and resources.",
@@ -74,8 +76,7 @@ export const HOMEPAGE_PROBLEM_SECTION = {
 export const HOMEPAGE_PROBLEM_POINTS = [
   {
     title: "Questions wait until the end",
-    description:
-      "By the time confusion surfaces, the class or workshop has already moved on.",
+    description: "By the time confusion surfaces, the class or workshop has already moved on.",
     icon: Timer,
   },
   {
@@ -347,7 +348,8 @@ export const HOMEPAGE_FEATURE_SECTION = {
 export const HOMEPAGE_FEATURES = [
   {
     title: "Fast room setup",
-    description: "Pick a tool, attach your content, and get a shareable room code without building a whole course.",
+    description:
+      "Pick a tool, attach your content, and get a shareable room code without building a whole course.",
     icon: QrCode,
   },
   {
@@ -357,12 +359,14 @@ export const HOMEPAGE_FEATURES = [
   },
   {
     title: "Multiple formats",
-    description: "Switch between quizzes, feedback, matching, image hunts, puzzles, and resource sharing.",
+    description:
+      "Switch between quizzes, feedback, matching, image hunts, puzzles, and resource sharing.",
     icon: Blocks,
   },
   {
     title: "Education-first flow",
-    description: "Designed for classrooms, workshops, and training rooms rather than generic meeting software.",
+    description:
+      "Designed for classrooms, workshops, and training rooms rather than generic meeting software.",
     icon: GraduationCap,
   },
 ] as const;

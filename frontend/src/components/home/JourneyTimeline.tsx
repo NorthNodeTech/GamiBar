@@ -4,10 +4,7 @@ import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "fr
 import { LandingSection } from "@/components/home/ViewportSection";
 import { Card3DTilt } from "@/components/home/Card3DTilt";
 import { MOTION_EASE, SectionHeading } from "@/components/ui/text-motion";
-import {
-  HOMEPAGE_JOURNEY_MILESTONES,
-  HOMEPAGE_JOURNEY_SECTION,
-} from "@/content/homepage";
+import { HOMEPAGE_JOURNEY_MILESTONES, HOMEPAGE_JOURNEY_SECTION } from "@/content/homepage";
 
 export function JourneyTimeline() {
   const reduce = useReducedMotion();
@@ -21,7 +18,12 @@ export function JourneyTimeline() {
   const pathLength = useTransform(smoothProgress, [0, 0.9], [0, 1]);
 
   return (
-    <LandingSection id="journey" width="5xl" innerClassName="relative" className="min-h-screen flex flex-col justify-center !py-16 md:!py-24">
+    <LandingSection
+      id="journey"
+      width="5xl"
+      innerClassName="relative"
+      className="flex min-h-[100svh] flex-col justify-center !py-16 md:!py-24"
+    >
       <div ref={containerRef}>
         <SectionHeading
           title={HOMEPAGE_JOURNEY_SECTION.title}

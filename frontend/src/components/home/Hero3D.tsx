@@ -1,0 +1,105 @@
+import { Link } from "@tanstack/react-router";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
+
+import homeHeroBg from "@/assets/home-hero-bg.webp";
+import { Button } from "@/components/ui/button";
+import { HOMEPAGE_HERO } from "@/content/homepage";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  show: (delay: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] as const },
+  }),
+};
+
+export function Hero3D() {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <section className="relative isolate -mt-20 flex min-h-screen items-center overflow-hidden bg-[#070707] pt-20 text-white">
+      {/* Background Image */}
+      <div className="pointer-events-none absolute inset-0 z-0 select-none">
+        <motion.img
+          src={homeHeroBg}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 size-full object-cover opacity-100"
+          initial={reduceMotion ? false : { scale: 1.06 }}
+          animate={reduceMotion ? undefined : { scale: 1 }}
+          transition={{ duration: 7, ease: "easeOut" }}
+        />
+      </div>
+
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-start px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl text-left drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
+          {/* Badge */}
+          <motion.span
+            custom={0}
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/85 backdrop-blur-md"
+          >
+            {HOMEPAGE_HERO.badge}
+          </motion.span>
+
+          {/* Headline */}
+          <motion.h1
+            custom={0.08}
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="mt-6 font-display text-[clamp(2.2rem,5.5vw,4.2rem)] font-black leading-[1.05] tracking-tight text-white"
+          >
+            {HOMEPAGE_HERO.headlinePrefix}
+            <span className="mt-2 block text-[clamp(1.8rem,4.5vw,3.2rem)] text-[#FF3B30]">
+              {HOMEPAGE_HERO.headlineAccent}
+            </span>
+          </motion.h1>
+
+          {/* Description */}
+          <motion.p
+            custom={0.18}
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="mt-6 max-w-xl text-base leading-relaxed text-zinc-200 sm:text-lg"
+          >
+            {HOMEPAGE_HERO.lede}
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            custom={0.28}
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:w-auto"
+          >
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-full bg-[#FF3B30] px-8 text-sm font-bold text-white shadow-[0_12px_34px_rgba(255,59,48,0.34)] transition-all duration-200 hover:bg-[#E6332B] hover:shadow-[0_16px_40px_rgba(255,59,48,0.45)] w-full sm:w-auto"
+            >
+              <Link to="/author/create">
+                {HOMEPAGE_HERO.primaryCta}
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-12 rounded-full border-white/20 bg-white/10 px-8 text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:text-white w-full sm:w-auto"
+            >
+              <Link to="/join">{HOMEPAGE_HERO.secondaryCta}</Link>
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -24,5 +24,17 @@ export function ScrollManager() {
     };
   }, [pathname, hash]);
 
+  useLayoutEffect(() => {
+    if (pathname !== "/" || !hash) return;
+
+    const id = decodeURIComponent(hash.replace(/^#/, ""));
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+  }, [pathname, hash]);
+
   return null;
 }

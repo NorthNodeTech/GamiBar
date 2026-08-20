@@ -1,29 +1,36 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Quote } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { GameModesSection } from "@/components/home/GameModesSection";
+import { Hero3D } from "@/components/home/Hero3D";
+import { JourneyTimeline } from "@/components/home/JourneyTimeline";
+import { LandingSection } from "@/components/home/ViewportSection";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { FadeUp, SectionHeading } from "@/components/ui/text-motion";
-import { Hero3D } from "@/components/home/Hero3D";
-import { GameModesSection } from "@/components/home/GameModesSection";
-import { JourneyTimeline } from "@/components/home/JourneyTimeline";
-import { LandingSection } from "@/components/home/ViewportSection";
-import { Card3DTilt } from "@/components/home/Card3DTilt";
 import { MagneticButton } from "@/components/home/MagneticButton";
 import {
+  HOMEPAGE_AUDIENCES,
+  HOMEPAGE_AUDIENCE_SECTION,
   HOMEPAGE_CTA,
   HOMEPAGE_FAQ,
   HOMEPAGE_FAQ_SECTION,
+  HOMEPAGE_FEATURES,
+  HOMEPAGE_FEATURE_SECTION,
+  HOMEPAGE_HERO,
+  HOMEPAGE_PROBLEM_POINTS,
+  HOMEPAGE_PROBLEM_SECTION,
   HOMEPAGE_SEO,
   HOMEPAGE_TESTIMONIALS,
   HOMEPAGE_TESTIMONIALS_SECTION,
 } from "@/content/homepage";
+import { cn } from "@/lib/utils";
 import { createSeoHead, DEFAULT_SOCIAL_IMAGE, SITE_URL } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
@@ -84,8 +91,10 @@ export const Route = createFileRoute("/")({
             publisher: { "@id": `${SITE_URL}/#organization` },
             featureList: [
               "Live classroom quizzes",
+              "Polls and Surveys",
               "Jigsaw learning missions",
-              "Connect-the-dots logic games",
+              "Connect Dots logic games",
+              "Target Hunt image challenges",
               "QR-based Resource Drop document sharing",
               "Host-selected 7, 14, or 28 day document retention",
               "Six-digit room codes and QR joining",
@@ -128,126 +137,343 @@ function Landing() {
   return (
     <div className="relative min-h-screen text-[var(--foreground)]">
       <Hero3D />
-
-      <GameModesSection />
-
+      <ProblemScene />
       <JourneyTimeline />
+      <GameModesSection />
+      <AudienceScene />
+      <WhyScene />
+      <TestimonialsScene />
+      <FaqScene />
+      <CtaScene />
+    </div>
+  );
+}
 
+function ProblemScene() {
+  return (
+    <LandingSection
+      id="problem"
+      width="7xl"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+    >
+      <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+        <div>
+          <SectionHeading
+            eyebrow={HOMEPAGE_PROBLEM_SECTION.eyebrow}
+            title={HOMEPAGE_PROBLEM_SECTION.title}
+            description={HOMEPAGE_PROBLEM_SECTION.description}
+            align="left"
+            titleClassName="text-[clamp(2rem,5vw,3.75rem)] leading-[1.02]"
+            className="max-w-2xl"
+          />
 
-      <LandingSection id="testimonials" width="7xl" className="min-h-screen flex flex-col justify-center !py-16 md:!py-24 bg-[#FAFAFA]">
-        <SectionHeading
-          title={HOMEPAGE_TESTIMONIALS_SECTION.title}
-          description={HOMEPAGE_TESTIMONIALS_SECTION.description}
-          className="mb-10 text-center md:mb-14"
-        />
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch">
-          {HOMEPAGE_TESTIMONIALS.map((t, i) => (
-            <Reveal key={t.name} delay={i * 0.08} className="h-full">
-              <Card3DTilt
-                variant="light"
-                className="flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white p-0 shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_36px_rgba(16,24,40,0.06)]"
-              >
-                <div className="w-full flex flex-col justify-between h-full">
-                  <div>
-                    {/* Testimonial Photo */}
-                    <div className="relative aspect-video w-full overflow-hidden border-b border-[#EEF0F3]">
-                      <img
-                        src={t.image}
-                        alt={t.imageAlt}
-                        loading="lazy"
-                        className="size-full object-cover"
-                      />
+          <div className="mt-8 grid gap-4">
+            {HOMEPAGE_PROBLEM_POINTS.map((point, index) => {
+              const Icon = point.icon;
+              return (
+                <Reveal key={point.title} delay={index * 0.08}>
+                  <div className="grid grid-cols-[44px_1fr] gap-4 rounded-[20px] border border-[#E7E9ED] bg-[#FAFAFA] p-4">
+                    <div className="grid size-11 place-items-center rounded-2xl bg-white text-[#FF3B30] shadow-sm">
+                      <Icon className="size-5" />
                     </div>
-                    {/* Testimonial Content */}
-                    <div className="p-5">
-                      <p className="text-sm font-medium leading-relaxed text-[#5F6368] italic">
-                        "{t.quote}"
+                    <div>
+                      <h3 className="font-display text-base font-bold text-[#111111]">
+                        {point.title}
+                      </h3>
+                      <p className="mt-1 text-sm leading-relaxed text-[#5F6368]">
+                        {point.description}
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="p-5 pt-0 mt-4 flex items-center justify-between border-t border-[#EEF0F3] pt-4">
-                    <div>
-                      <p className="font-display text-base font-bold text-[#111111]">{t.name}</p>
-                      <p className="text-xs text-[#5F6368]">{t.role}</p>
-                    </div>
-                    <CheckCircle2 className="size-4 shrink-0 text-[#FF3B30]" aria-hidden />
-                  </div>
-                </div>
-              </Card3DTilt>
-            </Reveal>
-          ))}
+                </Reveal>
+              );
+            })}
+          </div>
         </div>
-      </LandingSection>
 
-      <LandingSection id="faq" width="5xl" className="min-h-screen flex flex-col justify-center !py-16 md:!py-24 bg-white">
-        <SectionHeading
-          title={HOMEPAGE_FAQ_SECTION.title}
-          className="mb-10 text-center md:mb-12"
-          titleClassName="text-[clamp(1.75rem,4.5vw,2.25rem)]"
-        />
-
-        <Reveal className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-6 shadow-[var(--shadow-soft)]">
-          <Accordion type="single" collapsible className="w-full">
-            {HOMEPAGE_FAQ.map((item) => (
-              <AccordionItem
-                key={item.question}
-                value={item.question}
-                className="border-b border-[var(--gamibar-border)]"
-              >
-                <AccordionTrigger className="text-left text-sm font-semibold text-[var(--foreground)] hover:no-underline">
-                  {item.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-sm leading-relaxed text-[var(--muted-foreground)]">
-                  {item.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+        <Reveal className="relative">
+          <div className="relative overflow-hidden rounded-[32px] border border-[#E7E9ED] bg-[#111111] p-3 shadow-[0_28px_70px_rgba(16,24,40,0.14)]">
+            <img
+              src={HOMEPAGE_HERO.image}
+              alt={HOMEPAGE_HERO.imageAlt}
+              loading="lazy"
+              decoding="async"
+              className="aspect-[4/3] w-full rounded-[24px] object-cover"
+            />
+            <div className="absolute inset-x-3 bottom-3 rounded-b-[24px] bg-gradient-to-t from-black/80 via-black/45 to-transparent p-5 pt-20">
+              <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-white sm:text-sm">
+                {["Teacher leads", "GamiBar room", "Phones respond"].map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-md"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </Reveal>
-      </LandingSection>
+      </div>
+    </LandingSection>
+  );
+}
 
-      <LandingSection className="min-h-screen flex flex-col justify-center !py-16 md:!py-24 bg-[#FAFAFA]">
-        <Reveal className="relative overflow-hidden rounded-3xl border border-[var(--gamibar-border)] bg-[var(--foreground)] p-10 text-center shadow-lg md:p-16 dark:bg-[var(--elevated)]">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.06),transparent_70%)]" />
+function AudienceScene() {
+  return (
+    <LandingSection
+      id="audience"
+      width="7xl"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+    >
+      <SectionHeading
+        eyebrow={HOMEPAGE_AUDIENCE_SECTION.eyebrow}
+        title={HOMEPAGE_AUDIENCE_SECTION.title}
+        description={HOMEPAGE_AUDIENCE_SECTION.description}
+        className="mb-10 md:mb-14"
+      />
 
-          <FadeUp>
-            <h2 className="text-3xl font-extrabold tracking-tight text-[var(--background)] md:text-4xl dark:text-[var(--foreground)]">
-              {HOMEPAGE_CTA.title}
-            </h2>
-          </FadeUp>
-          <FadeUp delay={0.08}>
-            <p className="mx-auto mt-4 max-w-xl text-base text-[var(--background)]/80 sm:text-lg dark:text-[var(--muted-foreground)]">
-              {HOMEPAGE_CTA.description}
-            </p>
-          </FadeUp>
-          <FadeUp delay={0.16} className="mt-8 flex flex-col justify-center items-center gap-3.5 sm:flex-row sm:gap-4">
-            <MagneticButton>
-              <Button
-                asChild
-                size="lg"
-                className="h-13 rounded-full bg-[var(--background)] px-8 text-base font-semibold text-[var(--foreground)] shadow-md transition-all hover:opacity-90 dark:bg-[var(--gamibar-brand)] dark:text-white dark:hover:bg-[var(--gamibar-brand-hover)]"
-              >
-                <Link to="/author/create">
-                  {HOMEPAGE_CTA.primaryCta} <ArrowRight className="ml-2 size-4" />
-                </Link>
-              </Button>
-            </MagneticButton>
+      <div className="grid gap-6">
+        {HOMEPAGE_AUDIENCES.map((audience, index) => (
+          <Reveal key={audience.title} delay={index * 0.08}>
+            <article className="grid overflow-hidden rounded-[28px] border border-[#E7E9ED] bg-[#FAFAFA] shadow-[0_1px_3px_rgba(16,24,40,0.04)] lg:grid-cols-2">
+              <div className={cn("relative min-h-72", index === 1 && "lg:order-last")}>
+                <img
+                  src={audience.image}
+                  alt={audience.imageAlt}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 size-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#FF3B30]">
+                  {audience.eyebrow}
+                </span>
+                <h3 className="mt-3 font-display text-[clamp(1.6rem,4vw,2.5rem)] font-black leading-tight text-[#111111]">
+                  {audience.title}
+                </h3>
+                <p className="mt-4 text-base leading-relaxed text-[#5F6368]">
+                  {audience.description}
+                </p>
+                <ul className="mt-6 grid gap-3">
+                  {audience.points.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm leading-relaxed text-[#3F444A]">
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#FF3B30]" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+          </Reveal>
+        ))}
+      </div>
+    </LandingSection>
+  );
+}
 
-            <MagneticButton>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-13 rounded-full border-[var(--background)]/20 bg-[var(--background)]/5 px-8 text-base font-semibold text-[var(--background)] transition-all hover:bg-[var(--background)]/10 dark:border-[var(--gamibar-border)] dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--surface)]"
-              >
-                <Link to="/join">{HOMEPAGE_CTA.secondaryCta}</Link>
-              </Button>
-            </MagneticButton>
-          </FadeUp>
+function WhyScene() {
+  return (
+    <LandingSection
+      id="why"
+      width="7xl"
+      className="flex min-h-[100svh] flex-col justify-center bg-[#080809] !py-16 text-white md:!py-24"
+    >
+      <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
+        <div>
+          <SectionHeading
+            eyebrow={HOMEPAGE_FEATURE_SECTION.eyebrow}
+            title={HOMEPAGE_FEATURE_SECTION.title}
+            description={HOMEPAGE_FEATURE_SECTION.description}
+            align="left"
+            titleClassName="text-white text-[clamp(2rem,5vw,3.6rem)] leading-[1.03]"
+            eyebrowClassName="text-[#FF6B62]"
+            className="max-w-2xl [&_p]:text-white/68"
+          />
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {HOMEPAGE_FEATURES.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <Reveal key={feature.title} delay={index * 0.06}>
+                  <div className="h-full rounded-[20px] border border-white/10 bg-white/[0.06] p-5">
+                    <div className="grid size-10 place-items-center rounded-2xl bg-[#FF3B30] text-white">
+                      <Icon className="size-5" />
+                    </div>
+                    <h3 className="mt-4 font-display text-base font-bold text-white">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-white/62">
+                      {feature.description}
+                    </p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+
+        <Reveal className="relative">
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.06] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+            <img
+              src={HOMEPAGE_HERO.image}
+              alt={HOMEPAGE_HERO.imageAlt}
+              loading="lazy"
+              decoding="async"
+              className="aspect-[4/3] w-full rounded-[24px] object-cover opacity-90"
+            />
+            <div className="absolute inset-x-8 bottom-8 rounded-[22px] border border-white/12 bg-black/62 p-4 backdrop-blur-xl">
+              <div className="grid gap-3 sm:grid-cols-4">
+                {["Teacher", "GamiBar", "Students", "Interaction"].map((step, index) => (
+                  <div key={step} className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+                      0{index + 1}
+                    </p>
+                    <p className="mt-1 truncate text-sm font-bold text-white">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </Reveal>
-      </LandingSection>
-    </div>
+      </div>
+    </LandingSection>
+  );
+}
+
+function TestimonialsScene() {
+  return (
+    <LandingSection
+      id="testimonials"
+      width="7xl"
+      className="flex min-h-[100svh] flex-col justify-center bg-[#FAFAFA] !py-16 md:!py-24"
+    >
+      <SectionHeading
+        eyebrow={HOMEPAGE_TESTIMONIALS_SECTION.eyebrow}
+        title={HOMEPAGE_TESTIMONIALS_SECTION.title}
+        description={HOMEPAGE_TESTIMONIALS_SECTION.description}
+        className="mb-10 text-center md:mb-14"
+      />
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch">
+        {HOMEPAGE_TESTIMONIALS.map((testimonial, index) => (
+          <Reveal key={testimonial.name} delay={index * 0.08} className="h-full">
+            <article className="flex h-full flex-col overflow-hidden rounded-[20px] border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(16,24,40,0.08)]">
+              <div className="relative aspect-video w-full overflow-hidden border-b border-[#EEF0F3]">
+                <img
+                  src={testimonial.image}
+                  alt={testimonial.imageAlt}
+                  loading="lazy"
+                  decoding="async"
+                  className="size-full object-cover"
+                />
+              </div>
+              <div className="flex flex-1 flex-col p-6">
+                <Quote className="size-7 text-[#FF3B30]" aria-hidden />
+                <p className="mt-4 flex-1 text-base font-medium leading-relaxed text-[#33373D]">
+                  "{testimonial.quote}"
+                </p>
+                <div className="mt-6 border-t border-[#EEF0F3] pt-4">
+                  <p className="font-display text-base font-bold text-[#111111]">
+                    {testimonial.name}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#7A7F87]">
+                    {testimonial.role}
+                  </p>
+                </div>
+              </div>
+            </article>
+          </Reveal>
+        ))}
+      </div>
+    </LandingSection>
+  );
+}
+
+function FaqScene() {
+  return (
+    <LandingSection
+      id="faq"
+      width="5xl"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
+    >
+      <SectionHeading
+        eyebrow={HOMEPAGE_FAQ_SECTION.eyebrow}
+        title={HOMEPAGE_FAQ_SECTION.title}
+        className="mb-10 text-center md:mb-12"
+        titleClassName="text-[clamp(1.75rem,4.5vw,2.5rem)]"
+      />
+
+      <Reveal className="rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-5 shadow-[var(--shadow-soft)] sm:p-6">
+        <Accordion type="single" collapsible className="w-full">
+          {HOMEPAGE_FAQ.map((item) => (
+            <AccordionItem
+              key={item.question}
+              value={item.question}
+              className="border-b border-[var(--gamibar-border)] last:border-b-0"
+            >
+              <AccordionTrigger className="text-left text-sm font-semibold text-[var(--foreground)] hover:no-underline">
+                {item.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-sm leading-relaxed text-[var(--muted-foreground)]">
+                {item.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </Reveal>
+    </LandingSection>
+  );
+}
+
+function CtaScene() {
+  return (
+    <LandingSection
+      className="flex min-h-[85svh] flex-col justify-center bg-[#FAFAFA] !py-16 md:!py-24"
+      width="6xl"
+    >
+      <Reveal className="relative overflow-hidden rounded-[32px] border border-[var(--gamibar-border)] bg-[var(--foreground)] p-8 text-center shadow-lg sm:p-10 md:p-16 dark:bg-[var(--elevated)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.08),transparent_70%)]" />
+
+        <FadeUp>
+          <h2 className="mx-auto max-w-3xl font-display text-[clamp(2rem,5vw,3.75rem)] font-black leading-tight text-[var(--background)] dark:text-[var(--foreground)]">
+            {HOMEPAGE_CTA.title}
+          </h2>
+        </FadeUp>
+        <FadeUp delay={0.08}>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[var(--background)]/80 sm:text-lg dark:text-[var(--muted-foreground)]">
+            {HOMEPAGE_CTA.description}
+          </p>
+        </FadeUp>
+        <FadeUp
+          delay={0.16}
+          className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4"
+        >
+          <MagneticButton>
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-xl bg-[var(--background)] px-8 text-base font-semibold text-[var(--foreground)] shadow-md transition-all hover:opacity-90 dark:bg-[var(--gamibar-brand)] dark:text-white dark:hover:bg-[var(--gamibar-brand-hover)]"
+            >
+              <Link to="/author/create">
+                {HOMEPAGE_CTA.primaryCta} <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+          </MagneticButton>
+
+          <MagneticButton>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-12 rounded-xl border-[var(--background)]/20 bg-[var(--background)]/5 px-8 text-base font-semibold text-[var(--background)] transition-all hover:bg-[var(--background)]/10 dark:border-[var(--gamibar-border)] dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--surface)]"
+            >
+              <Link to="/join">{HOMEPAGE_CTA.secondaryCta}</Link>
+            </Button>
+          </MagneticButton>
+        </FadeUp>
+      </Reveal>
+    </LandingSection>
   );
 }
