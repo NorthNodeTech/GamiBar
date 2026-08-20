@@ -7,6 +7,8 @@ interface MobileCarouselProps {
   className?: string;
   itemClassName?: string;
   showIndicators?: boolean;
+  autoPlay?: boolean;
+  autoPlayInterval?: number;
 }
 
 export function MobileCarousel({
@@ -14,11 +16,15 @@ export function MobileCarousel({
   className,
   itemClassName,
   showIndicators = true,
+  autoPlay = true,
+  autoPlayInterval = 4000,
 }: MobileCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(children.length > 1);
+  const [isPaused, setIsPaused] = useState(false);
+  const totalItems = React.Children.count(children);
 
   const updateScrollState = () => {
     const el = scrollRef.current;
@@ -32,7 +38,7 @@ export function MobileCarousel({
     setCanScrollRight(scrollLeft < maxScroll - 10);
 
     const index = Math.round(scrollLeft / (itemWidth || 1));
-    setActiveIndex(Math.min(Math.max(index, 0), children.length - 1));
+    setActiveIndex(Math.min(Math.max(index, 0), totalItems - 1));
   };
 
   useEffect(() => {
@@ -41,39 +47,68 @@ export function MobileCarousel({
     el.addEventListener("scroll", updateScrollState, { passive: true });
     updateScrollState();
     return () => el.removeEventListener("scroll", updateScrollState);
-  }, [children.length]);
+  }, [totalItems]);
+
+  // Autoplay functionality
+  useEffect(() => {
+    if (!autoPlay || isPaused || totalItems <= 1) return;
+
+    const timer = setInterval(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+
+      const nextIndex = (activeIndex + 1) % totalItems;
+      const targetLeft = nextIndex * el.clientWidth;
+      el.scrollTo({ left: targetLeft, behavior: "smooth" });
+      setActiveIndex(nextIndex);
+    }, autoPlayInterval);
+
+    return () => clearInterval(timer);
+  }, [autoPlay, isPaused, activeIndex, totalItems, autoPlayInterval]);
 
   const scrollToIndex = (index: number) => {
     const el = scrollRef.current;
     if (!el) return;
     const targetLeft = index * el.clientWidth;
     el.scrollTo({ left: targetLeft, behavior: "smooth" });
+    setActiveIndex(index);
   };
 
   const handlePrev = () => {
-    if (activeIndex > 0) {
-      scrollToIndex(activeIndex - 1);
-    }
+    const prevIndex = activeIndex > 0 ? activeIndex - 1 : totalItems - 1;
+    scrollToIndex(prevIndex);
   };
 
   const handleNext = () => {
-    if (activeIndex < children.length - 1) {
-      scrollToIndex(activeIndex + 1);
-    }
+    const nextIndex = (activeIndex + 1) % totalItems;
+    scrollToIndex(nextIndex);
   };
 
   return (
-    <div className={cn("relative w-full", className)}>
-      {/* Scrollable Container */}
+    <div
+      className={cn("relative w-full", className)}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => {
+        // Resume after 3s of touch release
+        setTimeout(() => setIsPaused(false), 3000);
+      }}
+    >
+      {/* Scrollable Container with Hidden Scrollbars */}
       <div
         ref={scrollRef}
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
         className="flex w-full snap-x snap-mandatory overflow-x-auto pb-1 pt-1 no-scrollbar [-webkit-overflow-scrolling:touch]"
       >
         {React.Children.map(children, (child, idx) => (
           <div
             key={idx}
             className={cn(
-              "w-full min-w-full shrink-0 snap-center",
+              "w-full min-w-full shrink-0 snap-center px-0.5",
               itemClassName,
             )}
           >
@@ -97,36 +132,28 @@ export function MobileCarousel({
                   "h-1.5 rounded-full transition-all duration-300",
                   activeIndex === idx
                     ? "w-5 bg-[#FF3B30]"
-                    : "w-1.5 bg-[#D1D5DB] hover:bg-[#9CA3AF]",
+                    : "w-1.5 bg-[#9CA3AF] hover:bg-[#6B7280]",
                 )}
               />
             ))}
           </div>
         )}
 
-        {/* Arrow Buttons */}
+        {/* Arrow Buttons with Darker Crisp Borders */}
         <div className="flex items-center gap-1.5 ml-auto">
           <button
             type="button"
             onClick={handlePrev}
-            disabled={!canScrollLeft}
             aria-label="Previous slide"
-            className={cn(
-              "grid size-7 place-items-center rounded-full border border-[#E5E7EB] bg-white text-[#111111] shadow-sm transition-opacity active:scale-95",
-              !canScrollLeft && "opacity-30 pointer-events-none",
-            )}
+            className="grid size-7 place-items-center rounded-full border border-[#9CA3AF] bg-white text-[#111111] shadow-sm transition-all hover:border-[#111111] hover:bg-[#F3F4F6] active:scale-95"
           >
             <ChevronLeft className="size-3.5" />
           </button>
           <button
             type="button"
             onClick={handleNext}
-            disabled={!canScrollRight}
             aria-label="Next slide"
-            className={cn(
-              "grid size-7 place-items-center rounded-full border border-[#E5E7EB] bg-white text-[#111111] shadow-sm transition-opacity active:scale-95",
-              !canScrollRight && "opacity-30 pointer-events-none",
-            )}
+            className="grid size-7 place-items-center rounded-full border border-[#9CA3AF] bg-white text-[#111111] shadow-sm transition-all hover:border-[#111111] hover:bg-[#F3F4F6] active:scale-95"
           >
             <ChevronRight className="size-3.5" />
           </button>

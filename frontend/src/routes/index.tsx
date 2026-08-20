@@ -177,8 +177,8 @@ function ProblemScene() {
               const Icon = point.icon;
               return (
                 <Reveal key={point.title} delay={index * 0.08}>
-                  <div className="grid grid-cols-[38px_1fr] gap-3.5 rounded-[18px] border border-[#E7E9ED] bg-[#FAFAFA] p-3.5">
-                    <div className="grid size-9 place-items-center rounded-xl bg-white text-[#FF3B30] shadow-sm">
+                  <div className="grid grid-cols-[38px_1fr] gap-3.5 rounded-[18px] border border-[#CBD5E1] bg-[#FAFAFA] p-3.5 shadow-sm transition-all hover:border-[#94A3B8]">
+                    <div className="grid size-9 place-items-center rounded-xl border border-[#CBD5E1] bg-white text-[#FF3B30] shadow-sm">
                       <Icon className="size-4" />
                     </div>
                     <div>
@@ -197,7 +197,7 @@ function ProblemScene() {
         </div>
 
         <Reveal className="relative">
-          <div className="relative overflow-hidden rounded-[28px] border border-[#E7E9ED] bg-[#111111] p-2.5 shadow-[0_24px_60px_rgba(16,24,40,0.12)]">
+          <div className="relative overflow-hidden rounded-[28px] border border-[#CBD5E1] bg-[#111111] p-2.5 shadow-[0_24px_60px_rgba(16,24,40,0.12)]">
             <img
               src={HOMEPAGE_HERO.image}
               alt={HOMEPAGE_HERO.imageAlt}
@@ -210,7 +210,7 @@ function ProblemScene() {
                 {["Teacher leads", "GamiBar room", "Phones respond"].map((label) => (
                   <span
                     key={label}
-                    className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1.5 backdrop-blur-md"
+                    className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1.5 backdrop-blur-md"
                   >
                     {label}
                   </span>
@@ -241,7 +241,7 @@ function AudienceScene() {
       <div className="grid gap-5">
         {HOMEPAGE_AUDIENCES.map((audience, index) => (
           <Reveal key={audience.title} delay={index * 0.08}>
-            <article className="grid overflow-hidden rounded-[24px] border border-[#E7E9ED] bg-[#FAFAFA] shadow-[0_1px_3px_rgba(16,24,40,0.04)] lg:grid-cols-2">
+            <article className="grid overflow-hidden rounded-[24px] border border-[#CBD5E1] bg-[#FAFAFA] shadow-[0_2px_6px_rgba(0,0,0,0.05)] transition-all hover:border-[#94A3B8] lg:grid-cols-2">
               <div className={cn("relative min-h-64", index === 1 && "lg:order-last")}>
                 <img
                   src={audience.image}
@@ -295,16 +295,16 @@ function TestimonialsScene() {
 
       {/* Mobile Touch Carousel (< md) */}
       <div className="block md:hidden">
-        <MobileCarousel>
+        <MobileCarousel autoPlay={true} autoPlayInterval={4500}>
           {HOMEPAGE_TESTIMONIALS.map((testimonial) => (
             <article
               key={testimonial.name}
-              className="flex h-full w-full flex-col justify-between rounded-[20px] border border-[#E7E9ED] bg-white p-4 shadow-[0_2px_8px_rgba(16,24,40,0.04)]"
+              className="flex h-full w-full flex-col justify-between rounded-[20px] border border-[#CBD5E1] bg-white p-4 shadow-[0_2px_8px_rgba(16,24,40,0.04)]"
             >
               <div>
                 <div className="flex items-center justify-between">
                   <Quote className="size-5 text-[#FF3B30] opacity-90" aria-hidden />
-                  <span className="rounded-full bg-[#FFF1F0] px-2 py-0.5 text-[10px] font-bold text-[#FF3B30]">
+                  <span className="rounded-full border border-[#FFD0CC] bg-[#FFF1F0] px-2 py-0.5 text-[10px] font-bold text-[#FF3B30]">
                     {testimonial.tag}
                   </span>
                 </div>
@@ -313,7 +313,7 @@ function TestimonialsScene() {
                 </p>
               </div>
 
-              <div className="mt-4 border-t border-[#EEF0F3] pt-3">
+              <div className="mt-4 border-t border-[#E2E8F0] pt-3">
                 <div className="flex items-center gap-2.5">
                   <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FF3B30] to-[#FF7B72] font-display text-[11px] font-bold text-white shadow-sm">
                     {testimonial.initials}
@@ -337,11 +337,11 @@ function TestimonialsScene() {
       <div className="hidden md:grid md:grid-cols-3 items-stretch gap-5">
         {HOMEPAGE_TESTIMONIALS.map((testimonial, index) => (
           <Reveal key={testimonial.name} delay={index * 0.08} className="h-full">
-            <article className="flex h-full flex-col justify-between rounded-[22px] border border-[#E7E9ED] bg-white p-5 sm:p-6 shadow-[0_2px_8px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:shadow-[0_20px_40px_rgba(16,24,40,0.08)]">
+            <article className="flex h-full flex-col justify-between rounded-[22px] border border-[#CBD5E1] bg-white p-5 sm:p-6 shadow-[0_2px_8px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#94A3B8] hover:shadow-[0_20px_40px_rgba(16,24,40,0.08)]">
               <div>
                 <div className="flex items-center justify-between">
                   <Quote className="size-6 text-[#FF3B30] opacity-90" aria-hidden />
-                  <span className="rounded-full bg-[#FFF1F0] px-2.5 py-0.5 text-[11px] font-bold text-[#FF3B30]">
+                  <span className="rounded-full border border-[#FFD0CC] bg-[#FFF1F0] px-2.5 py-0.5 text-[11px] font-bold text-[#FF3B30]">
                     {testimonial.tag}
                   </span>
                 </div>
@@ -350,7 +350,7 @@ function TestimonialsScene() {
                 </p>
               </div>
 
-              <div className="mt-6 border-t border-[#EEF0F3] pt-4">
+              <div className="mt-6 border-t border-[#E2E8F0] pt-4">
                 <div className="flex items-center gap-3">
                   <div className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FF3B30] to-[#FF7B72] font-display text-xs font-bold text-white shadow-sm">
                     {testimonial.initials}
@@ -393,13 +393,13 @@ function FaqScene() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Reveal delay={0.05} className="h-full">
-          <div className="rounded-[22px] border border-[#E7E9ED] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
+          <div className="rounded-[22px] border border-[#CBD5E1] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
             <Accordion type="single" collapsible className="w-full space-y-2.5">
               {col1.map((item) => (
                 <AccordionItem
                   key={item.question}
                   value={item.question}
-                  className="rounded-xl border border-[#E7E9ED] bg-white px-4 py-0.5 shadow-sm transition-colors last:border-b"
+                  className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-0.5 shadow-sm transition-colors hover:border-[#94A3B8] last:border-b"
                 >
                   <AccordionTrigger className="text-left text-xs sm:text-[13px] font-bold text-[#111111] hover:no-underline">
                     {item.question}
@@ -414,13 +414,13 @@ function FaqScene() {
         </Reveal>
 
         <Reveal delay={0.12} className="h-full">
-          <div className="rounded-[22px] border border-[#E7E9ED] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
+          <div className="rounded-[22px] border border-[#CBD5E1] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
             <Accordion type="single" collapsible className="w-full space-y-2.5">
               {col2.map((item) => (
                 <AccordionItem
                   key={item.question}
                   value={item.question}
-                  className="rounded-xl border border-[#E7E9ED] bg-white px-4 py-0.5 shadow-sm transition-colors last:border-b"
+                  className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-0.5 shadow-sm transition-colors hover:border-[#94A3B8] last:border-b"
                 >
                   <AccordionTrigger className="text-left text-xs sm:text-[13px] font-bold text-[#111111] hover:no-underline">
                     {item.question}

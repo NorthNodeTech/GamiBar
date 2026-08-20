@@ -114,7 +114,7 @@ export function Hero3D() {
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-5 w-full max-w-md rounded-[20px] border border-white/20 bg-black/40 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+            className="mt-4 sm:mt-5 w-full max-w-md rounded-[20px] border border-white/30 bg-black/50 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl"
           >
             <form onSubmit={handleJoinSubmit} className="grid gap-1.5">
               <div className="flex min-h-5 items-center justify-between gap-3 px-1">
@@ -128,7 +128,7 @@ export function Hero3D() {
                 ) : null}
               </div>
 
-              <div className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white p-1.5 text-[#111111]">
+              <div className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 bg-white p-1.5 text-[#111111] shadow-inner">
                 <Hash className="ml-1 size-4 shrink-0 text-[#FF3B30]" aria-hidden />
                 <label htmlFor="hero-room-code" className="sr-only">
                   Enter room code
@@ -157,7 +157,7 @@ export function Hero3D() {
                   onClick={() => navigate({ to: "/join", search: { mode: "scan" } })}
                   aria-label="Scan room QR code"
                   title="Scan room QR code"
-                  className="grid size-8 shrink-0 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]"
+                  className="grid size-8 shrink-0 place-items-center rounded-lg border border-transparent text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]"
                 >
                   <QrCode className="size-4" />
                 </button>
@@ -167,7 +167,7 @@ export function Hero3D() {
                   type="submit"
                   aria-label="Join room"
                   disabled={loading || (cleanRoomCode.length > 0 && cleanRoomCode.length < 6)}
-                  className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#FF3B30] text-white transition-colors hover:bg-[#E6332B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#FF3B30] text-white shadow-sm transition-colors hover:bg-[#E6332B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -185,12 +185,12 @@ export function Hero3D() {
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:w-auto"
+            className="mt-3.5 sm:mt-4 flex flex-col gap-2.5 sm:flex-row sm:w-auto"
           >
             <Button
               asChild
               size="lg"
-              className="h-11 rounded-full bg-[#FF3B30] px-7 text-xs sm:text-sm font-bold text-white shadow-[0_12px_34px_rgba(255,59,48,0.34)] transition-all duration-200 hover:bg-[#E6332B] hover:shadow-[0_16px_40px_rgba(255,59,48,0.45)] w-full sm:w-auto"
+              className="h-11 rounded-full border border-[#FF5A50] bg-[#FF3B30] px-7 text-xs sm:text-sm font-bold text-white shadow-[0_12px_34px_rgba(255,59,48,0.34)] transition-all duration-200 hover:bg-[#E6332B] hover:shadow-[0_16px_40px_rgba(255,59,48,0.45)] w-full sm:w-auto"
             >
               <Link to="/author/create">
                 {HOMEPAGE_HERO.primaryCta}
@@ -201,7 +201,7 @@ export function Hero3D() {
               asChild
               size="lg"
               variant="outline"
-              className="h-11 rounded-full border-white/20 bg-white/10 px-7 text-xs sm:text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:text-white w-full sm:w-auto"
+              className="h-11 rounded-full border border-white/35 bg-white/10 px-7 text-xs sm:text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:border-white/60 hover:bg-white/20 hover:text-white w-full sm:w-auto"
             >
               <Link to="/join" search={{ mode: "scan" }}>
                 <ScanLine className="mr-2 size-3.5" />

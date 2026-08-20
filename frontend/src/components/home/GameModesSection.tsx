@@ -94,16 +94,16 @@ function ToolGroup({
         <p className="mt-0.5 max-w-2xl text-[11px] sm:text-[13px] leading-relaxed text-[#5F6368]">{description}</p>
       </div>
 
-      {/* Mobile Touch Carousel with Buttons (< md) */}
+      {/* Mobile Touch Carousel with Autoplay & Buttons (< md) */}
       <div className="block md:hidden">
-        <MobileCarousel>
+        <MobileCarousel autoPlay={true} autoPlayInterval={4000}>
           {games.map((game) => (
             <article
               key={game.title}
-              className="flex h-full w-full flex-col justify-between overflow-hidden rounded-[18px] border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)]"
+              className="flex h-full w-full flex-col justify-between overflow-hidden rounded-[18px] border border-[#CBD5E1] bg-white shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
             >
               <div>
-                <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-[#EEF0F3] bg-[#F4F5F7]">
+                <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-[#CBD5E1] bg-[#F4F5F7]">
                   <img
                     src={game.image}
                     alt={game.imageAlt}
@@ -114,7 +114,7 @@ function ToolGroup({
                 </div>
 
                 <div className="p-3.5">
-                  <span className="inline-flex rounded-full bg-[#F4F5F7] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#4A5568]">
+                  <span className="inline-flex rounded-full border border-[#D1D5DB] bg-[#F4F5F7] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#4A5568]">
                     {game.tag}
                   </span>
                   <h4 className="mt-1.5 font-display text-sm font-bold text-[#111111]">
@@ -129,7 +129,7 @@ function ToolGroup({
               <div className="p-3.5 pt-0">
                 <Link
                   to={game.href}
-                  className="inline-flex items-center text-xs font-bold text-[#FF3B30]"
+                  className="inline-flex items-center rounded-lg border border-[#CBD5E1] bg-[#FAFAFA] px-3 py-1.5 text-xs font-bold text-[#FF3B30] transition-colors hover:border-[#FF3B30] hover:bg-[#FFF5F5]"
                 >
                   {game.cta}
                   <ArrowRight className="ml-1 size-3" />
@@ -140,7 +140,7 @@ function ToolGroup({
         </MobileCarousel>
       </div>
 
-      {/* Desktop Multi-column Grid (>= md) */}
+      {/* Desktop Multi-column Grid (>= md) with Darker Crisp Borders */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -150,9 +150,9 @@ function ToolGroup({
       >
         {games.map((game) => (
           <motion.div key={game.title} variants={itemVariants} className="flex h-full">
-            <article className="group flex h-full w-full flex-col justify-between overflow-hidden rounded-[20px] border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:shadow-[0_18px_36px_rgba(16,24,40,0.08)]">
+            <article className="group flex h-full w-full flex-col justify-between overflow-hidden rounded-[20px] border border-[#CBD5E1] bg-white shadow-[0_2px_6px_rgba(0,0,0,0.05)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#94A3B8] hover:shadow-[0_18px_36px_rgba(16,24,40,0.09)]">
               <div>
-                <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-[#EEF0F3] bg-[#F4F5F7]">
+                <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-[#CBD5E1] bg-[#F4F5F7]">
                   <img
                     src={game.image}
                     alt={game.imageAlt}
@@ -163,7 +163,7 @@ function ToolGroup({
                 </div>
 
                 <div className="p-4 sm:p-5">
-                  <span className="inline-flex rounded-full bg-[#F4F5F7] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#4A5568]">
+                  <span className="inline-flex rounded-full border border-[#D1D5DB] bg-[#F4F5F7] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#4A5568]">
                     {game.tag}
                   </span>
                   <h4 className="mt-2 font-display text-sm font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30] sm:text-base">
@@ -178,7 +178,7 @@ function ToolGroup({
               <div className="p-4 pt-0 sm:p-5 sm:pt-0">
                 <Link
                   to={game.href}
-                  className="inline-flex items-center text-xs font-bold text-[#FF3B30] transition-colors hover:text-[#E6332B]"
+                  className="inline-flex items-center rounded-lg border border-[#CBD5E1] bg-[#FAFAFA] px-3.5 py-1.5 text-xs font-bold text-[#FF3B30] transition-colors hover:border-[#FF3B30] hover:bg-[#FFF5F5]"
                 >
                   {game.cta}
                   <ArrowRight className="ml-1 size-3 transition-transform duration-200 group-hover:translate-x-1" />
