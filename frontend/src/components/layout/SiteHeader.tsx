@@ -21,9 +21,9 @@ export function SiteHeader() {
     <>
       <header className="sticky top-4 z-50 mx-4 md:mx-auto max-w-5xl lg:max-w-6xl rounded-full border border-white/15 bg-black/60 backdrop-blur-xl shadow-[0_16px_50px_rgba(0,0,0,0.5)] px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link to="/" className="group flex items-center gap-2.5">
-          <Logo size={32} tone="on-dark" />
-          <span className="font-display text-sm font-bold leading-none tracking-tight text-white transition-colors group-hover:text-white/80 sm:text-base">
+        <Link to="/" className="group flex items-center gap-3">
+          <Logo size={46} />
+          <span className="font-display text-base font-bold leading-none tracking-tight text-white transition-colors group-hover:text-white/80 sm:text-lg">
             Gami<span className="font-black text-[#FF3B30]">BAR</span>
           </span>
         </Link>
@@ -97,10 +97,10 @@ export function SiteHeader() {
               <Link
                 to="/"
                 onClick={() => setOpen(false)}
-                className="flex min-w-0 items-center gap-2.5"
+                className="flex min-w-0 items-center gap-3"
               >
-                <Logo size={34} tone="on-dark" />
-                <span className="truncate font-display text-base font-bold leading-none text-white">
+                <Logo size={46} />
+                <span className="truncate font-display text-lg font-bold leading-none text-white">
                   Gami<span className="font-black text-[#FF3B30]">BAR</span>
                 </span>
               </Link>

@@ -140,11 +140,11 @@ function JoinCodePage() {
           Back to home
         </Link>
 
-        <Link to="/" className="mt-4 flex items-center justify-center gap-2.5">
-          <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
-            <Logo size={28} />
+        <Link to="/" className="mt-4 flex items-center justify-center gap-3">
+          <div className="grid size-14 place-items-center rounded-2xl bg-[#111111] p-2.5 shadow-sm">
+            <Logo size={44} />
           </div>
-          <span className="font-display text-xl font-bold tracking-tight text-[#111111]">
+          <span className="font-display text-2xl font-bold tracking-tight text-[#111111]">
             Gami<span className="text-red-500">BAR</span>
           </span>
         </Link>

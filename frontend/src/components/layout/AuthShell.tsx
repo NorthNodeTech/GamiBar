@@ -130,10 +130,10 @@ function AuthStoryPanel({
       <div className="relative z-10 flex min-h-dvh w-full flex-col justify-between p-5 xl:p-10 2xl:p-12">
         <Link
           to="/"
-          className="inline-flex w-fit items-center gap-3 transition-opacity hover:opacity-85"
+          className="inline-flex w-fit items-center gap-3.5 transition-opacity hover:opacity-85"
         >
-          <Logo size={40} tone="on-dark" />
-          <span className="font-display text-xl font-bold leading-none text-white">
+          <Logo size={52} />
+          <span className="font-display text-2xl font-bold leading-none text-white">
             Gami<span className="text-[#FF3B30]">BAR</span>
           </span>
         </Link>
@@ -169,9 +169,11 @@ function AuthStoryPanel({
 function MobileStoryHeader({ copy }: { copy: (typeof heroCopy)[AuthIntent] }) {
   return (
     <div className="mb-5 lg:hidden">
-      <div className="flex items-center gap-2.5">
-        <Logo size={34} />
-        <span className="font-display text-base font-bold text-[#111111]">
+      <div className="flex items-center gap-3">
+        <div className="grid size-12 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+          <Logo size={36} />
+        </div>
+        <span className="font-display text-lg font-bold text-[#111111]">
           Gami<span className="text-[#FF3B30]">BAR</span>
         </span>
       </div>

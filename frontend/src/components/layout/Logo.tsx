@@ -8,7 +8,7 @@ type LogoProps = {
 };
 
 /** Site-wide GamiBAR brand logo mark (transparent white logo). */
-export function Logo({ size = 40, className }: LogoProps) {
+export function Logo({ size = 48, className }: LogoProps) {
   return (
     <span
       className={cn("inline-flex shrink-0 items-center justify-center leading-none", className)}

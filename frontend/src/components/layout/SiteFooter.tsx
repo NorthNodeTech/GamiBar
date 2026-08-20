@@ -34,9 +34,9 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-[#E5E7EB] bg-[#111111] text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
         <div>
-          <div className="flex items-center gap-2.5">
-            <Logo size={36} tone="on-dark" />
-            <span className="font-display text-base font-bold leading-none text-white">
+          <div className="flex items-center gap-3">
+            <Logo size={52} />
+            <span className="font-display text-lg font-bold leading-none text-white">
               Gami<span className="text-red-500">BAR</span>
             </span>
           </div>

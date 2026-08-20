@@ -48,8 +48,8 @@ export function SignatureIntroLoader() {
             className="relative z-10 flex flex-col items-center text-center px-4"
           >
             <div className="relative">
-              <Logo size={72} tone="on-dark" />
-              <div className="absolute -inset-2 -z-10 rounded-full bg-[#FF3B30]/20 blur-xl animate-pulse" />
+              <Logo size={108} />
+              <div className="absolute -inset-3 -z-10 rounded-full bg-[#FF3B30]/25 blur-2xl animate-pulse" />
             </div>
 
             <h2 className="mt-4 font-display text-xl font-black uppercase tracking-[0.16em] text-white">

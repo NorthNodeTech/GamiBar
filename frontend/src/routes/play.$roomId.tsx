@@ -618,8 +618,8 @@ function QuizPlay({
       {/* Main question area — ~75% on desktop */}
       <div className="flex min-w-0 flex-1 flex-col lg:w-[75%] lg:max-w-[75%] lg:pr-8">
         <div className="flex items-center justify-between gap-3">
-          <div className="grid size-9 place-items-center rounded-xl bg-[#111111] p-1.5 shadow-sm">
-            <Logo size={24} />
+          <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+            <Logo size={32} />
           </div>
           <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
         </div>
@@ -940,8 +940,8 @@ function PollPlay({
   return (
     <div className="mx-auto flex min-h-dvh-screen w-full max-w-5xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
       <div className="flex items-center justify-between gap-3">
-        <div className="grid size-9 place-items-center rounded-xl bg-[#111111] p-1.5 shadow-sm">
-          <Logo size={24} />
+        <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+          <Logo size={32} />
         </div>
         <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
       </div>
@@ -1311,8 +1311,8 @@ function VisualPointPlay({
   return (
     <div className="mx-auto flex min-h-dvh-screen w-full max-w-5xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
       <div className="flex items-center justify-between gap-3">
-        <div className="grid size-9 place-items-center rounded-xl bg-[#111111] p-1.5 shadow-sm">
-          <Logo size={24} />
+        <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+          <Logo size={32} />
         </div>
         <TimerBar endsAt={endsAt} onTimedOut={setTimedOut} />
       </div>
