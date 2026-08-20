@@ -47,7 +47,7 @@ export const HOMEPAGE_HERO = {
   headlineAccent: "Turn listeners into participants.",
   lede: "Create a room, share a QR, and bring your classroom, workshop, or presentation to life with games, polls, live answers, rankings, and resources.",
   primaryCta: "Create a room",
-  secondaryCta: "Join room",
+  secondaryCta: "Join with scanner",
   image: heroSessionPoster,
   imageAlt:
     "Teacher leading an interactive GamiBar session while participants join and answer from their phones",

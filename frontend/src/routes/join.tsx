@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-store";
 
 const joinSearchSchema = z.object({
   code: z.string().optional(),
+  mode: z.enum(["code", "scan"]).optional(),
 });
 
 export const Route = createFileRoute("/join")({

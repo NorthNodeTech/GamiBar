@@ -47,8 +47,8 @@ type JoinMode = "scan" | "code";
 
 function JoinCodePage() {
   const navigate = useNavigate();
-  const { code: preset } = joinRouteApi.useSearch();
-  const [mode, setMode] = useState<JoinMode>("code");
+  const { code: preset, mode: initialMode } = joinRouteApi.useSearch();
+  const [mode, setMode] = useState<JoinMode>(initialMode === "scan" ? "scan" : "code");
   const [code, setCode] = useState(preset ?? "");
   const [loading, setLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);

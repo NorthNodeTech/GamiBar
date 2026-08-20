@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Hash, Loader2 } from "lucide-react";
+import { ArrowRight, Hash, Loader2, QrCode, ScanLine } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 
 import homeHeroBg from "@/assets/home-hero-bg.webp";
@@ -108,7 +108,7 @@ export function Hero3D() {
             {HOMEPAGE_HERO.lede}
           </motion.p>
 
-          {/* Direct Room Code Input Form */}
+          {/* Direct Room Code Input Form with QR Scan Shortcut */}
           <motion.div
             custom={0.2}
             variants={fadeUp}
@@ -150,6 +150,19 @@ export function Hero3D() {
                   placeholder={HOMEPAGE_HERO.codePlaceholder}
                   className="min-w-0 flex-1 bg-transparent font-mono text-base font-bold tracking-[0.16em] text-[#111111] outline-none placeholder:font-sans placeholder:font-semibold placeholder:tracking-normal placeholder:text-[#7A7A7A] sm:text-lg"
                 />
+
+                {/* Scan QR Shortcut Button */}
+                <button
+                  type="button"
+                  onClick={() => navigate({ to: "/join", search: { mode: "scan" } })}
+                  aria-label="Scan room QR code"
+                  title="Scan room QR code"
+                  className="grid size-8 shrink-0 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]"
+                >
+                  <QrCode className="size-4" />
+                </button>
+
+                {/* Join Submit Arrow */}
                 <button
                   type="submit"
                   aria-label="Join room"
@@ -190,7 +203,10 @@ export function Hero3D() {
               variant="outline"
               className="h-11 rounded-full border-white/20 bg-white/10 px-7 text-xs sm:text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:text-white w-full sm:w-auto"
             >
-              <Link to="/join">{HOMEPAGE_HERO.secondaryCta}</Link>
+              <Link to="/join" search={{ mode: "scan" }}>
+                <ScanLine className="mr-2 size-3.5" />
+                {HOMEPAGE_HERO.secondaryCta}
+              </Link>
             </Button>
           </motion.div>
         </div>
