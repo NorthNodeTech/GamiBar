@@ -1,108 +1,130 @@
-import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 
 import { LandingSection } from "@/components/home/ViewportSection";
-import { Card3DTilt } from "@/components/home/Card3DTilt";
 import { MOTION_EASE, SectionHeading } from "@/components/ui/text-motion";
 import { HOMEPAGE_JOURNEY_MILESTONES, HOMEPAGE_JOURNEY_SECTION } from "@/content/homepage";
 
 export function JourneyTimeline() {
   const reduce = useReducedMotion();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
-
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 20 });
-  const pathLength = useTransform(smoothProgress, [0, 0.9], [0, 1]);
 
   return (
     <LandingSection
       id="journey"
-      width="5xl"
-      innerClassName="relative"
-      className="flex min-h-[100svh] flex-col justify-center !py-16 md:!py-24"
+      width="7xl"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-16 md:!py-24"
     >
-      <div ref={containerRef}>
-        <SectionHeading
-          title={HOMEPAGE_JOURNEY_SECTION.title}
-          description={HOMEPAGE_JOURNEY_SECTION.description}
-          className="mb-10 text-center md:mb-14"
-        />
+      <SectionHeading
+        eyebrow={HOMEPAGE_JOURNEY_SECTION.eyebrow}
+        title={HOMEPAGE_JOURNEY_SECTION.title}
+        description={HOMEPAGE_JOURNEY_SECTION.description}
+        className="mb-10 text-center md:mb-16"
+        titleClassName="text-[clamp(2rem,5vw,3.5rem)]"
+      />
 
-        <div className="relative">
-          <div className="pointer-events-none absolute bottom-0 left-6 top-0 w-1 -translate-x-1/2 md:left-1/2">
-            <svg className="-ml-1.5 h-full w-4" preserveAspectRatio="none" viewBox="0 0 10 1000">
-              <line x1="5" y1="0" x2="5" y2="1000" stroke="var(--gamibar-border)" strokeWidth="2" />
-              <motion.line
-                x1="5"
-                y1="0"
-                x2="5"
-                y2="1000"
-                stroke="var(--foreground)"
-                strokeWidth="3"
-                style={{ pathLength }}
-              />
-            </svg>
-          </div>
-
-          <div className="space-y-10 md:space-y-14">
+      {/* Desktop Horizontal Flow (Hidden on Mobile) */}
+      <div className="hidden lg:block">
+        {/* Horizontal Step Icons & Connector Line */}
+        <div className="relative mb-8">
+          <div className="absolute left-[10%] right-[10%] top-6 h-0.5 -translate-y-1/2 bg-[#E7E9ED]" />
+          <div className="relative z-10 grid grid-cols-5 gap-4">
             {HOMEPAGE_JOURNEY_MILESTONES.map((m, i) => {
-              const isEven = i % 2 === 0;
               const Icon = m.icon;
-
               return (
-                <motion.div
-                  key={m.title}
-                  initial={reduce ? false : { opacity: 0, y: 24 }}
-                  whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-48px" }}
-                  transition={{ duration: 0.55, delay: i * 0.04, ease: MOTION_EASE }}
-                  className={`relative flex flex-col items-center gap-6 md:flex-row md:gap-8 ${
-                    isEven ? "md:flex-row-reverse" : ""
-                  }`}
-                >
+                <div key={m.title} className="flex flex-col items-center">
                   <motion.div
-                    initial={reduce ? false : { opacity: 0, x: isEven ? 20 : -20 }}
-                    whileInView={reduce ? undefined : { opacity: 1, x: 0 }}
-                    viewport={{ once: true, margin: "-48px" }}
-                    transition={{ duration: 0.55, delay: 0.06 + i * 0.04, ease: MOTION_EASE }}
-                    className="w-full pl-14 md:w-1/2 md:pl-0"
+                    initial={reduce ? false : { scale: 0.7, opacity: 0 }}
+                    whileInView={reduce ? undefined : { scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.08, ease: MOTION_EASE }}
+                    className="grid size-12 place-items-center rounded-2xl bg-[#FF3B30] text-white shadow-[0_4px_16px_rgba(255,59,48,0.3)]"
                   >
-                    <Card3DTilt className="border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-5 sm:p-6 hover:border-[color-mix(in_srgb,var(--foreground)_28%,var(--gamibar-border))]">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-bold text-[var(--gamibar-text-tertiary)]">
-                          STEP 0{i + 1}
-                        </span>
-                        <span className="rounded-full border border-[var(--gamibar-border)] bg-[var(--surface)] px-2.5 py-0.5 text-xs font-bold text-[var(--muted-foreground)]">
-                          {m.badge}
-                        </span>
-                      </div>
-                      <h3 className="mt-3 text-base font-bold text-[var(--foreground)] sm:text-lg">
-                        {m.title}
-                      </h3>
-                      <p className="mt-2 text-xs leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
-                        {m.desc}
-                      </p>
-                    </Card3DTilt>
+                    <Icon className="size-5" />
                   </motion.div>
-
-                  <motion.div
-                    initial={reduce ? false : { opacity: 0, scale: 0.65 }}
-                    whileInView={reduce ? undefined : { opacity: 1, scale: 1 }}
-                    viewport={{ once: true, margin: "-48px" }}
-                    transition={{ duration: 0.45, delay: 0.1 + i * 0.04, ease: MOTION_EASE }}
-                    className="absolute left-6 z-10 grid size-10 -translate-x-1/2 place-items-center rounded-full border-2 border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)] shadow-md md:left-1/2"
-                  >
-                    <Icon className="size-4" />
-                  </motion.div>
-
-                  <div className="hidden w-1/2 md:block" />
-                </motion.div>
+                  <span className="mt-3 font-mono text-xs font-black tracking-widest text-[#9CA3AF]">
+                    STEP 0{i + 1}
+                  </span>
+                </div>
               );
             })}
           </div>
+        </div>
+
+        {/* Horizontal Cards Grid */}
+        <div className="grid grid-cols-5 gap-4 items-stretch">
+          {HOMEPAGE_JOURNEY_MILESTONES.map((m, i) => (
+            <motion.div
+              key={m.title}
+              initial={reduce ? false : { opacity: 0, y: 20 }}
+              whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: 0.1 + i * 0.06, ease: MOTION_EASE }}
+              className="flex h-full"
+            >
+              <article className="flex h-full w-full flex-col justify-between rounded-[22px] border border-[#E7E9ED] bg-[#FAFAFA] p-5 shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:bg-white hover:shadow-[0_16px_36px_rgba(16,24,40,0.08)]">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-[#FFF1F0] px-2.5 py-0.5 text-[11px] font-bold text-[#FF3B30]">
+                      {m.badge}
+                    </span>
+                    {i < HOMEPAGE_JOURNEY_MILESTONES.length - 1 && (
+                      <ArrowRight className="size-3.5 text-[#D1D5DB]" />
+                    )}
+                  </div>
+                  <h3 className="mt-3.5 font-display text-base font-bold leading-snug text-[#111111]">
+                    {m.title}
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[#5F6368]">
+                    {m.desc}
+                  </p>
+                </div>
+              </article>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile Vertical Flow (Hidden on Desktop) */}
+      <div className="relative lg:hidden">
+        <div className="pointer-events-none absolute bottom-0 left-6 top-0 w-0.5 -translate-x-1/2 bg-[#E7E9ED]" />
+
+        <div className="space-y-6">
+          {HOMEPAGE_JOURNEY_MILESTONES.map((m, i) => {
+            const Icon = m.icon;
+            return (
+              <motion.div
+                key={m.title}
+                initial={reduce ? false : { opacity: 0, y: 16 }}
+                whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: i * 0.05, ease: MOTION_EASE }}
+                className="relative flex items-start gap-4 pl-14"
+              >
+                {/* Node icon */}
+                <div className="absolute left-6 top-4 grid size-10 -translate-x-1/2 place-items-center rounded-xl bg-[#FF3B30] text-white shadow-[0_4px_12px_rgba(255,59,48,0.25)]">
+                  <Icon className="size-4" />
+                </div>
+
+                {/* Card */}
+                <div className="w-full rounded-[20px] border border-[#E7E9ED] bg-[#FAFAFA] p-5 shadow-[0_1px_3px_rgba(16,24,40,0.04)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-bold text-[#9CA3AF]">
+                      STEP 0{i + 1}
+                    </span>
+                    <span className="rounded-full bg-[#FFF1F0] px-2.5 py-0.5 text-xs font-bold text-[#FF3B30]">
+                      {m.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 font-display text-base font-bold text-[#111111]">
+                    {m.title}
+                  </h3>
+                  <p className="mt-1.5 text-xs leading-relaxed text-[#5F6368]">
+                    {m.desc}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </LandingSection>
