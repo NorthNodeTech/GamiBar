@@ -107,7 +107,7 @@ function ToolGroup({
                 {/* Edge-to-edge top thumbnail */}
                 <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-[#EEF0F3] bg-[#F4F5F7]">
                   <img
-                    src={game.preview}
+                    src={game.image}
                     alt={game.imageAlt}
                     loading="lazy"
                     decoding="async"
@@ -124,7 +124,7 @@ function ToolGroup({
                     {game.title}
                   </h4>
                   <p className="mt-1.5 text-xs leading-relaxed text-[#5F6368]">
-                    {game.description}
+                    {game.copy}
                   </p>
                 </div>
               </div>
@@ -132,7 +132,6 @@ function ToolGroup({
               <div className="p-4 pt-0 sm:p-5 sm:pt-0">
                 <Link
                   to={game.href}
-                  search={{ mode: game.mode }}
                   className="inline-flex items-center text-xs font-bold text-[#FF3B30] transition-colors hover:text-[#E6332B]"
                 >
                   {game.cta}

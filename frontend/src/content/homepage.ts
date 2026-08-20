@@ -22,12 +22,10 @@ import pollsPreview from "@/assets/tool-polls-survey.webp";
 import quizPreview from "@/assets/tool-quiz-battle.webp";
 import resourceDropPreview from "@/assets/tool-resource-drop.webp";
 import targetHuntPreview from "@/assets/tool-target-hunt.webp";
-import testimonialCorporate from "@/assets/testimonial-corporate-learning.webp";
-import testimonialMath from "@/assets/testimonial-math-classroom.webp";
-import testimonialPhysics from "@/assets/testimonial-physics-classroom.webp";
+import audienceEducators from "@/assets/audience-educators.webp";
+import audienceLearners from "@/assets/audience-learners.webp";
 import flowStep1 from "@/assets/flow-step-1.webp";
 import flowStep2 from "@/assets/flow-step-2.webp";
-import flowStep3 from "@/assets/flow-step-3.webp";
 import flowStep4 from "@/assets/flow-step-4.webp";
 import flowStep5 from "@/assets/flow-step-5.webp";
 import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
@@ -305,7 +303,7 @@ export const HOMEPAGE_AUDIENCES = [
     title: "Keep the room involved.",
     description:
       "GamiBar gives you simple ways to ask questions, run games, collect feedback, and share resources — without jumping between different tools.",
-    image: testimonialPhysics,
+    image: audienceEducators,
     imageAlt: "Educator leading a classroom through an interactive GamiBar session",
     points: [
       "Start a quiz, poll, game, or file share from one place.",
@@ -318,7 +316,7 @@ export const HOMEPAGE_AUDIENCES = [
     title: "Just scan. Join. Play.",
     description:
       "No app to install and no long sign-up process. Participants join from the phone already in their hand and can answer, vote, play, and get the resources they need.",
-    image: testimonialMath,
+    image: audienceLearners,
     imageAlt: "Students participating in a live GamiBar quiz from their devices",
     points: [
       "Join with a room code, nickname, or QR.",

@@ -19,6 +19,7 @@ import type {
   VisualPointQuestionDraft,
 } from "@/lib/game/types";
 import { isTimerValid } from "@/lib/game/timer";
+import targetHuntHeartUrl from "@/assets/tool-target-hunt.webp";
 
 const OPTIONS: QuizOptionId[] = ["A", "B", "C", "D"];
 
@@ -92,8 +93,6 @@ export function validateJigsawFile(file: File): { ok: true } | { ok: false; erro
   }
   return { ok: true };
 }
-
-import targetHuntHeartUrl from "@/assets/target-hunt-heart.webp";
 
 export function emptyVisualPointQuestions(
   count = GAME_CONFIG.visual_point.defaultQuestionCount,
