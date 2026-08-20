@@ -19,7 +19,7 @@ export function Hero3D() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="relative isolate -mt-20 flex min-h-screen items-center overflow-hidden bg-[#070707] pt-20 text-white">
+    <section className="relative isolate -mt-20 flex min-h-[calc(100dvh+5rem)] h-[calc(100dvh+5rem)] items-center overflow-hidden bg-[#070707] pt-20 pb-8 text-white">
       {/* Background Image */}
       <div className="pointer-events-none absolute inset-0 z-0 select-none">
         <motion.img

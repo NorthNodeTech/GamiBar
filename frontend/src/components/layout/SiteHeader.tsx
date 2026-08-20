@@ -61,14 +61,13 @@ export function SiteHeader() {
         </nav>
 
         {/* Action Buttons */}
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2.5 md:flex">
           <Button
             asChild
-            variant="ghost"
             size="sm"
-            className="rounded-full font-semibold text-white/80 hover:text-white hover:bg-white/15"
+            className="rounded-full border border-white/20 bg-white/10 px-4 text-xs font-bold text-white shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:text-white h-9"
           >
-            <Link to="/author">Workspace</Link>
+            <Link to="/author/create">Create room</Link>
           </Button>
           <NavJoinGame className="rounded-full bg-[#FF3B30] hover:bg-[#E6332B] h-9 px-4 text-xs font-bold text-white shadow-[0_4px_16px_rgba(255,59,48,0.4)]" />
         </div>
@@ -144,12 +143,11 @@ export function SiteHeader() {
               <div className="mt-8 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
                 <Button
                   asChild
-                  variant="outline"
-                  className="h-11 rounded-xl border-white/15 bg-white/5 font-semibold text-white hover:bg-white/10 hover:text-white"
+                  className="h-11 rounded-xl border border-white/20 bg-white/10 font-bold text-white shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
                 >
-                  <Link to="/author" onClick={() => setOpen(false)}>
+                  <Link to="/author/create" onClick={() => setOpen(false)}>
                     <Plus className="mr-2 size-4" />
-                    Workspace
+                    Create room
                   </Link>
                 </Button>
                 <NavJoinGame
