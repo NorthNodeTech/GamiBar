@@ -1,11 +1,13 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Hash } from "lucide-react";
+import { ArrowRight, Hash, Loader2 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 
 import homeHeroBg from "@/assets/home-hero-bg.webp";
 import { Button } from "@/components/ui/button";
 import { HOMEPAGE_HERO } from "@/content/homepage";
+import { getRoomSnapshotFn } from "@/lib/game/room.functions";
+import { friendlyGameError } from "@/lib/accessibility";
 import { normalizeRoomCode } from "@/lib/game/room-code";
 
 const fadeUp = {
@@ -21,10 +23,11 @@ export function Hero3D() {
   const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const [roomCode, setRoomCode] = useState("");
+  const [loading, setLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const cleanRoomCode = useMemo(() => normalizeRoomCode(roomCode), [roomCode]);
 
-  const handleJoinSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleJoinSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const clean = normalizeRoomCode(roomCode);
 
@@ -38,7 +41,29 @@ export function Hero3D() {
       return;
     }
 
-    navigate({ to: "/join", search: { code: clean } });
+    setLoading(true);
+    setJoinError(null);
+    try {
+      const snap = await getRoomSnapshotFn({ data: { code: clean } });
+      if (!snap.ok) {
+        setJoinError(
+          friendlyGameError(
+            snap.error,
+            "That room code was not found. Check the code and try again.",
+          ),
+        );
+        return;
+      }
+      if (snap.room.status === "FINISHED" || snap.room.status === "CANCELLED") {
+        setJoinError("This room is closed.");
+        return;
+      }
+      navigate({ to: "/join/name", search: { code: clean } });
+    } catch {
+      setJoinError("Could not validate room. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,54 +82,43 @@ export function Hero3D() {
       </div>
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-start px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl text-left drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
-          {/* Badge */}
-          <motion.span
-            custom={0}
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/85 backdrop-blur-md"
-          >
-            {HOMEPAGE_HERO.badge}
-          </motion.span>
-
+        <div className="max-w-xl text-left drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
           {/* Headline */}
           <motion.h1
-            custom={0.08}
+            custom={0.04}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-6 font-display text-[clamp(2.2rem,5.5vw,4.2rem)] font-black leading-[1.05] tracking-tight text-white"
+            className="font-display text-[clamp(1.85rem,4.2vw,3.15rem)] font-black leading-[1.08] tracking-tight text-white"
           >
             {HOMEPAGE_HERO.headlinePrefix}
-            <span className="mt-2 block text-[clamp(1.8rem,4.5vw,3.2rem)] text-[#FF3B30]">
+            <span className="mt-1.5 block text-[clamp(1.45rem,3.2vw,2.35rem)] text-[#FF3B30]">
               {HOMEPAGE_HERO.headlineAccent}
             </span>
           </motion.h1>
 
           {/* Description */}
           <motion.p
-            custom={0.18}
+            custom={0.12}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-4 max-w-xl text-base leading-relaxed text-zinc-200 sm:text-lg"
+            className="mt-3.5 max-w-lg text-sm sm:text-base leading-relaxed text-zinc-300"
           >
             {HOMEPAGE_HERO.lede}
           </motion.p>
 
           {/* Direct Room Code Input Form */}
           <motion.div
-            custom={0.26}
+            custom={0.2}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-6 w-full max-w-lg rounded-[22px] border border-white/20 bg-black/40 p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+            className="mt-5 w-full max-w-md rounded-[20px] border border-white/20 bg-black/40 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           >
             <form onSubmit={handleJoinSubmit} className="grid gap-1.5">
               <div className="flex min-h-5 items-center justify-between gap-3 px-1">
-                <span className="text-xs font-bold text-white/90">
+                <span className="text-xs font-semibold text-white/90">
                   {HOMEPAGE_HERO.participantPrompt}
                 </span>
                 {joinError ? (
@@ -114,8 +128,8 @@ export function Hero3D() {
                 ) : null}
               </div>
 
-              <div className="flex min-h-12 items-center gap-2 rounded-xl border border-white/10 bg-white p-1.5 text-[#111111]">
-                <Hash className="ml-1 size-5 shrink-0 text-[#FF3B30]" aria-hidden />
+              <div className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white p-1.5 text-[#111111]">
+                <Hash className="ml-1 size-4 shrink-0 text-[#FF3B30]" aria-hidden />
                 <label htmlFor="hero-room-code" className="sr-only">
                   Enter room code
                 </label>
@@ -123,23 +137,30 @@ export function Hero3D() {
                   id="hero-room-code"
                   value={roomCode}
                   onChange={(event) => {
-                    setRoomCode(normalizeRoomCode(event.target.value));
+                    // Only digits allowed, maximum 6
+                    const digits = event.target.value.replace(/\D/g, "").slice(0, 6);
+                    setRoomCode(digits);
                     if (joinError) setJoinError(null);
                   }}
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   pattern="[0-9]*"
                   maxLength={6}
+                  disabled={loading}
                   placeholder={HOMEPAGE_HERO.codePlaceholder}
-                  className="min-w-0 flex-1 bg-transparent font-mono text-lg font-bold tracking-[0.18em] text-[#111111] outline-none placeholder:font-sans placeholder:font-semibold placeholder:tracking-normal placeholder:text-[#7A7A7A] sm:text-xl"
+                  className="min-w-0 flex-1 bg-transparent font-mono text-base font-bold tracking-[0.16em] text-[#111111] outline-none placeholder:font-sans placeholder:font-semibold placeholder:tracking-normal placeholder:text-[#7A7A7A] sm:text-lg"
                 />
                 <button
                   type="submit"
                   aria-label="Join room"
-                  className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#FF3B30] text-white transition-colors hover:bg-[#E6332B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={cleanRoomCode.length > 0 && cleanRoomCode.length < 6}
+                  disabled={loading || (cleanRoomCode.length > 0 && cleanRoomCode.length < 6)}
+                  className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#FF3B30] text-white transition-colors hover:bg-[#E6332B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <ArrowRight className="size-5" />
+                  {loading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="size-4" />
+                  )}
                 </button>
               </div>
             </form>
@@ -147,27 +168,27 @@ export function Hero3D() {
 
           {/* Action Buttons */}
           <motion.div
-            custom={0.34}
+            custom={0.28}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-5 flex flex-col gap-3 sm:flex-row sm:w-auto"
+            className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:w-auto"
           >
             <Button
               asChild
               size="lg"
-              className="h-12 rounded-full bg-[#FF3B30] px-8 text-sm font-bold text-white shadow-[0_12px_34px_rgba(255,59,48,0.34)] transition-all duration-200 hover:bg-[#E6332B] hover:shadow-[0_16px_40px_rgba(255,59,48,0.45)] w-full sm:w-auto"
+              className="h-11 rounded-full bg-[#FF3B30] px-7 text-xs sm:text-sm font-bold text-white shadow-[0_12px_34px_rgba(255,59,48,0.34)] transition-all duration-200 hover:bg-[#E6332B] hover:shadow-[0_16px_40px_rgba(255,59,48,0.45)] w-full sm:w-auto"
             >
               <Link to="/author/create">
                 {HOMEPAGE_HERO.primaryCta}
-                <ArrowRight className="ml-2 size-4" />
+                <ArrowRight className="ml-2 size-3.5" />
               </Link>
             </Button>
             <Button
               asChild
               size="lg"
               variant="outline"
-              className="h-12 rounded-full border-white/20 bg-white/10 px-8 text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:text-white w-full sm:w-auto"
+              className="h-11 rounded-full border-white/20 bg-white/10 px-7 text-xs sm:text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:text-white w-full sm:w-auto"
             >
               <Link to="/join">{HOMEPAGE_HERO.secondaryCta}</Link>
             </Button>
