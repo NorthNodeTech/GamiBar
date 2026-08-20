@@ -1,10 +1,12 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Hash } from "lucide-react";
+import { type FormEvent, useMemo, useState } from "react";
 
 import homeHeroBg from "@/assets/home-hero-bg.webp";
 import { Button } from "@/components/ui/button";
 import { HOMEPAGE_HERO } from "@/content/homepage";
+import { normalizeRoomCode } from "@/lib/game/room-code";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
@@ -17,6 +19,27 @@ const fadeUp = {
 
 export function Hero3D() {
   const reduceMotion = useReducedMotion();
+  const navigate = useNavigate();
+  const [roomCode, setRoomCode] = useState("");
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const cleanRoomCode = useMemo(() => normalizeRoomCode(roomCode), [roomCode]);
+
+  const handleJoinSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const clean = normalizeRoomCode(roomCode);
+
+    if (!clean) {
+      navigate({ to: "/join" });
+      return;
+    }
+
+    if (clean.length !== 6) {
+      setJoinError("Enter the full 6-digit code.");
+      return;
+    }
+
+    navigate({ to: "/join", search: { code: clean } });
+  };
 
   return (
     <section className="relative isolate -mt-20 flex min-h-[calc(100dvh+5rem)] h-[calc(100dvh+5rem)] items-center overflow-hidden bg-[#070707] pt-20 pb-8 text-white">
@@ -66,18 +89,69 @@ export function Hero3D() {
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-6 max-w-xl text-base leading-relaxed text-zinc-200 sm:text-lg"
+            className="mt-4 max-w-xl text-base leading-relaxed text-zinc-200 sm:text-lg"
           >
             {HOMEPAGE_HERO.lede}
           </motion.p>
 
-          {/* CTAs */}
+          {/* Direct Room Code Input Form */}
           <motion.div
-            custom={0.28}
+            custom={0.26}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:w-auto"
+            className="mt-6 w-full max-w-lg rounded-[22px] border border-white/20 bg-black/40 p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+          >
+            <form onSubmit={handleJoinSubmit} className="grid gap-1.5">
+              <div className="flex min-h-5 items-center justify-between gap-3 px-1">
+                <span className="text-xs font-bold text-white/90">
+                  {HOMEPAGE_HERO.participantPrompt}
+                </span>
+                {joinError ? (
+                  <span className="text-xs font-semibold text-[#FFB4AE]" role="alert">
+                    {joinError}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="flex min-h-12 items-center gap-2 rounded-xl border border-white/10 bg-white p-1.5 text-[#111111]">
+                <Hash className="ml-1 size-5 shrink-0 text-[#FF3B30]" aria-hidden />
+                <label htmlFor="hero-room-code" className="sr-only">
+                  Enter room code
+                </label>
+                <input
+                  id="hero-room-code"
+                  value={roomCode}
+                  onChange={(event) => {
+                    setRoomCode(normalizeRoomCode(event.target.value));
+                    if (joinError) setJoinError(null);
+                  }}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder={HOMEPAGE_HERO.codePlaceholder}
+                  className="min-w-0 flex-1 bg-transparent font-mono text-lg font-bold tracking-[0.18em] text-[#111111] outline-none placeholder:font-sans placeholder:font-semibold placeholder:tracking-normal placeholder:text-[#7A7A7A] sm:text-xl"
+                />
+                <button
+                  type="submit"
+                  aria-label="Join room"
+                  className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#FF3B30] text-white transition-colors hover:bg-[#E6332B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={cleanRoomCode.length > 0 && cleanRoomCode.length < 6}
+                >
+                  <ArrowRight className="size-5" />
+                </button>
+              </div>
+            </form>
+          </motion.div>
+
+          {/* Action Buttons */}
+          <motion.div
+            custom={0.34}
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="mt-5 flex flex-col gap-3 sm:flex-row sm:w-auto"
           >
             <Button
               asChild
