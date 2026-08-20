@@ -4,6 +4,7 @@ import {
   CircleDot,
   Crosshair,
   FileDown,
+  GraduationCap,
   MonitorSmartphone,
   QrCode,
   Radio,
@@ -14,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import heroSessionPoster from "@/assets/auth-live-session.webp";
 import connectDotsPreview from "@/assets/tool-connect-dots.webp";
 import jigsawPreview from "@/assets/tool-jigsaw-mission.webp";
 import pollsPreview from "@/assets/tool-polls-survey.webp";
@@ -33,16 +35,15 @@ export const HOMEPAGE_SEO = {
 } as const;
 
 export const HOMEPAGE_HERO = {
-  badge: "No more boring classrooms. No more boring sessions.",
+  badge: "Play. Learn. Win.",
   headlinePrefix: "Make every session interactive.",
   headlineAccent: "Turn listeners into participants.",
   lede: "Create a room, share a QR, and bring your classroom, workshop, or presentation to life with games, polls, live answers, rankings, and resources.",
   primaryCta: "Create a room",
   secondaryCta: "Join room",
-  image: "",
-  video: "",
+  image: heroSessionPoster,
   imageAlt:
-    "Teacher leading an interactive session while participants join and answer from their phones",
+    "Teacher leading an interactive GamiBar session while participants join and answer from their phones",
 } as const;
 
 export const HOMEPAGE_HERO_PROOFS = [
@@ -63,6 +64,34 @@ export const HOMEPAGE_HERO_PROOFS = [
   },
 ] as const;
 
+export const HOMEPAGE_PROBLEM_SECTION = {
+  eyebrow: "The problem",
+  title: "Passive rooms lose energy fast.",
+  description:
+    "When a session is only slides and speech, the host cannot see who is following, phones become distractions, and useful feedback arrives too late.",
+} as const;
+
+export const HOMEPAGE_PROBLEM_POINTS = [
+  {
+    title: "Questions wait until the end",
+    description:
+      "By the time confusion surfaces, the class or workshop has already moved on.",
+    icon: Timer,
+  },
+  {
+    title: "Phones pull attention away",
+    description:
+      "GamiBar turns the same device into the controller for the activity in front of the room.",
+    icon: MonitorSmartphone,
+  },
+  {
+    title: "Resources scatter after the session",
+    description:
+      "One room QR can carry the game, the feedback moment, and the files participants need later.",
+    icon: FileDown,
+  },
+] as const;
+
 const MODE_PRESENTATION: Record<
   GameMode,
   {
@@ -79,11 +108,11 @@ const MODE_PRESENTATION: Record<
   quiz: {
     tag: "Quick recall",
     tint: "bg-[var(--game-quiz-soft)]",
-    accent: "text-[#b91c1c]",
+    accent: "text-[#B91C1C]",
     icon: Timer,
     preview: quizPreview,
-    imageAlt: "Quiz Challenge - multiple-choice question with four answers and live ranking",
-    cta: "Set Up Quiz",
+    imageAlt: "Quiz Challenge multiple-choice question with four answers and live ranking",
+    cta: "Set up quiz",
     href: "/author/create?mode=quiz",
   },
   quiz_jigsaw: {
@@ -92,8 +121,8 @@ const MODE_PRESENTATION: Record<
     accent: "text-[#5B21B6]",
     icon: Blocks,
     preview: jigsawPreview,
-    imageAlt: "Puzzle Quest - quiz questions unlocking puzzle pieces",
-    cta: "Set Up Puzzle Quest",
+    imageAlt: "Puzzle Quest quiz questions unlocking puzzle pieces",
+    cta: "Set up Puzzle Quest",
     href: "/author/create",
   },
   polls: {
@@ -102,18 +131,18 @@ const MODE_PRESENTATION: Record<
     accent: "text-orange-700",
     icon: Radio,
     preview: pollsPreview,
-    imageAlt: "Polls and Surveys - live rating scale, vote bars, and QR response card",
-    cta: "Set Up Poll",
+    imageAlt: "Polls and Surveys with live rating scale, vote bars, and QR response card",
+    cta: "Set up poll",
     href: "/author/create?mode=polls",
   },
   jigsaw: {
     tag: "Visual puzzle",
     tint: "bg-[var(--game-jigsaw-soft)]",
-    accent: "text-[#1d4ed8]",
+    accent: "text-[#1D4ED8]",
     icon: Blocks,
     preview: jigsawPreview,
-    imageAlt: "Jigsaw Mission - draggable puzzle pieces forming a classroom image",
-    cta: "Set Up Jigsaw",
+    imageAlt: "Jigsaw Mission with draggable puzzle pieces forming a classroom image",
+    cta: "Set up jigsaw",
     href: "/author/create?mode=jigsaw",
   },
   connect_dots: {
@@ -122,8 +151,8 @@ const MODE_PRESENTATION: Record<
     accent: "text-[#047857]",
     icon: CircleDot,
     preview: connectDotsPreview,
-    imageAlt: "Connect Dots - colored dot pairs linked by paths on a grid",
-    cta: "Set Up Connect Dots",
+    imageAlt: "Connect Dots with colored dot pairs linked by paths on a grid",
+    cta: "Set up Connect Dots",
     href: "/author/create?mode=connect_dots",
   },
   visual_point: {
@@ -132,8 +161,8 @@ const MODE_PRESENTATION: Record<
     accent: "text-[var(--game-visual-point-deep)]",
     icon: Crosshair,
     preview: targetHuntPreview,
-    imageAlt: "Target Hunt - image-based prompt with answer dots over a diagram",
-    cta: "Set Up Target Hunt",
+    imageAlt: "Target Hunt image-based prompt with answer dots over a diagram",
+    cta: "Set up Target Hunt",
     href: "/author/create?mode=visual_point",
   },
 };
@@ -216,92 +245,157 @@ export const HOMEPAGE_TOOL_WALL: HomepageToolCard[] = [
     copy: "Upload presentations, PDFs, and documents once. Participants scan one QR and download the right resource before they leave.",
     meta: "PPT, PDF, DOC - 7, 14, or 28 days",
     image: resourceDropPreview,
-    imageAlt: "Resource Drop - QR file sharing from a host screen to participant phones",
+    imageAlt: "Resource Drop QR file sharing from a host screen to participant phones",
     icon: FileDown,
     tint: "bg-[#F0FDFA]",
     accent: "text-[#0F766E]",
-    cta: "Share Resources",
+    cta: "Share resources",
     href: "/author/create",
   },
 ];
 
 export const HOMEPAGE_GAME_MODES_SECTION = {
-  eyebrow: "Live room tools",
+  eyebrow: "Play with GamiBar",
   title: "Pick the moment. Launch the right activity.",
   description:
     "Use one room for recall, feedback, visual challenges, matching practice, image hunts, and QR-based resource sharing.",
 } as const;
 
 export const HOMEPAGE_JOURNEY_SECTION = {
-  eyebrow: "Room flow",
-  title: "From quiet room to live participation",
+  eyebrow: "How it works",
+  title: "Create, share, play, review.",
   description:
     "The whole flow is built for hosts who need people joining, answering, voting, playing, and leaving with the right materials.",
 } as const;
 
 export const HOMEPAGE_JOURNEY_MILESTONES = [
   {
-    title: "01. Create a room",
+    title: "Create a room",
     desc: "Name the session, pick a tool, attach your content, and prepare files participants can download by QR.",
     badge: "Host setup",
     icon: Zap,
   },
   {
-    title: "02. Participants join",
+    title: "Participants join",
     desc: `Share a ${GAME_CONFIG.room.codeLength}-digit code or QR link. People enter a nickname - no account required to play.`,
     badge: "Instant join",
     icon: Users,
   },
   {
-    title: "03. Start the round together",
+    title: "Start the round together",
     desc: "When you press Start, every connected device enters the same game state. No one begins early or on a different puzzle.",
     badge: "Synchronized play",
     icon: Timer,
   },
   {
-    title: "04. Watch the live leaderboard",
+    title: "Watch the live leaderboard",
     desc: "Scores and completion times update in real time on the host screen and participant devices as the round progresses.",
     badge: "Live rankings",
     icon: BarChart3,
   },
   {
-    title: "05. Share resources and review",
+    title: "Share resources and review",
     desc: "Use Resource Drop for handouts, then review leaderboard and participation data after the session.",
     badge: "Follow-up",
     icon: Trophy,
   },
 ] as const;
 
+export const HOMEPAGE_AUDIENCE_SECTION = {
+  eyebrow: "For the whole room",
+  title: "Built for hosts and participants.",
+  description:
+    "The host gets control and visibility. Participants get a simple way to join, answer, compete, and leave with the right resources.",
+} as const;
 
+export const HOMEPAGE_AUDIENCES = [
+  {
+    eyebrow: "For educators and facilitators",
+    title: "Run the room without fighting the room.",
+    description:
+      "GamiBar keeps setup lightweight while giving you multiple ways to check understanding, collect feedback, and turn a quiet audience into an active one.",
+    image: testimonialPhysics,
+    imageAlt: "Educator leading a classroom through an interactive GamiBar session",
+    points: [
+      "Launch quizzes, polls, puzzles, image hunts, and resource sharing from one workspace.",
+      "Use room codes and QR joins instead of account setup during the session.",
+      "Watch live answers and rankings while the activity is still happening.",
+    ],
+  },
+  {
+    eyebrow: "For learners and participants",
+    title: "Join from the phone already in hand.",
+    description:
+      "Participants do not need a heavy app or long setup. They join, answer, play, see progress, and download the files they need from the same room.",
+    image: testimonialMath,
+    imageAlt: "Students participating in a live GamiBar quiz from their devices",
+    points: [
+      "Enter with a code, nickname, or QR link.",
+      "Answer, vote, drag, connect, and tap through activities built for touch.",
+      "Download shared resources before leaving the room.",
+    ],
+  },
+] as const;
+
+export const HOMEPAGE_FEATURE_SECTION = {
+  eyebrow: "Why GamiBar",
+  title: "Interactive enough for games. Simple enough for class.",
+  description:
+    "GamiBar keeps the product story focused: teacher to screen, screen to phones, phones back to live participation.",
+} as const;
+
+export const HOMEPAGE_FEATURES = [
+  {
+    title: "Fast room setup",
+    description: "Pick a tool, attach your content, and get a shareable room code without building a whole course.",
+    icon: QrCode,
+  },
+  {
+    title: "Live participation",
+    description: "Answers, votes, progress, and rankings update while the room is still active.",
+    icon: Radio,
+  },
+  {
+    title: "Multiple formats",
+    description: "Switch between quizzes, feedback, matching, image hunts, puzzles, and resource sharing.",
+    icon: Blocks,
+  },
+  {
+    title: "Education-first flow",
+    description: "Designed for classrooms, workshops, and training rooms rather than generic meeting software.",
+    icon: GraduationCap,
+  },
+] as const;
 
 export const HOMEPAGE_TESTIMONIALS_SECTION = {
-  eyebrow: "Session moments",
-  title: "Designed for rooms with energy",
-  description: "Use GamiBar when the room needs a reason to look up, join in, and respond.",
+  eyebrow: "Testimonials",
+  title: "What active sessions sound like.",
+  description:
+    "Representative host feedback for the classroom, workshop, and recap moments GamiBar is built to support.",
 } as const;
 
 export const HOMEPAGE_TESTIMONIALS = [
   {
     quote:
-      "Open a review class with a matching challenge, then use the live leaderboard to see which concepts need another explanation.",
-    name: "University review",
-    role: "Connect Dots + live ranking",
+      "When I launch a quick quiz, the quiet students join from their phones and I can see where the class is stuck before moving on.",
+    name: "Biology instructor",
+    role: "Quiz Challenge",
     image: testimonialPhysics,
-    imageAlt: "Physics classroom with participants playing a live Connect Dots session",
+    imageAlt: "Physics classroom with participants playing a live GamiBar session",
   },
   {
     quote:
-      "Run a workshop pulse check, let people answer from their phones, and adjust the room before attention starts dropping.",
-    name: "Training workshop",
-    role: "Polls & Surveys",
+      "Polls make the room easier to read. I can change the pace while people are still engaged instead of waiting for feedback later.",
+    name: "Training facilitator",
+    role: "Polls and Surveys",
     image: testimonialCorporate,
-    imageAlt: "Corporate training room with a live leaderboard on display",
+    imageAlt: "Corporate training room with live audience feedback on display",
   },
   {
     quote:
-      "Turn a recap into a quick quiz battle, then share the follow-up slides through the same room QR.",
-    name: "Class recap",
-    role: "Quiz Challenge + Resource Drop",
+      "Resource Drop solves the end-of-session file chase. The QR stays on the screen, and everyone leaves with the deck.",
+    name: "Math lecturer",
+    role: "Resource Drop",
     image: testimonialMath,
     imageAlt: "University mathematics classroom during a live quiz review",
   },
@@ -316,7 +410,7 @@ export const HOMEPAGE_FAQ = [
   {
     question: "Is GamiBar only quizzes?",
     answer:
-      "No. The current app includes Quiz Challenge, Polls & Surveys, Jigsaw Mission, Connect Dots, Target Hunt, and Resource Drop for QR-based file sharing.",
+      "No. The current app includes Quiz Challenge, Polls and Surveys, Jigsaw Mission, Connect Dots, Target Hunt, and Resource Drop for QR-based file sharing.",
   },
   {
     question: "Can I use my own questions, images, and documents?",
@@ -341,7 +435,7 @@ export const HOMEPAGE_FAQ = [
 ] as const;
 
 export const HOMEPAGE_CTA = {
-  title: "Build the next session before the room loses attention",
+  title: "Turn the next session into a live room.",
   description:
     "Create a room, pick an activity, attach resources, and share the QR while the audience is ready to participate.",
   primaryCta: "Create a room",

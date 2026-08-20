@@ -20,7 +20,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-4 z-50 mx-4 md:mx-auto max-w-5xl rounded-full border border-white/10 bg-black/60 backdrop-blur-md shadow-[0_12px_40px_rgba(0,0,0,0.55)] px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+      <header className="fixed top-3 left-0 right-0 z-50 mx-4 md:mx-auto max-w-7xl rounded-full border border-white/10 bg-black/60 backdrop-blur-md shadow-[0_12px_40px_rgba(0,0,0,0.55)] px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Logo */}
         <Link
           to="/"
