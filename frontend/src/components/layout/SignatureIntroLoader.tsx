@@ -20,7 +20,7 @@ export function SignatureIntroLoader() {
     const timer = window.setTimeout(() => {
       window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       setVisible(false);
-    }, 600);
+    }, 550);
 
     return () => {
       window.clearTimeout(timer);
@@ -35,34 +35,31 @@ export function SignatureIntroLoader() {
           key="intro-loader"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-[#070707] text-white"
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white text-[#111111]"
         >
-          {/* Subtle ambient glow */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,59,48,0.12)_0%,transparent_65%)]" />
-
           <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="relative z-10 flex flex-col items-center text-center px-4"
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center text-center px-4"
           >
-            <div className="relative">
-              <Logo size={108} />
-              <div className="absolute -inset-3 -z-10 rounded-full bg-[#FF3B30]/25 blur-2xl animate-pulse" />
+            {/* Center Logo Card */}
+            <div className="grid size-24 place-items-center rounded-3xl bg-[#111111] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.12)]">
+              <Logo size={64} />
             </div>
 
-            <h2 className="mt-4 font-display text-xl font-black uppercase tracking-[0.16em] text-white">
-              GAMI<span className="text-[#FF3B30]">BAR</span>
+            <h2 className="mt-5 font-display text-2xl font-black tracking-tight text-[#111111]">
+              Gami<span className="font-extrabold text-[#111111]">BAR</span>
             </h2>
 
-            {/* Quick smooth progress bar */}
-            <div className="mt-4 h-1 w-36 overflow-hidden rounded-full bg-white/10">
+            {/* Minimalist neutral progress bar */}
+            <div className="mt-4 h-1 w-32 overflow-hidden rounded-full bg-[#E5E7EB]">
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 0.55, ease: "easeInOut" }}
-                className="h-full bg-[#FF3B30] rounded-full"
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="h-full bg-[#111111] rounded-full"
               />
             </div>
           </motion.div>
