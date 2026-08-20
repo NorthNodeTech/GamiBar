@@ -278,9 +278,9 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
     icon: BarChart3,
   },
   {
-    title: "Share resources and review",
-    desc: "Use Resource Drop for handouts, then review leaderboard and participation data after the session.",
-    badge: "Follow-up",
+    title: "Celebrate winners & podium",
+    desc: "Crown top performers on the live podium, award XP bonuses for streaks, and review final game stats.",
+    badge: "Winners podium",
     icon: Trophy,
   },
 ] as const;
