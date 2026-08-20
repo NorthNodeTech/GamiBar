@@ -25,6 +25,11 @@ import targetHuntPreview from "@/assets/tool-target-hunt.webp";
 import testimonialCorporate from "@/assets/testimonial-corporate-learning.webp";
 import testimonialMath from "@/assets/testimonial-math-classroom.webp";
 import testimonialPhysics from "@/assets/testimonial-physics-classroom.webp";
+import flowStep1 from "@/assets/flow-step-1.webp";
+import flowStep2 from "@/assets/flow-step-2.webp";
+import flowStep3 from "@/assets/flow-step-3.webp";
+import flowStep4 from "@/assets/flow-step-4.webp";
+import flowStep5 from "@/assets/flow-step-5.webp";
 import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
 import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, type GameMode } from "@/lib/game/config";
 
@@ -258,30 +263,40 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
     desc: "Name the session, pick a tool, attach your content, and prepare files participants can download by QR.",
     badge: "Host setup",
     icon: Zap,
+    image: flowStep1,
+    imageAlt: "Educator setting up a live interactive session on laptop",
   },
   {
     title: "Participants join",
     desc: `Share a ${GAME_CONFIG.room.codeLength}-digit code or QR link. People enter a nickname - no account required to play.`,
     badge: "Instant join",
     icon: Users,
+    image: flowStep2,
+    imageAlt: "Students in classroom scanning QR code to join live room",
   },
   {
     title: "Start the round together",
     desc: "When you press Start, every connected device enters the same game state. No one begins early or on a different puzzle.",
     badge: "Synchronized play",
     icon: Timer,
+    image: flowStep3,
+    imageAlt: "Students tapping colorful answer buttons on smartphones",
   },
   {
     title: "Watch the live leaderboard",
     desc: "Scores and completion times update in real time on the host screen and participant devices as the round progresses.",
     badge: "Live rankings",
     icon: BarChart3,
+    image: flowStep4,
+    imageAlt: "Live ranking board on auditorium screen with cheering students",
   },
   {
     title: "Celebrate winners & podium",
     desc: "Crown top performers on the live podium, award XP bonuses for streaks, and review final game stats.",
     badge: "Winners podium",
     icon: Trophy,
+    image: flowStep5,
+    imageAlt: "Celebration podium stage with trophies and confetti",
   },
 ] as const;
 
