@@ -26,7 +26,6 @@ import { Route as AuthorLoginRouteImport } from './routes/author.login'
 import { Route as AuthorParticipatedRouteImport } from './routes/author.participated'
 import { Route as AuthorQuestionsRouteImport } from './routes/author.questions'
 import { Route as AuthorRegisterRouteImport } from './routes/author.register'
-import { Route as AuthorReportsRouteImport } from './routes/author.reports'
 import { Route as AuthorSessionsRouteImport } from './routes/author.sessions'
 import { Route as AuthorTemplatesRouteImport } from './routes/author.templates'
 import { Route as AuthorToolsRouteImport } from './routes/author.tools'
@@ -127,11 +126,6 @@ const AuthorRegisterRoute = AuthorRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AuthorRoute,
 } as any)
-const AuthorReportsRoute = AuthorReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AuthorRoute,
-} as any)
 const AuthorSessionsRoute = AuthorSessionsRouteImport.update({
   id: '/sessions',
   path: '/sessions',
@@ -220,7 +214,6 @@ export interface FileRoutesByFullPath {
   '/author/participated': typeof AuthorParticipatedRoute
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
-  '/author/reports': typeof AuthorReportsRoute
   '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
   '/author/tools': typeof AuthorToolsRoute
@@ -252,7 +245,6 @@ export interface FileRoutesByTo {
   '/author/participated': typeof AuthorParticipatedRoute
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
-  '/author/reports': typeof AuthorReportsRoute
   '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
   '/author/tools': typeof AuthorToolsRoute
@@ -287,7 +279,6 @@ export interface FileRoutesById {
   '/author/participated': typeof AuthorParticipatedRoute
   '/author/questions': typeof AuthorQuestionsRoute
   '/author/register': typeof AuthorRegisterRoute
-  '/author/reports': typeof AuthorReportsRoute
   '/author/sessions': typeof AuthorSessionsRouteWithChildren
   '/author/templates': typeof AuthorTemplatesRoute
   '/author/tools': typeof AuthorToolsRoute
@@ -323,7 +314,6 @@ export interface FileRouteTypes {
     | '/author/participated'
     | '/author/questions'
     | '/author/register'
-    | '/author/reports'
     | '/author/sessions'
     | '/author/templates'
     | '/author/tools'
@@ -355,7 +345,6 @@ export interface FileRouteTypes {
     | '/author/participated'
     | '/author/questions'
     | '/author/register'
-    | '/author/reports'
     | '/author/sessions'
     | '/author/templates'
     | '/author/tools'
@@ -389,7 +378,6 @@ export interface FileRouteTypes {
     | '/author/participated'
     | '/author/questions'
     | '/author/register'
-    | '/author/reports'
     | '/author/sessions'
     | '/author/templates'
     | '/author/tools'
@@ -547,13 +535,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorRegisterRouteImport
       parentRoute: typeof AuthorRoute
     }
-    '/author/reports': {
-      id: '/author/reports'
-      path: '/reports'
-      fullPath: '/author/reports'
-      preLoaderRoute: typeof AuthorReportsRouteImport
-      parentRoute: typeof AuthorRoute
-    }
     '/author/sessions': {
       id: '/author/sessions'
       path: '/sessions'
@@ -674,7 +655,6 @@ interface AuthorRouteChildren {
   AuthorParticipatedRoute: typeof AuthorParticipatedRoute
   AuthorQuestionsRoute: typeof AuthorQuestionsRoute
   AuthorRegisterRoute: typeof AuthorRegisterRoute
-  AuthorReportsRoute: typeof AuthorReportsRoute
   AuthorSessionsRoute: typeof AuthorSessionsRouteWithChildren
   AuthorTemplatesRoute: typeof AuthorTemplatesRoute
   AuthorToolsRoute: typeof AuthorToolsRoute
@@ -689,7 +669,6 @@ const AuthorRouteChildren: AuthorRouteChildren = {
   AuthorParticipatedRoute: AuthorParticipatedRoute,
   AuthorQuestionsRoute: AuthorQuestionsRoute,
   AuthorRegisterRoute: AuthorRegisterRoute,
-  AuthorReportsRoute: AuthorReportsRoute,
   AuthorSessionsRoute: AuthorSessionsRouteWithChildren,
   AuthorTemplatesRoute: AuthorTemplatesRoute,
   AuthorToolsRoute: AuthorToolsRoute,

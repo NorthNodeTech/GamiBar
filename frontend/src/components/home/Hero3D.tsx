@@ -2,9 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
-import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Button } from "@/components/ui/button";
-import { HOMEPAGE_HERO, HOMEPAGE_HERO_STATS } from "@/content/homepage";
+import { HOMEPAGE_HERO } from "@/content/homepage";
+import homeHeroBg from "@/assets/home-hero-bg.webp";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
@@ -17,81 +17,77 @@ const fadeUp = {
 
 export function Hero3D() {
   return (
-    <section className="relative isolate min-h-[calc(100svh-7rem)] overflow-hidden border-b border-white/10 bg-[#08080a]">
-      <img
-        src={HOMEPAGE_HERO.image}
-        alt={HOMEPAGE_HERO.imageAlt}
-        width={1536}
-        height={1024}
-        decoding="async"
-        fetchPriority="high"
-        loading="eager"
-        className="absolute inset-0 size-full object-cover"
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,7,0.94)_0%,rgba(5,5,7,0.76)_42%,rgba(5,5,7,0.25)_100%)]"
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-[linear-gradient(0deg,rgba(5,5,7,0.78)_0%,rgba(5,5,7,0.12)_52%,rgba(5,5,7,0.38)_100%)]"
-      />
+    <section className="relative isolate overflow-hidden min-h-[calc(100svh-4rem)] flex items-center bg-[#070707] text-white py-16 sm:py-24">
+      {/* Background Image (No black shade overlay) */}
+      <div className="absolute inset-0 z-0 select-none pointer-events-none">
+        <img
+          src={homeHeroBg}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 size-full object-cover opacity-100"
+        />
+      </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-7rem)] max-w-6xl flex-col justify-center px-4 py-12 sm:px-5 sm:py-16 lg:px-8">
-        <div className="max-w-2xl text-white">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-start">
+        <div className="max-w-2xl text-left flex flex-col items-start drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
+          {/* Badge */}
           <motion.span
             custom={0}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="inline-flex w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/90 shadow-sm backdrop-blur-md sm:text-xs"
+            className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 shadow-sm backdrop-blur-md"
           >
             {HOMEPAGE_HERO.badge}
           </motion.span>
 
+          {/* Headline */}
           <motion.h1
             custom={0.08}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-5 font-display text-[clamp(3rem,12vw,6.5rem)] font-black leading-[0.92] tracking-tight text-white"
+            className="mt-6 font-display text-[clamp(2.2rem,5.5vw,4.2rem)] font-black leading-[1.05] tracking-tight text-white"
           >
             {HOMEPAGE_HERO.headlinePrefix}
           </motion.h1>
 
+          {/* Accent */}
           <motion.p
             custom={0.16}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-4 max-w-xl font-display text-[clamp(1.375rem,4vw,2.25rem)] font-extrabold leading-tight text-white"
+            className="mt-4 font-display text-[clamp(1.4rem,3.2vw,2.2rem)] font-extrabold leading-tight text-red-500"
           >
             {HOMEPAGE_HERO.headlineAccent}
           </motion.p>
 
+          {/* Description */}
           <motion.p
             custom={0.22}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-4 max-w-xl text-sm leading-relaxed text-white/76 sm:text-base"
+            className="mt-6 text-sm leading-relaxed text-zinc-200 sm:text-base max-w-xl"
           >
             {HOMEPAGE_HERO.lede}
           </motion.p>
 
+          {/* CTAs */}
           <motion.div
             custom={0.3}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="mt-6 flex flex-col gap-2.5 min-[420px]:flex-row sm:mt-8 sm:gap-3"
+            className="mt-8 flex flex-col sm:flex-row gap-3.5 w-full sm:w-auto"
           >
             <Button
               asChild
               size="lg"
-              className="h-11 rounded-full bg-[var(--gamibar-brand)] px-6 text-sm font-bold text-white shadow-[0_12px_34px_rgba(239,68,68,0.38)] hover:bg-[var(--gamibar-brand-hover)] sm:h-12 sm:px-7"
+              className="h-12 rounded-full bg-[#FF3B30] px-8 text-sm font-bold text-white shadow-[0_12px_34px_rgba(255,59,48,0.34)] transition-all duration-200 hover:bg-[#E6332B] hover:shadow-[0_16px_40px_rgba(255,59,48,0.45)] w-full sm:w-auto"
             >
-              <Link to="/author">
+              <Link to="/author/create">
                 {HOMEPAGE_HERO.primaryCta}
                 <ArrowRight className="ml-2 size-4" />
               </Link>
@@ -100,34 +96,10 @@ export function Hero3D() {
               asChild
               size="lg"
               variant="outline"
-              className="h-11 rounded-full border-white/25 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-md hover:bg-white/15 hover:text-white sm:h-12 sm:px-7"
+              className="h-12 rounded-full border-white/20 bg-white/5 px-8 text-sm font-bold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/10 hover:text-white w-full sm:w-auto"
             >
               <Link to="/join">{HOMEPAGE_HERO.secondaryCta}</Link>
             </Button>
-          </motion.div>
-
-          <motion.div
-            custom={0.38}
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="mt-6 grid max-w-xl grid-cols-3 gap-2 sm:mt-8 sm:gap-3"
-          >
-            {HOMEPAGE_HERO_STATS.map((stat) => (
-              <div
-                key={stat.label}
-                className="min-w-0 rounded-lg border border-white/12 bg-white/[0.09] px-2.5 py-2.5 backdrop-blur-md sm:px-3.5 sm:py-3"
-              >
-                <stat.icon className="size-4 text-white/85" />
-                <p className="mt-2 font-display text-base font-black tabular-nums text-white sm:text-xl">
-                  <AnimatedNumber value={stat.value} immediate />
-                  {stat.suffix}
-                </p>
-                <p className="mt-0.5 text-[10px] font-medium leading-tight text-white/62 sm:text-xs">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
           </motion.div>
         </div>
       </div>

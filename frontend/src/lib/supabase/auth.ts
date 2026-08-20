@@ -12,6 +12,14 @@ import type { Database } from "@/lib/supabase/database.types";
 type AuthorRow = Database["public"]["Tables"]["gamibar_authors"]["Row"];
 const SUPABASE_CONFIG_ERROR =
   "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to frontend/.env, then restart the frontend dev server.";
+const AUTH_REQUEST_TIMEOUT_MS = 8000;
+
+class SupabaseAuthTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SupabaseAuthTimeoutError";
+  }
+}
 
 function authorAuthRedirectUrl(redirectPath = "/author/create") {
   if (typeof window === "undefined") return undefined;
@@ -57,11 +65,14 @@ export function mapProfileToAuthUser(user: User, profile: AuthorRow): AuthUser {
 export async function fetchProfileForUser(userId: string) {
   if (!isSupabaseConfigured) throw new Error(SUPABASE_CONFIG_ERROR);
 
-  const { data, error } = await supabase
-    .from("gamibar_authors")
-    .select("id, display_name, role")
-    .eq("id", userId)
-    .maybeSingle();
+  const { data, error } = await withAuthTimeout(
+    supabase
+      .from("gamibar_authors")
+      .select("id, display_name, role")
+      .eq("id", userId)
+      .maybeSingle(),
+    "Timed out while loading your author profile.",
+  );
 
   if (error) throw new Error(error.message);
   return data;
@@ -70,7 +81,10 @@ export async function fetchProfileForUser(userId: string) {
 export async function resolveAuthUserFromSession() {
   if (!isSupabaseConfigured) return null;
 
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const { data: sessionData, error: sessionError } = await withAuthTimeout(
+    supabase.auth.getSession(),
+    "Timed out while checking your sign-in session.",
+  );
   if (sessionError) {
     if (isRecoverableSessionError(sessionError)) {
       await clearSupabaseAuthSession();
@@ -254,4 +268,20 @@ export async function requestPasswordReset(email: string) {
   }
 
   return { ok: true as const };
+}
+
+async function withAuthTimeout<T>(request: PromiseLike<T>, message: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(
+      () => reject(new SupabaseAuthTimeoutError(message)),
+      AUTH_REQUEST_TIMEOUT_MS,
+    );
+  });
+
+  try {
+    return await Promise.race([Promise.resolve(request), timeoutPromise]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }

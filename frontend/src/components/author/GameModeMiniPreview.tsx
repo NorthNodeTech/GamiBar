@@ -2,6 +2,7 @@ import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
 import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
 import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
+import gameTargetHuntPreview from "@/assets/tool-target-hunt.webp";
 import type { GameMode } from "@/lib/game/config";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +11,7 @@ const previews: Partial<Record<GameMode, string>> = {
   quiz_jigsaw: gameJigsawPreview,
   jigsaw: gameJigsawPreview,
   connect_dots: gameConnectDotsPreview,
-  visual_point: gameJigsawPreview,
+  visual_point: gameTargetHuntPreview,
   polls: gamePollsPreview,
 };
 
@@ -140,23 +141,4 @@ function ModeDecor({ mode }: { mode: GameMode }) {
       ))}
     </div>
   );
-}
-
-export function modeLabel(mode: GameMode): string {
-  switch (mode) {
-    case "quiz":
-      return "Quiz";
-    case "quiz_jigsaw":
-      return "Puzzle Quest";
-    case "jigsaw":
-      return "Jigsaw";
-    case "connect_dots":
-      return "Connect Dots";
-    case "visual_point":
-      return "Target Hunt";
-    case "polls":
-      return "Polls";
-    default:
-      return mode;
-  }
 }

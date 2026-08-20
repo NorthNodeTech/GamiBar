@@ -3,7 +3,6 @@ import { LogOut, Radio } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/layout/Logo";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { authorNavItems, type AuthorNavItem } from "@/lib/author-nav";
 import { useAuthSafe } from "@/lib/auth-store";
 import { clearAuthorRoom } from "@/lib/game/client-session";
@@ -17,15 +16,15 @@ function navLinkClass(active: boolean, layout: "mobile" | "desktop") {
   if (layout === "mobile") {
     return cn(
       "flex flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-center text-[10px] font-semibold leading-tight transition-colors",
-      active ? "text-[var(--gamibar-brand)]" : "text-[var(--muted-foreground)]",
+      active ? "text-[#111111]" : "text-[#5F6368]",
     );
   }
 
   return cn(
     "tap-target inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200",
     active
-      ? "bg-[var(--foreground)] text-[var(--background)] shadow-[0_4px_14px_rgba(0,0,0,0.14)]"
-      : "text-[var(--muted-foreground)] hover:bg-[var(--gamibar-page)] hover:text-[var(--foreground)]",
+      ? "bg-[#111111] text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)]"
+      : "text-[#5F6368] hover:bg-[#F8F9FB] hover:text-[#111111]",
   );
 }
 
@@ -73,15 +72,15 @@ export function AuthorShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="author-shell flex min-h-dvh flex-col overflow-x-clip bg-[var(--gamibar-page)]">
-      <header className="sticky top-0 z-30 border-b border-[var(--gamibar-border)] bg-[var(--gamibar-surface)]/90 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--gamibar-surface)]/80">
-        <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
-          <div className="flex h-12 items-center justify-between gap-2 sm:h-14">
+    <div className="author-shell flex min-h-dvh flex-col overflow-x-clip bg-[#F8F9FB]">
+      <header className="sticky top-0 z-30 border-b border-[#E7E9ED] bg-white">
+        <div className="mx-auto max-w-[80rem] px-4 sm:px-6 lg:px-8">
+          <div className="flex h-14 items-center justify-between gap-2 sm:h-16">
             <Link to="/author" className="flex min-w-0 shrink-0 items-center gap-2 tap-target">
               <Logo size={28} className="sm:hidden" />
-              <Logo size={32} className="hidden sm:block" />
-              <span className="truncate font-display text-sm font-bold text-[var(--foreground)]">
-                Gami<span className="text-[var(--gamibar-brand)]">BAR</span>
+              <Logo size={34} className="hidden sm:block" />
+              <span className="truncate font-display text-sm font-bold text-[#111111]">
+                Gami<span className="text-[#FF3B30]">BAR</span>
               </span>
             </Link>
 
@@ -91,8 +90,8 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             >
               {authorNavItems.map((item) => renderNavLink(item, "desktop"))}
               {onLiveRoom && (
-                <span className="ml-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--gamibar-brand)]/30 bg-[var(--gamibar-brand-soft)] px-2.5 py-2 text-xs font-semibold text-[var(--gamibar-brand)]">
-                  <Radio className="size-3.5 animate-pulse" />
+                <span className="ml-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#FF3B30]/20 bg-[#FFF1F0] px-2.5 py-2 text-xs font-semibold text-[#FF3B30]">
+                  <Radio className="size-3.5" />
                   Live
                 </span>
               )}
@@ -100,24 +99,23 @@ export function AuthorShell({ children }: { children: ReactNode }) {
 
             <div className="flex shrink-0 items-center gap-1">
               {onLiveRoom && (
-                <span className="inline-flex items-center gap-1 rounded-xl border border-[var(--gamibar-brand)]/30 bg-[var(--gamibar-brand-soft)] px-2 py-1.5 text-[10px] font-semibold text-[var(--gamibar-brand)] sm:hidden">
-                  <Radio className="size-3 animate-pulse" />
+                <span className="inline-flex items-center gap-1 rounded-xl border border-[#FF3B30]/20 bg-[#FFF1F0] px-2 py-1.5 text-[10px] font-semibold text-[#FF3B30] sm:hidden">
+                  <Radio className="size-3" />
                   Live
                 </span>
               )}
-              <ThemeToggle />
-              <div className="hidden items-center gap-2 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] py-1 pl-1 pr-2 md:flex">
-                <div className="grid size-8 place-items-center rounded-lg bg-[var(--gamibar-surface)] text-xs font-bold text-[var(--gamibar-brand)] shadow-[var(--shadow-soft)]">
+              <div className="hidden items-center gap-2 rounded-xl border border-[#E7E9ED] bg-[#F8F9FB] py-1 pl-1 pr-2 md:flex">
+                <div className="grid size-8 place-items-center rounded-lg bg-white text-xs font-bold text-[#FF3B30] shadow-[0_1px_3px_rgba(16,24,40,0.04)]">
                   {(user?.name ?? "A").slice(0, 1).toUpperCase()}
                 </div>
-                <span className="max-w-[7rem] truncate text-xs font-semibold text-[var(--foreground)]">
+                <span className="max-w-[7rem] truncate text-xs font-semibold text-[#111111]">
                   {user?.name ?? "Host"}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => void handleLogout()}
-                className="tap-target grid size-10 place-items-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--gamibar-page)] hover:text-[var(--foreground)] sm:size-9"
+                className="tap-target grid size-10 place-items-center rounded-xl text-[#5F6368] transition-colors hover:bg-[#F8F9FB] hover:text-[#111111] sm:size-9"
                 aria-label="Log out"
               >
                 <LogOut className="size-[18px]" />
@@ -126,7 +124,7 @@ export function AuthorShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav
-            className="grid grid-cols-5 gap-0.5 border-t border-[var(--gamibar-border)] py-1 sm:hidden"
+            className="grid grid-cols-4 gap-0.5 border-t border-[#E7E9ED] py-1 sm:hidden"
             aria-label="Main navigation"
           >
             {authorNavItems.map((item) => renderNavLink(item, "mobile"))}
@@ -136,19 +134,16 @@ export function AuthorShell({ children }: { children: ReactNode }) {
 
       <div className="relative flex-1">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-8%,rgba(239,68,68,0.07),transparent_58%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_100%_20%,rgba(59,130,246,0.05),transparent_55%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_35%_at_0%_80%,rgba(16,185,129,0.04),transparent_50%)]" />
           <div
-            className="absolute inset-0 opacity-[0.35] dark:opacity-[0.12]"
+            className="absolute inset-0 opacity-[0.45]"
             style={{
               backgroundImage:
-                "linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)",
+                "linear-gradient(rgba(17,17,17,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(17,17,17,0.025) 1px, transparent 1px)",
               backgroundSize: "32px 32px",
             }}
           />
         </div>
-        <main className="relative px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-5 sm:pb-5 lg:px-8">
+        <main className="relative px-4 py-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
           {children}
         </main>
       </div>

@@ -93,18 +93,58 @@ export function validateJigsawFile(file: File): { ok: true } | { ok: false; erro
   return { ok: true };
 }
 
+import targetHuntHeartUrl from "@/assets/target-hunt-heart.webp";
+
 export function emptyVisualPointQuestions(
   count = GAME_CONFIG.visual_point.defaultQuestionCount,
 ): VisualPointQuestionDraft[] {
-  return Array.from({ length: Math.max(1, count) }, (_, index) => ({
-    id: `vp-q-${index + 1}`,
-    prompt: "",
-    imageUrl: null,
-    imageMime: null,
-    imageWidth: null,
-    imageHeight: null,
-    points: [],
-  }));
+  return Array.from({ length: Math.max(1, count) }, (_, index) => {
+    if (index === 0) {
+      return {
+        id: `vp-q-${index + 1}`,
+        prompt: "Label the parts of the human heart",
+        imageUrl: targetHuntHeartUrl,
+        imageMime: "image/webp",
+        imageWidth: 1024,
+        imageHeight: 1024,
+        points: [
+          {
+            id: "point-1",
+            x: 48.0,
+            y: 25.0,
+            isCorrect: true,
+            adminReference: "Aorta",
+            color: "#EF4444",
+          },
+          {
+            id: "point-2",
+            x: 64.0,
+            y: 35.0,
+            isCorrect: true,
+            adminReference: "Pulmonary Artery",
+            color: "#3B82F6",
+          },
+          {
+            id: "point-3",
+            x: 58.5,
+            y: 76.0,
+            isCorrect: true,
+            adminReference: "Left Ventricle",
+            color: "#10B981",
+          },
+        ],
+      };
+    }
+    return {
+      id: `vp-q-${index + 1}`,
+      prompt: "",
+      imageUrl: null,
+      imageMime: null,
+      imageWidth: null,
+      imageHeight: null,
+      points: [],
+    };
+  });
 }
 
 export function isVisualPointQuestionComplete(q: VisualPointQuestionDraft): boolean {

@@ -55,10 +55,19 @@ app.listen(port, () => {
 
 function corsOrigin() {
   const raw = process.env.CORS_ORIGIN;
+  const devOrigins = ["http://localhost:8080", "http://localhost:8082", "http://localhost:3000", "http://localhost:5173"];
   if (!raw) return true;
   const allowed = raw
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+  if (process.env.NODE_ENV !== "production") {
+    for (const origin of devOrigins) {
+      if (!allowed.includes(origin)) {
+        allowed.push(origin);
+      }
+    }
+  }
   return allowed.length > 0 ? allowed : true;
 }

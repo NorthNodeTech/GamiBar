@@ -1,25 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
 import {
   ArrowRight,
   Blocks,
   CircleDot,
+  ClipboardList,
   Crosshair,
+  Gamepad2,
   Plus,
   QrCode,
   Radio,
-  Sparkles,
-  Zap,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
-import simpleQuizPollsArt from "@/assets/tool-simple-quiz-polls.webp";
 import connectDotsArt from "@/assets/tool-connect-dots.webp";
 import jigsawMissionArt from "@/assets/tool-jigsaw-mission.webp";
 import pollsSurveyArt from "@/assets/tool-polls-survey.webp";
 import quizBattleArt from "@/assets/tool-quiz-battle.webp";
 import resourceDropArt from "@/assets/tool-resource-drop.webp";
+import targetHuntArt from "@/assets/tool-target-hunt.webp";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
 import type { CoreLiveGameMode } from "@/lib/game/session-flow";
@@ -32,133 +33,100 @@ export const Route = createFileRoute("/author/tools")({
       {
         name: "description",
         content:
-          "Browse GamiBar tools for simple quizzes, polls, gamified quiz experiences, and QR-based file sharing.",
+          "Browse GamiBar tools for quizzes, polls, gamified experiences, Target Hunt image challenges, and QR-based file sharing.",
       },
     ],
   }),
   component: ToolsPage,
 });
 
-type PlayableTool = {
+type ToolCardData = {
   mode: CoreLiveGameMode;
   title: string;
-  status: string;
-  copy: string;
-  icon: LucideIcon;
+  description: string;
+  tags: string[];
   image: string;
-  accent: string;
-  soft: string;
-  chips: string[];
+  imageAlt: string;
+  icon: LucideIcon;
 };
 
-type ComingSoonTool = {
-  title: string;
-  status: "Coming soon";
-  copy: string;
-  icon: LucideIcon;
-  image: string;
-  chips: readonly string[];
-};
-
-const quizBattleTool = {
-  mode: "quiz" as const,
-  title: "Quiz Battle",
-  status: "Available",
-  copy: "Live MCQs with rankings.",
-  icon: Zap,
-  image: quizBattleArt,
-  accent: "bg-[var(--game-quiz)]",
-  soft: "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]",
-  chips: ["MCQs", "Leaderboard", "QR"],
-} satisfies PlayableTool;
-
-const pollsTool = {
-  mode: "polls" as const,
-  title: "Polls",
-  status: "Available",
-  copy: "Votes, ratings, surveys.",
-  icon: Radio,
-  image: pollsSurveyArt,
-  accent: "bg-orange-500",
-  soft: "bg-orange-100 text-orange-800",
-  chips: ["Rating", "Survey", "Live"],
-} satisfies PlayableTool;
-
-const moreQuickChecksTool = {
-  title: "More checks",
-  status: "Coming soon",
-  copy: "Warmups, exits, and quick rounds.",
-  icon: Sparkles,
-  image: simpleQuizPollsArt,
-  chips: ["Warmups", "Exit tickets"],
-} as const satisfies ComingSoonTool;
-
-const gamifiedTools = [
+const quickCheckTools: ToolCardData[] = [
   {
-    mode: "jigsaw" as const,
+    mode: "quiz",
+    title: "Quiz Battle",
+    description: "Turn MCQs into a live classroom challenge with instant results and rankings.",
+    tags: ["MCQs", "Live rankings", "Instant results", "QR join"],
+    image: quizBattleArt,
+    imageAlt: "Quiz Battle interactive classroom",
+    icon: ClipboardList,
+  },
+  {
+    mode: "polls",
+    title: "Polls",
+    description: "Ask the room, collect responses instantly, and see what everyone thinks.",
+    tags: ["Live voting", "Ratings", "Surveys", "Instant results"],
+    image: pollsSurveyArt,
+    imageAlt: "Polls live feedback activity",
+    icon: Radio,
+  },
+];
+
+const playableGameTools: ToolCardData[] = [
+  {
+    mode: "jigsaw",
     title: "Jigsaw Mission",
-    status: "Available",
-    copy: "Answer to unlock puzzle pieces.",
+    description:
+      "Answer questions, unlock puzzle pieces, and rebuild the image before time runs out.",
+    tags: ["Image puzzle", "Question unlocks", "Timer"],
+    image: jigsawMissionArt,
+    imageAlt: "Jigsaw Mission puzzle activity",
     icon: Blocks,
-    image: jigsawMissionArt,
-    accent: "bg-[var(--game-jigsaw)]",
-    soft: "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw-deep)]",
-    chips: ["Image puzzle", "Question unlocks", "Timer"],
   },
   {
-    mode: "connect_dots" as const,
+    mode: "connect_dots",
     title: "Connect Dots",
-    status: "Available",
-    copy: "Match questions to answers.",
-    icon: CircleDot,
+    description:
+      "Match concepts to the right answers by drawing the correct connections before time runs out.",
+    tags: ["Matching", "Shared board", "Timer"],
     image: connectDotsArt,
-    accent: "bg-[var(--game-connect-dots)]",
-    soft: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
-    chips: ["Matching pairs", "Shared board", "Timer"],
+    imageAlt: "Connect Dots matching game",
+    icon: CircleDot,
   },
   {
-    mode: "visual_point" as const,
+    mode: "visual_point",
     title: "Target Hunt",
-    status: "Available",
-    copy: "Ask learners to hunt for targets on images.",
+    description:
+      "Turn images and maps into a challenge by asking players to find the correct target.",
+    tags: ["Images", "Hidden targets", "Target selection"],
+    image: targetHuntArt,
+    imageAlt: "Target Hunt image challenge",
     icon: Crosshair,
-    image: jigsawMissionArt,
-    accent: "bg-[var(--game-visual-point)]",
-    soft: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]",
-    chips: ["Images", "Hidden labels", "Target selection"],
   },
-] satisfies PlayableTool[];
+];
 
-const moreGamifiedTool = {
-  title: "More games",
-  status: "Coming soon",
-  copy: "More playful quiz formats.",
-  icon: Sparkles,
-  image: jigsawMissionArt,
-  chips: ["Teams", "Challenges"],
-} as const satisfies ComingSoonTool;
+const fileSharingTags = ["PDF", "PPT", "PPTX", "DOC", "DOCX", "7/14/28 days"];
 
 function ToolsPage() {
   return (
     <AuthorShell>
-      <div className="mx-auto grid w-full max-w-5xl gap-4 py-1 sm:gap-5 sm:py-3">
-        <header className="grid gap-3 border-b border-[var(--gamibar-border)] pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <div className="mx-auto w-full max-w-[72rem] py-3 text-[#111111] sm:py-5">
+        <header className="grid gap-5 border-b border-[#E7E9ED] pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--gamibar-brand-soft)] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-brand)]">
-              <Sparkles className="size-3.5" />
+            <p className="text-[11px] font-bold uppercase text-[#FF3B30]">
               No more boring classrooms, no more boring sessions
-            </span>
-            <h1 className="mt-3 max-w-3xl font-display text-2xl font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-3xl">
+            </p>
+            <h1 className="mt-3 font-display text-[2rem] font-bold leading-tight text-[#111111] sm:text-[2.5rem]">
               Tools
             </h1>
-            <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-              Pick a tool. Share a QR. Run the room.
+            <p className="mt-3 max-w-2xl text-[15px] leading-6 text-[#5F6368]">
+              Everything you need to make your next session interactive.
             </p>
           </div>
+
           <div className="grid gap-2 min-[430px]:grid-cols-2 lg:w-[21rem]">
             <Button
               asChild
-              className="h-10 rounded-lg bg-[#111111] text-sm font-semibold text-white hover:bg-black"
+              className="h-12 rounded-xl bg-[#111111] px-5 text-sm font-semibold text-white shadow-none hover:bg-[#2A2A2A]"
             >
               <Link to="/author/create">
                 <Plus className="size-4" />
@@ -168,7 +136,7 @@ function ToolsPage() {
             <Button
               asChild
               variant="outline"
-              className="h-10 rounded-lg border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--gamibar-page)]"
+              className="h-12 rounded-xl border-[#D9DDE3] bg-white px-5 text-sm font-semibold text-[#111111] shadow-none hover:bg-[#F3F4F6]"
             >
               <Link to="/author/sessions">
                 <QrCode className="size-4" />
@@ -178,38 +146,40 @@ function ToolsPage() {
           </div>
         </header>
 
-        <ToolSection
-          eyebrow="Quick checks"
-          title="Simple Quiz and Polls"
-          copy="Fast checks, ratings, and live feedback."
-        >
-          <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-3">
-            <GameToolCard tool={quizBattleTool} index={0} />
-            <GameToolCard tool={pollsTool} index={1} />
-            <ComingSoonCard tool={moreQuickChecksTool} index={3} />
-          </div>
-        </ToolSection>
+        <div className="space-y-14 pt-10">
+          <ToolSection
+            eyebrow="Quick checks"
+            title="Simple Quiz and Polls"
+            description="Fast ways to check understanding, collect opinions, and get instant feedback."
+          >
+            <div className="grid auto-rows-fr gap-4 md:grid-cols-2">
+              {quickCheckTools.map((tool, index) => (
+                <ToolCard key={tool.mode} tool={tool} index={index} />
+              ))}
+            </div>
+          </ToolSection>
 
-        <ToolSection
-          eyebrow="Playable now"
-          title="Quizzes with gamified experiences"
-          copy="Visual games for puzzles and matching."
-        >
-          <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-3">
-            {gamifiedTools.map((tool, index) => (
-              <GameToolCard key={tool.mode} tool={tool} index={index} />
-            ))}
-            <ComingSoonCard tool={moreGamifiedTool} index={3} />
-          </div>
-        </ToolSection>
+          <ToolSection
+            eyebrow="Playable now"
+            title="Quizzes with gamified experiences"
+            description="Turn questions into interactive challenges that get people thinking, matching, and competing."
+          >
+            <div className="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {playableGameTools.map((tool, index) => (
+                <ToolCard key={tool.mode} tool={tool} index={index} compact />
+              ))}
+            </div>
+            <MoreGamesBanner />
+          </ToolSection>
 
-        <ToolSection
-          eyebrow="File sharing"
-          title="Share files with your audience"
-          copy="Upload files. Share one QR. Auto-expire them."
-        >
-          <ResourceDropCard />
-        </ToolSection>
+          <ToolSection
+            eyebrow="File sharing"
+            title="Share files with your audience"
+            description="Upload once. Share one QR. Let everyone download instantly."
+          >
+            <FilesByQrCard />
+          </ToolSection>
+        </div>
       </div>
     </AuthorShell>
   );
@@ -218,212 +188,248 @@ function ToolsPage() {
 function ToolSection({
   eyebrow,
   title,
-  copy,
+  description,
   children,
 }: {
   eyebrow: string;
   title: string;
-  copy: string;
+  description: string;
   children: ReactNode;
 }) {
   return (
-    <section className="grid gap-3.5 border-b border-[var(--gamibar-border)] pb-5 last:border-b-0 last:pb-0">
-      <SectionHeader eyebrow={eyebrow} title={title} copy={copy} />
+    <section className="space-y-5">
+      <SectionHeader eyebrow={eyebrow} title={title} description={description} />
       {children}
     </section>
   );
 }
 
-function SectionHeader({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="grid max-w-2xl gap-1">
-      <div className="min-w-0">
-        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--gamibar-brand)]">
-          {eyebrow}
-        </p>
-        <h2 className="mt-0.5 font-display text-lg font-bold tracking-tight text-[var(--foreground)] sm:text-xl">
-          {title}
-        </h2>
-      </div>
-      <p className="max-w-sm text-xs leading-relaxed text-[var(--muted-foreground)]">{copy}</p>
+    <div className="max-w-2xl">
+      <p className="text-[11px] font-bold uppercase text-[#FF3B30]">{eyebrow}</p>
+      <h2 className="mt-1 font-display text-[1.55rem] font-bold leading-tight text-[#111111] sm:text-[1.75rem]">
+        {title}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-[#5F6368]">{description}</p>
     </div>
   );
 }
 
-function ComingSoonCard({ tool, index }: { tool: ComingSoonTool; index: number }) {
+function ToolCard({
+  tool,
+  index,
+  compact = false,
+}: {
+  tool: ToolCardData;
+  index: number;
+  compact?: boolean;
+}) {
   const Icon = tool.icon;
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.04 + index * 0.05 }}
-      className="overflow-hidden rounded-lg border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]"
-    >
-      <div className="relative aspect-video overflow-hidden bg-[var(--gamibar-page)]">
-        <FittedToolImage src={tool.image} alt="" className="opacity-75 saturate-[0.9]" />
-        <div className="absolute inset-0 bg-white/18 dark:bg-black/25" aria-hidden />
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#525252] shadow-sm backdrop-blur-sm dark:bg-black/65 dark:text-white/80">
-          <Icon className="size-3.5" />
-          {tool.status}
-        </span>
-      </div>
-      <div className="grid gap-1.5 p-2.5">
-        <div>
-          <h3 className="font-display text-sm font-bold text-[var(--foreground)]">{tool.title}</h3>
-          <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted-foreground)]">
-            {tool.copy}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {tool.chips.map((chip) => (
-            <span
-              key={chip}
-              className="rounded-full bg-[var(--gamibar-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--gamibar-text-tertiary)]"
-            >
-              {chip}
-            </span>
-          ))}
-        </div>
-      </div>
-    </motion.article>
-  );
-}
-
-function GameToolCard({ tool, index }: { tool: PlayableTool; index: number }) {
-  const Icon = tool.icon;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.08 + index * 0.05 }}
+      transition={{ delay: 0.04 + index * 0.04, duration: 0.18 }}
       className="h-full"
     >
       <Link
         to="/author/create"
         search={{ mode: tool.mode }}
-        className="group block h-full overflow-hidden rounded-lg border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/45 hover:shadow-[var(--shadow-lift)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gamibar-brand)] focus-visible:ring-offset-2"
+        aria-label={`Build ${tool.title}`}
+        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D9DDE3] hover:shadow-[0_8px_22px_rgba(16,24,40,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30] focus-visible:ring-offset-2"
       >
-        <div className="relative aspect-video overflow-hidden bg-[var(--gamibar-page)]">
-          <FittedToolImage
-            src={tool.image}
-            alt=""
-            className="transition-transform duration-300 group-hover:scale-[1.02]"
-          />
-          <span
-            className={cn(
-              "absolute left-2 top-2 grid size-8 place-items-center rounded-lg border border-white/75 shadow-sm backdrop-blur-sm",
-              tool.soft,
-            )}
-          >
-            <Icon className="size-4" />
-          </span>
-          <span className={cn("absolute inset-x-0 bottom-0 h-1", tool.accent)} aria-hidden />
-        </div>
-        <div className="grid gap-1.5 p-2.5">
-          <div>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-display text-sm font-bold leading-tight text-[var(--foreground)]">
+        <ToolImage
+          src={tool.image}
+          alt={tool.imageAlt}
+          icon={Icon}
+          className={compact ? "aspect-video" : "aspect-[16/8.6]"}
+        />
+
+        <div className="flex min-h-[14.25rem] flex-1 flex-col p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#F6F7F9] text-[#111111]">
+                <Icon className="size-4" aria-hidden />
+              </span>
+              <h3 className="font-display text-[1.08rem] font-bold leading-tight text-[#111111]">
                 {tool.title}
               </h3>
-              <span className="shrink-0 rounded-full bg-[var(--gamibar-brand-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--gamibar-brand)]">
-                {tool.status}
-              </span>
             </div>
-            <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted-foreground)]">
-              {tool.copy}
-            </p>
+            <AvailabilityBadge />
           </div>
-          <div className="flex flex-wrap gap-1">
-            {tool.chips.map((chip) => (
-              <span
-                key={chip}
-                className="rounded-full bg-[var(--gamibar-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)]"
-              >
-                {chip}
-              </span>
+
+          <p className="mt-3 text-sm leading-6 text-[#5F6368]">{tool.description}</p>
+
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {tool.tags.map((tag) => (
+              <FeatureTag key={tag}>{tag}</FeatureTag>
             ))}
           </div>
-          <span className="inline-flex items-center text-xs font-bold text-[var(--foreground)]">
+
+          <span className="mt-auto inline-flex items-center pt-5 text-sm font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30]">
             Build
-            <ArrowRight className="ml-1 size-3.5 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="ml-1 size-4 transition-transform duration-200 group-hover:translate-x-1" />
           </span>
         </div>
       </Link>
-    </motion.div>
+    </motion.article>
   );
 }
 
-function ResourceDropCard() {
+function MoreGamesBanner() {
+  return (
+    <div className="mt-4 rounded-2xl border border-dashed border-[#D9DDE3] bg-white px-5 py-6 shadow-[0_1px_3px_rgba(16,24,40,0.04)] sm:flex sm:items-center sm:justify-between sm:gap-6 sm:px-6">
+      <div className="flex min-w-0 gap-4">
+        <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#FFF1F0] text-[#FF3B30]">
+          <Gamepad2 className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase text-[#FF3B30]">More games are coming</p>
+          <h3 className="mt-1 font-display text-lg font-bold text-[#111111]">
+            New interactive formats are on the way.
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#5F6368]">
+            GamiBAR is being built so future games can join this catalog without changing the way
+            hosts start a room.
+          </p>
+        </div>
+      </div>
+      <span className="mt-4 inline-flex items-center text-sm font-bold text-[#111111] sm:mt-0">
+        More games coming soon
+        <ArrowRight className="ml-1 size-4" aria-hidden />
+      </span>
+    </div>
+  );
+}
+
+function FilesByQrCard() {
   return (
     <Link
       to="/author/create"
-      className="group grid overflow-hidden rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/45 hover:shadow-[var(--shadow-lift)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gamibar-brand)] focus-visible:ring-offset-2 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
+      aria-label="Create Files by QR share"
+      className="group grid overflow-hidden rounded-[18px] border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D9DDE3] hover:shadow-[0_10px_28px_rgba(16,24,40,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30] focus-visible:ring-offset-2 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]"
     >
-      <div className="relative aspect-video overflow-hidden bg-[var(--gamibar-page)] md:min-h-56">
-        <FittedToolImage
-          src={resourceDropArt}
-          alt=""
-          className="p-3 transition-transform duration-300 group-hover:scale-[1.02] sm:p-4"
-        />
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#111111] shadow-sm backdrop-blur-sm dark:bg-black/65 dark:text-white">
-          <QrCode className="size-3.5 text-[var(--gamibar-brand)]" />
-          Resource Drop
-        </span>
-      </div>
-      <div className="grid content-center gap-3 p-4 sm:p-5">
-        <div>
-          <h3 className="font-display text-xl font-black leading-tight text-[var(--foreground)]">
-            Files by QR
-          </h3>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--muted-foreground)]">
-            PPT, PDF, DOC. Auto-expiry.
-          </p>
+      <ToolImage
+        src={resourceDropArt}
+        alt="Files by QR file sharing"
+        icon={QrCode}
+        fit="contain"
+        className="aspect-[4/3] bg-[#F6F7F9] p-3 sm:p-5 lg:min-h-[22rem]"
+      />
+
+      <div className="flex flex-col justify-center p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF1F0] px-2.5 py-1 text-[11px] font-bold uppercase text-[#FF3B30]">
+            <Upload className="size-3.5" aria-hidden />
+            Resource Drop
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-bold uppercase text-[#2563EB]">
+            <QrCode className="size-3.5" aria-hidden />
+            One QR
+          </span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {["PDF", "PPTX", "DOCX", "7/14/28 days"].map((chip) => (
-            <span
-              key={chip}
-              className="rounded-full bg-[var(--gamibar-page)] px-2.5 py-1 text-[10px] font-bold text-[var(--muted-foreground)]"
-            >
-              {chip}
-            </span>
+
+        <h3 className="mt-4 font-display text-[1.8rem] font-bold leading-tight text-[#111111]">
+          Files by QR
+        </h3>
+        <p className="mt-3 text-[15px] leading-7 text-[#5F6368]">
+          Upload your presentation once, share one QR, and let the entire room download it
+          instantly.
+        </p>
+
+        <p className="mt-4 text-xs font-bold uppercase text-[#111111]">
+          One upload. One QR. Instant download.
+        </p>
+
+        <div className="mt-5 flex flex-wrap gap-1.5">
+          {fileSharingTags.map((tag) => (
+            <FeatureTag key={tag}>{tag}</FeatureTag>
           ))}
         </div>
-        <span className="inline-flex items-center text-xs font-bold text-[var(--foreground)]">
+
+        <span className="mt-7 inline-flex items-center text-sm font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30]">
           Upload
-          <ArrowRight className="ml-1 size-3.5 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="ml-1 size-4 transition-transform duration-200 group-hover:translate-x-1" />
         </span>
       </div>
     </Link>
   );
 }
 
-function FittedToolImage({
+function AvailabilityBadge() {
+  return (
+    <span className="shrink-0 rounded-full bg-[#FFF1F0] px-2.5 py-1 text-[11px] font-bold uppercase text-[#FF3B30]">
+      Available
+    </span>
+  );
+}
+
+function FeatureTag({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full bg-[#F6F7F9] px-2.5 py-1 text-xs font-semibold text-[#5F6368]">
+      {children}
+    </span>
+  );
+}
+
+function ToolImage({
   src,
   alt,
+  icon: Icon,
+  fit = "cover",
   className,
 }: {
   src: string;
   alt: string;
+  icon: LucideIcon;
+  fit?: "cover" | "contain";
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
+
   return (
-    <>
-      <img
-        src={src}
-        alt=""
-        aria-hidden
-        className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-xl"
-        loading="lazy"
-      />
-      <img
-        src={src}
-        alt={alt}
-        className={cn("relative z-10 size-full object-contain p-2", className)}
-        loading="lazy"
-      />
-    </>
+    <div
+      className={cn("relative shrink-0 overflow-hidden bg-[#F1F3F5]", className)}
+      role={failed ? "img" : undefined}
+      aria-label={failed ? alt : undefined}
+    >
+      {failed ? (
+        <div className="absolute inset-0 grid place-items-center text-[#5F6368]">
+          <Icon className="size-8" aria-hidden />
+        </div>
+      ) : (
+        <>
+          {fit === "contain" ? (
+            <img
+              src={src}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 size-full scale-110 object-cover opacity-20 blur-xl"
+              loading="lazy"
+            />
+          ) : null}
+          <img
+            src={src}
+            alt={alt}
+            className={cn(
+              "relative z-10 size-full transition-transform duration-200 group-hover:scale-[1.02]",
+              fit === "cover" ? "object-cover" : "object-contain",
+            )}
+            loading="lazy"
+            onError={() => setFailed(true)}
+          />
+        </>
+      )}
+    </div>
   );
 }

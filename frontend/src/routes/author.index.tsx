@@ -1,28 +1,36 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
-  BarChart3,
   Blocks,
   CircleDot,
   ClipboardList,
   Crosshair,
-  Gamepad2,
+  FileUp,
+  Loader2,
   Plus,
-  QrCode,
   Radio,
   ScanLine,
-  Sparkles,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import gameConnectDotsPreview from "@/assets/tool-connect-dots.webp";
 import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
+import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
+import gameTargetHuntPreview from "@/assets/tool-target-hunt.webp";
+import resourceDropPreview from "@/assets/tool-resource-drop.webp";
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
+import { InlineErrorBanner } from "@/components/ui/async-state";
+import { useAuth } from "@/lib/auth-store";
+import { saveAuthorRoom } from "@/lib/game/client-session";
+import { GAME_MODE_META, type GameMode } from "@/lib/game/config";
+import { claimAuthorSessionFn } from "@/lib/game/room.functions";
 import type { CoreLiveGameMode } from "@/lib/game/session-flow";
+import { fetchAuthorSessions, type AuthorSessionSummary } from "@/lib/supabase/author-sessions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/")({
@@ -32,114 +40,183 @@ export const Route = createFileRoute("/author/")({
       {
         name: "description",
         content:
-          "Create activities, live sessions, resource drops, and reports from one GamiBar workspace.",
+          "Create interactive sessions, continue active rooms, and reopen recent GamiBar work.",
       },
     ],
   }),
   component: AuthorHome,
 });
 
-const startTools = [
+type DashboardTool = {
+  id: string;
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt: string;
+  icon: LucideIcon;
+  mode?: CoreLiveGameMode;
+  to?: "/author/create";
+};
+
+const quickStartTools: DashboardTool[] = [
   {
-    title: "Normal Quiz",
-    copy: "Fast MCQ checks, revision rounds, and leaderboard-based recaps.",
+    id: "quiz",
+    title: "Quiz Battle",
+    description: "Live MCQs and rankings.",
+    image: gameQuizPreview,
+    imageAlt: "Quiz Battle game artwork with quiz questions and competition UI",
     icon: ClipboardList,
-    status: "Ready",
-    action: "Create quiz",
-    mode: "quiz" as const,
-    tint: "bg-[var(--game-quiz-soft)] text-[var(--game-quiz)]",
+    mode: "quiz",
   },
   {
-    title: "Interactive Games",
-    copy: "Use Jigsaw Mission, Connect Dots, or Target Hunt when the session needs movement and focus.",
-    icon: Gamepad2,
-    status: "Ready",
-    action: "Choose game",
-    mode: "jigsaw" as const,
-    tint: "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw)]",
-  },
-  {
-    title: "Resource Drop",
-    copy: "Upload handouts once, choose 7, 14, or 28 days, and share one QR.",
-    icon: QrCode,
-    status: "New",
-    action: "Attach files",
-    to: "/author/create",
-    tint: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
-  },
-  {
+    id: "polls",
     title: "Polls",
-    copy: "Run ratings, live votes, surveys, and exit tickets without Google Forms.",
+    description: "Votes, ratings, and feedback.",
+    image: gamePollsPreview,
+    imageAlt: "Polls game artwork with response cards and result bars",
     icon: Radio,
-    status: "Ready",
-    action: "Create poll",
-    mode: "polls" as const,
-    tint: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-200",
-  },
-] as const;
-
-const gameModes = [
-  {
-    mode: "quiz" as const,
-    title: "Quiz Challenge",
-    copy: "Multiple-choice rounds with accuracy-first ranking and live room control.",
-    icon: Zap,
-    preview: gameQuizPreview,
-    ring: "hover:border-[var(--game-quiz)]",
-    iconTint: "bg-[var(--game-quiz-soft)] text-[var(--game-quiz)]",
+    mode: "polls",
   },
   {
-    mode: "jigsaw" as const,
+    id: "jigsaw",
     title: "Jigsaw Mission",
-    copy: "Unlock puzzle pieces through questions, then rebuild the image together.",
+    description: "Unlock pieces and rebuild images.",
+    image: gameJigsawPreview,
+    imageAlt: "Jigsaw Mission artwork with puzzle pieces and classroom image reconstruction",
     icon: Blocks,
-    preview: gameJigsawPreview,
-    ring: "hover:border-[var(--game-jigsaw)]",
-    iconTint: "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw)]",
+    mode: "jigsaw",
   },
   {
-    mode: "connect_dots" as const,
+    id: "connect_dots",
     title: "Connect Dots",
-    copy: "Match concepts and draw correct paths before the timer runs out.",
+    description: "Match concepts with paths.",
+    image: gameConnectDotsPreview,
+    imageAlt: "Connect Dots artwork with connected nodes and matching paths",
     icon: CircleDot,
-    preview: gameConnectDotsPreview,
-    ring: "hover:border-[var(--game-connect-dots)]",
-    iconTint: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots)]",
+    mode: "connect_dots",
   },
   {
-    mode: "visual_point" as const,
+    id: "visual_point",
     title: "Target Hunt",
-    copy: "Upload a diagram or image, place target dots, and let participants identify the right target.",
+    description: "Find the right point on an image.",
+    image: gameTargetHuntPreview,
+    imageAlt: "Target Hunt image challenge with target points",
     icon: Crosshair,
-    preview: gameJigsawPreview,
-    ring: "hover:border-[var(--game-visual-point)]",
-    iconTint: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point)]",
+    mode: "visual_point",
   },
-] as const;
-
-const opsLinks = [
   {
-    to: "/author/sessions",
-    title: "My sessions",
-    copy: "Your created-room history: active rooms, duplicates, summaries, and results.",
+    id: "resource_drop",
+    title: "Resource Drop",
+    description: "Share files through a QR code.",
+    image: resourceDropPreview,
+    imageAlt: "Resource Drop artwork with documents and a QR sharing flow",
+    icon: FileUp,
+    to: "/author/create",
+  },
+];
+
+const modeVisuals: Record<
+  GameMode,
+  {
+    title: string;
+    image?: string;
+    imageAlt: string;
+    icon: LucideIcon;
+  }
+> = {
+  quiz: {
+    title: "Quiz Battle",
+    image: gameQuizPreview,
+    imageAlt: "Quiz Battle thumbnail",
+    icon: ClipboardList,
+  },
+  quiz_jigsaw: {
+    title: "Puzzle Quest",
+    image: gameJigsawPreview,
+    imageAlt: "Puzzle Quest thumbnail",
+    icon: Blocks,
+  },
+  polls: {
+    title: "Polls",
+    image: gamePollsPreview,
+    imageAlt: "Polls thumbnail",
     icon: Radio,
   },
-  {
-    to: "/author/reports",
-    title: "Reports",
-    copy: "Participation and performance insights for post-session follow-up.",
-    icon: BarChart3,
+  jigsaw: {
+    title: "Jigsaw Mission",
+    image: gameJigsawPreview,
+    imageAlt: "Jigsaw Mission thumbnail",
+    icon: Blocks,
   },
-  {
-    to: "/join",
-    title: "Join room",
-    copy: "Open the join flow for testing QR and room-code entry.",
-    icon: ScanLine,
+  connect_dots: {
+    title: "Connect Dots",
+    image: gameConnectDotsPreview,
+    imageAlt: "Connect Dots thumbnail",
+    icon: CircleDot,
   },
-] as const;
+  visual_point: {
+    title: "Target Hunt",
+    image: gameTargetHuntPreview,
+    imageAlt: "Target Hunt thumbnail",
+    icon: Crosshair,
+  },
+};
+
+const activeStatuses = new Set(["DRAFT", "LOBBY", "READY", "COUNTDOWN", "LIVE"]);
+
+const statusLabel: Record<string, string> = {
+  DRAFT: "Draft",
+  LOBBY: "Lobby",
+  READY: "Ready",
+  COUNTDOWN: "Starting",
+  LIVE: "Live",
+  FINISHED: "Finished",
+  CANCELLED: "Cancelled",
+};
 
 function AuthorHome() {
   const navigate = useNavigate();
+  const { user, isAuthor, loading: authLoading } = useAuth();
+
+  const sessionsQuery = useQuery({
+    queryKey: ["author-home-sessions", user?.id],
+    enabled: isAuthor && Boolean(user?.id),
+    queryFn: () => fetchAuthorSessions(user!.id, 8),
+    retry: false,
+  });
+
+  const openLiveMutation = useMutation({
+    mutationFn: async (session: AuthorSessionSummary) => {
+      const res = await claimAuthorSessionFn({
+        data: { roomId: session.id, authorId: user!.id },
+      });
+      if (!res.ok) throw new Error(res.error);
+      return { session, res };
+    },
+    onSuccess: ({ session, res }) => {
+      saveAuthorRoom({
+        roomId: session.id,
+        code: res.room.code,
+        authorToken: res.authorToken,
+      });
+      navigate({ to: "/author/room/$roomId", params: { roomId: session.id } });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
+  const activeRooms = useMemo(
+    () => sessions.filter((session) => isActiveSession(session.status)).slice(0, 3),
+    [sessions],
+  );
+  const recentSessions = sessions.slice(0, 5);
+  const isLoadingSessions = authLoading || sessionsQuery.isLoading;
+  const busyRoomId = openLiveMutation.isPending ? openLiveMutation.variables?.id : null;
+  const firstName = firstDisplayName(user?.name);
+  const activity = useMemo(
+    () => getActivitySummary(sessions, activeRooms.length),
+    [activeRooms.length, sessions],
+  );
 
   const openCreateWithMode = (mode: CoreLiveGameMode) => {
     navigate({ to: "/author/create", search: { mode } });
@@ -147,264 +224,487 @@ function AuthorHome() {
 
   return (
     <AuthorShell>
-      <div className="mx-auto grid w-full max-w-6xl gap-7 py-3 sm:py-5">
-        <section className="author-card overflow-hidden p-0">
-          <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--gamibar-brand-soft)] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-brand)]">
-                <Sparkles className="size-3.5" />
-                No more boring classrooms, no more boring sessions
-              </span>
-              <h1 className="mt-4 max-w-3xl font-display text-2xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-3xl">
-                Host workspace
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-                Start activities, share documents by QR, manage live rooms, and keep every created
-                session in one place.
-              </p>
-            </div>
-            <div className="grid gap-2 min-[420px]:grid-cols-2 lg:w-[22rem]">
-              <Button
-                type="button"
-                onClick={() => navigate({ to: "/author/create" })}
-                className="h-11 rounded-xl bg-[#111111] font-semibold text-white hover:bg-black"
-              >
-                <Plus className="size-4" />
-                Create room
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate({ to: "/join" })}
-                className="h-11 rounded-xl border-[var(--gamibar-border)] bg-white font-semibold text-[#111111] hover:bg-[var(--gamibar-page)]"
-              >
-                <ScanLine className="size-4" />
-                Join test
-              </Button>
-            </div>
+      <div className="mx-auto w-full max-w-[76rem] py-3 text-[#111111] sm:py-5">
+        <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#5F6368]">Command center</p>
+            <h1 className="mt-2 font-display text-[2rem] font-bold tracking-normal text-[#111111] sm:text-[2.4rem]">
+              Good afternoon, {firstName}
+            </h1>
+            <p className="mt-2 max-w-2xl text-[15px] leading-6 text-[#5F6368]">
+              Everything you need to run your next interactive session.
+            </p>
+          </div>
+
+          <div className="grid gap-2 min-[420px]:grid-cols-2 sm:flex sm:items-center">
+            <Button
+              type="button"
+              onClick={() => navigate({ to: "/author/create" })}
+              className="h-12 rounded-xl bg-[#111111] px-5 text-sm font-semibold text-white shadow-none transition-colors hover:bg-[#2A2A2A]"
+            >
+              <Plus className="size-4" />
+              Create room
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate({ to: "/join" })}
+              className="h-12 rounded-xl border-[#D9DDE3] bg-white px-5 text-sm font-semibold text-[#111111] shadow-none transition-colors hover:bg-[#F3F4F6]"
+            >
+              <ScanLine className="size-4" />
+              Join room
+            </Button>
           </div>
         </section>
 
-        <section>
-          <SectionTitle
-            eyebrow="Start from a tool"
-            title="What do you want to run?"
-            copy="GamiBar is structured as a toolkit. Games are one category, not the whole product."
-          />
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {startTools.map((tool, index) => (
-              <ToolCard
-                key={tool.title}
-                tool={tool}
-                index={index}
-                onMode={(mode) => openCreateWithMode(mode)}
-              />
-            ))}
-          </div>
-        </section>
+        <div className="mt-8 space-y-10">
+          <section>
+            <SectionHeader
+              eyebrow={activeRooms.length > 0 ? "Active rooms" : undefined}
+              title="Active rooms"
+              description="Continue a session that's currently running."
+              live={activeRooms.length > 0}
+            />
 
-        <section>
-          <SectionTitle
-            eyebrow="Current activities"
-            title="Live game modes"
-            copy="These are the first playable activities. The structure now supports more tools and categories around them."
-          />
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {gameModes.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <motion.button
-                  key={item.mode}
-                  type="button"
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.08 + i * 0.05 }}
-                  onClick={() => openCreateWithMode(item.mode)}
-                  className={cn(
-                    "group overflow-hidden rounded-[20px] border border-[var(--gamibar-border)] bg-white text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]",
-                    item.ring,
-                  )}
-                >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-[var(--gamibar-page)]">
-                    <img
-                      src={item.preview}
-                      alt=""
-                      className="size-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
+            <div className="mt-4">
+              {isLoadingSessions ? (
+                <DashboardLoadingCard label="Loading active rooms..." />
+              ) : sessionsQuery.isError ? (
+                <InlineErrorBanner
+                  message={
+                    sessionsQuery.error instanceof Error
+                      ? sessionsQuery.error.message
+                      : "Could not load your sessions."
+                  }
+                  onRetry={() => void sessionsQuery.refetch()}
+                  retrying={sessionsQuery.isFetching}
+                />
+              ) : activeRooms.length > 0 ? (
+                <div className="grid gap-3">
+                  {activeRooms.map((session) => (
+                    <ActiveRoomCard
+                      key={session.id}
+                      session={session}
+                      busy={busyRoomId === session.id}
+                      onContinue={() => openLiveMutation.mutate(session)}
                     />
-                    <span
-                      className={cn(
-                        "absolute left-3 top-3 grid size-9 place-items-center rounded-xl shadow-sm",
-                        item.iconTint,
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                  </div>
-                  <div className="p-4">
-                    <p className="font-display text-base font-bold text-[#111111]">{item.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-[#737373]">{item.copy}</p>
-                    <span className="mt-3 inline-flex items-center text-xs font-semibold text-[#111111]">
-                      Set up activity
-                      <ArrowRight className="ml-1 size-3.5 transition-transform group-hover:translate-x-0.5" />
-                    </span>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </section>
+                  ))}
+                </div>
+              ) : (
+                <EmptyActiveRooms onCreate={() => navigate({ to: "/author/create" })} />
+              )}
+            </div>
+          </section>
 
-        <section>
-          <SectionTitle
-            eyebrow="Session operations"
-            title="Manage what happens around the activity"
-            copy="Live rooms, reports, and participant entry are separated from creation so repeat work is easier to scan."
-          />
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {opsLinks.map((item) => (
-              <OperationLink key={item.title} item={item} />
-            ))}
-          </div>
-        </section>
+          <section>
+            <SectionHeader
+              title="Start something"
+              description="Choose a tool and launch your next session."
+            />
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {quickStartTools.map((tool) => (
+                <QuickStartCard key={tool.id} tool={tool} onMode={openCreateWithMode} />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <SectionHeader
+                title="Recent sessions"
+                description="Quickly access your recently created sessions."
+              />
+              <Link
+                to="/author/sessions"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-[#111111] transition-colors hover:text-[#FF3B30]"
+              >
+                View all
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
+
+            <div className="mt-4">
+              {isLoadingSessions ? (
+                <DashboardLoadingCard label="Loading recent sessions..." />
+              ) : sessionsQuery.isError ? (
+                <InlineErrorBanner
+                  message="Could not load recent sessions."
+                  onRetry={() => void sessionsQuery.refetch()}
+                  retrying={sessionsQuery.isFetching}
+                />
+              ) : recentSessions.length > 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)]">
+                  {recentSessions.map((session, index) => (
+                    <RecentSessionRow
+                      key={session.id}
+                      session={session}
+                      last={index === recentSessions.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[#D9DDE3] bg-white px-5 py-8 text-sm text-[#5F6368]">
+                  No sessions created yet.
+                </div>
+              )}
+            </div>
+          </section>
+
+          {!isLoadingSessions && !sessionsQuery.isError && sessions.length > 0 ? (
+            <section>
+              <SectionHeader
+                title="Your activity"
+                description="Simple totals from your workspace."
+              />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {activity.map((item) => (
+                  <StatCard key={item.label} label={item.label} value={item.value} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
       </div>
     </AuthorShell>
   );
 }
 
-function SectionTitle({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  live = false,
+}: {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  live?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-brand)]">
+    <div>
+      {eyebrow || live ? (
+        <p className="mb-2 inline-flex items-center gap-2 text-[11px] font-bold uppercase text-[#FF3B30]">
+          {live ? <span className="size-2 rounded-full bg-[#FF3B30]" aria-hidden /> : null}
           {eyebrow}
         </p>
-        <h2 className="mt-1 font-display text-xl font-bold text-[var(--foreground)] sm:text-2xl">
-          {title}
-        </h2>
-      </div>
-      <p className="max-w-xl text-sm leading-relaxed text-[var(--muted-foreground)]">{copy}</p>
+      ) : null}
+      <h2 className="font-display text-[1.45rem] font-bold tracking-normal text-[#111111] sm:text-[1.6rem]">
+        {title}
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-[#5F6368]">{description}</p>
     </div>
   );
 }
 
-function ToolCard({
-  tool,
-  index,
-  onMode,
+function ActiveRoomCard({
+  session,
+  busy,
+  onContinue,
 }: {
-  tool: (typeof startTools)[number];
-  index: number;
-  onMode: (mode: CoreLiveGameMode) => void;
+  session: AuthorSessionSummary;
+  busy: boolean;
+  onContinue: () => void;
 }) {
-  const Icon = tool.icon;
-  const disabled = "disabled" in tool && tool.disabled;
-
-  const content = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <span className={cn("grid size-10 place-items-center rounded-xl", tool.tint)}>
-          <Icon className="size-5" />
-        </span>
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
-            disabled
-              ? "bg-[var(--gamibar-page)] text-[var(--gamibar-text-tertiary)]"
-              : "bg-[var(--gamibar-brand-soft)] text-[var(--gamibar-brand)]",
-          )}
-        >
-          {tool.status}
-        </span>
-      </div>
-      <div className="mt-5">
-        <h3 className="font-display text-base font-bold text-[var(--foreground)]">{tool.title}</h3>
-        <p className="mt-2 min-h-[3.25rem] text-sm leading-relaxed text-[var(--muted-foreground)]">
-          {tool.copy}
-        </p>
-      </div>
-      <span
-        className={cn(
-          "mt-auto pt-4 inline-flex items-center text-xs font-bold",
-          disabled ? "text-[var(--gamibar-text-tertiary)]" : "text-[var(--foreground)]",
-        )}
-      >
-        {tool.action}
-        {!disabled ? <ArrowRight className="ml-1 size-3.5" /> : null}
-      </span>
-    </>
-  );
-
-  if (disabled) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.04 + index * 0.04 }}
-        className="flex flex-col h-full rounded-[20px] border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 opacity-85"
-      >
-        {content}
-      </motion.div>
-    );
-  }
-
-  if ("to" in tool) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.04 + index * 0.04 }}
-        className="h-full"
-      >
-        <Link
-          to={tool.to}
-          className="flex flex-col h-full rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 text-left shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
-        >
-          {content}
-        </Link>
-      </motion.div>
-    );
-  }
+  const visual = modeVisuals[session.mode];
+  const status = statusLabel[session.status] ?? session.status;
+  const isLive = session.status === "LIVE" || session.status === "COUNTDOWN";
 
   return (
-    <motion.button
-      type="button"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.04 + index * 0.04 }}
-      onClick={() => ("mode" in tool ? onMode(tool.mode) : undefined)}
-      className="flex flex-col w-full h-full rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 text-left shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
-    >
-      {content}
-    </motion.button>
+    <article className="grid gap-4 rounded-2xl border border-[#E7E9ED] bg-white p-4 shadow-[0_1px_3px_rgba(16,24,40,0.04)] sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center">
+      <ToolImage
+        image={visual.image}
+        alt={visual.imageAlt}
+        icon={visual.icon}
+        title={visual.title}
+        className="w-full sm:w-28"
+      />
+
+      <div className="min-w-0">
+        <h3 className="truncate font-display text-[1.05rem] font-semibold tracking-normal text-[#111111]">
+          {session.name}
+        </h3>
+        <p className="mt-1 text-sm font-medium text-[#5F6368]">{displayModeTitle(session.mode)}</p>
+        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#8A8F98]">
+          <span>{formatParticipantCount(session.playerCount)}</span>
+          <span>{formatQuestionCount(session)}</span>
+          <span className="font-mono">{session.code}</span>
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:items-end">
+        <span
+          className={cn(
+            "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase",
+            isLive ? "bg-[#FFF1F0] text-[#FF3B30]" : "bg-[#EFF6FF] text-[#2563EB]",
+          )}
+        >
+          <span
+            className={cn("size-1.5 rounded-full", isLive ? "bg-[#FF3B30]" : "bg-[#2563EB]")}
+            aria-hidden
+          />
+          {status}
+        </span>
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={onContinue}
+          className="h-11 rounded-xl bg-[#111111] px-4 text-sm font-semibold text-white shadow-none transition-colors hover:bg-[#2A2A2A]"
+        >
+          {busy ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Opening...
+            </>
+          ) : (
+            <>
+              Continue room
+              <ArrowRight className="size-4" />
+            </>
+          )}
+        </Button>
+      </div>
+    </article>
   );
 }
 
-function OperationLink({
-  item,
-}: {
-  item: { to: string; title: string; copy: string; icon: LucideIcon };
-}) {
-  const Icon = item.icon;
+function EmptyActiveRooms({ onCreate }: { onCreate: () => void }) {
   return (
-    <Link
-      to={item.to}
-      className="group rounded-[20px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5 hover:border-[var(--gamibar-brand)]/35 hover:shadow-[var(--shadow-lift)]"
-    >
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--gamibar-page)] text-[var(--foreground)]">
-          <Icon className="size-5" />
+    <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E9ED] bg-white p-5 shadow-[0_1px_3px_rgba(16,24,40,0.04)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#F1F3F5] text-[#5F6368]">
+          <Radio className="size-5" />
         </span>
         <div className="min-w-0">
-          <h3 className="font-display text-base font-bold text-[var(--foreground)]">
-            {item.title}
+          <h3 className="font-display text-base font-semibold tracking-normal text-[#111111]">
+            No active rooms
           </h3>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--muted-foreground)]">{item.copy}</p>
-          <span className="mt-3 inline-flex items-center text-xs font-bold text-[var(--foreground)]">
-            Open
-            <ArrowRight className="ml-1 size-3.5 transition-transform group-hover:translate-x-0.5" />
-          </span>
+          <p className="mt-1 text-sm text-[#5F6368]">
+            You don't have a live session running right now.
+          </p>
         </div>
       </div>
+      <Button
+        type="button"
+        onClick={onCreate}
+        className="h-11 rounded-xl bg-[#111111] px-4 text-sm font-semibold text-white shadow-none hover:bg-[#2A2A2A]"
+      >
+        <Plus className="size-4" />
+        Create room
+      </Button>
+    </div>
+  );
+}
+
+function QuickStartCard({
+  tool,
+  onMode,
+}: {
+  tool: DashboardTool;
+  onMode: (mode: CoreLiveGameMode) => void;
+}) {
+  const content = (
+    <>
+      <ToolImage
+        image={tool.image}
+        alt={tool.imageAlt}
+        icon={tool.icon}
+        title={tool.title}
+        className="h-[84px] w-full"
+        showFallbackLabel
+      />
+      <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-display text-base font-semibold tracking-normal text-[#111111]">
+            {tool.title}
+          </h3>
+          <p className="mt-1 text-sm leading-5 text-[#5F6368]">{tool.description}</p>
+        </div>
+        <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111] transition-transform duration-200 ease-out group-hover:translate-x-1" />
+      </div>
+    </>
+  );
+
+  const className =
+    "group rounded-2xl border border-[#E7E9ED] bg-white p-4 text-left shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#D9DDE3] hover:shadow-[0_6px_18px_rgba(16,24,40,0.07)]";
+
+  if (tool.mode) {
+    return (
+      <button type="button" onClick={() => onMode(tool.mode!)} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={tool.to ?? "/author/create"} className={className}>
+      {content}
     </Link>
   );
+}
+
+function RecentSessionRow({ session, last }: { session: AuthorSessionSummary; last: boolean }) {
+  const visual = modeVisuals[session.mode];
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-[76px] items-center gap-3 px-3 py-3 sm:px-4",
+        !last && "border-b border-[#EEF0F3]",
+      )}
+    >
+      <ToolImage
+        image={visual.image}
+        alt={visual.imageAlt}
+        icon={visual.icon}
+        title={visual.title}
+        className="h-10 w-14"
+      />
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-sm font-semibold text-[#111111]">{session.name}</h3>
+        <p className="mt-0.5 truncate text-xs text-[#5F6368]">
+          {displayModeTitle(session.mode)} | {formatParticipantCount(session.playerCount)} |{" "}
+          {formatRecentDate(session.createdAt)}
+        </p>
+      </div>
+      <Link
+        to="/author/sessions/$roomId"
+        params={{ roomId: session.id }}
+        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold text-[#111111] transition-colors hover:text-[#FF3B30]"
+      >
+        View
+        <ArrowRight className="size-4" />
+      </Link>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[#E7E9ED] bg-white p-4 shadow-[0_1px_3px_rgba(16,24,40,0.04)]">
+      <p className="text-sm font-medium text-[#5F6368]">{label}</p>
+      <p className="mt-3 font-display text-[1.9rem] font-bold leading-none tracking-normal text-[#111111]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function DashboardLoadingCard({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[92px] items-center justify-center gap-2 rounded-2xl border border-[#E7E9ED] bg-white p-5 text-sm font-medium text-[#5F6368]">
+      <Loader2 className="size-4 animate-spin text-[#FF3B30]" />
+      {label}
+    </div>
+  );
+}
+
+function ToolImage({
+  image,
+  alt,
+  icon: Icon,
+  title,
+  className,
+  showFallbackLabel = false,
+}: {
+  image?: string;
+  alt: string;
+  icon: LucideIcon;
+  title: string;
+  className?: string;
+  showFallbackLabel?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showFallback = !image || failed;
+
+  return (
+    <div
+      className={cn(
+        "relative aspect-video shrink-0 overflow-hidden rounded-xl border border-[#EEF0F3] bg-[#F1F3F5]",
+        className,
+      )}
+      role={showFallback ? "img" : undefined}
+      aria-label={showFallback ? title : undefined}
+    >
+      {showFallback ? (
+        <div className="absolute inset-0 grid place-items-center text-[#5F6368]">
+          <div className="flex flex-col items-center gap-1.5 px-2 text-center">
+            <Icon className="size-5" aria-hidden />
+            {showFallbackLabel ? (
+              <span className="max-w-full truncate text-xs font-semibold">{title}</span>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <img
+          src={image}
+          alt={alt}
+          loading="lazy"
+          className="size-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.02]"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+function firstDisplayName(name: string | undefined): string {
+  const cleaned = name?.trim();
+  if (!cleaned) return "Host";
+  return cleaned.split(/\s+/)[0] ?? "Host";
+}
+
+function isActiveSession(status: string) {
+  return activeStatuses.has(status);
+}
+
+function displayModeTitle(mode: GameMode): string {
+  return modeVisuals[mode]?.title ?? GAME_MODE_META[mode]?.title ?? mode;
+}
+
+function formatParticipantCount(count: number): string {
+  return `${count} ${count === 1 ? "participant" : "participants"}`;
+}
+
+function formatQuestionCount(session: AuthorSessionSummary): string {
+  if (session.mode === "connect_dots") {
+    return `${session.questionCount} ${session.questionCount === 1 ? "pair" : "pairs"}`;
+  }
+  if (session.mode === "polls") {
+    return `${session.questionCount} ${session.questionCount === 1 ? "prompt" : "prompts"}`;
+  }
+  return `${session.questionCount} ${session.questionCount === 1 ? "question" : "questions"}`;
+}
+
+function formatRecentDate(value: string): string {
+  const date = new Date(Number.isFinite(Number(value)) ? Number(value) : value);
+  if (Number.isNaN(date.getTime())) return "Recently";
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const dayDiff = Math.round((startOfToday - startOfDate) / 86_400_000);
+
+  if (dayDiff === 0) {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
+  if (dayDiff === 1) return "Yesterday";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function getActivitySummary(sessions: AuthorSessionSummary[], activeCount: number) {
+  const participants = sessions.reduce((total, session) => total + session.playerCount, 0);
+  const toolTypes = new Set(sessions.map((session) => session.mode)).size;
+
+  return [
+    { label: "Sessions hosted", value: String(sessions.length) },
+    { label: "Participants", value: new Intl.NumberFormat().format(participants) },
+    { label: "Active rooms", value: String(activeCount) },
+    { label: "Tool types used", value: String(toolTypes) },
+  ];
 }

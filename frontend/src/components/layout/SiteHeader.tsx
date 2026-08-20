@@ -1,13 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, Moon, Plus, Sun, X } from "lucide-react";
+import { Menu, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Logo } from "@/components/layout/Logo";
 import { NavJoinGame } from "@/components/layout/NavJoinGame";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
-import { useTheme } from "@/lib/theme-store";
 
 const publicNav = [
   { to: "/#games", label: "Tools", hash: true },
@@ -19,7 +16,6 @@ const publicNav = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { isDark, setTheme } = useTheme();
 
   return (
     <>
@@ -75,7 +71,6 @@ export function SiteHeader() {
               <Link to="/author">Workspace</Link>
             </Button>
             <NavJoinGame />
-            <ThemeToggle />
           </div>
 
           <div className="col-start-2 row-start-1 flex shrink-0 justify-self-end md:hidden">
@@ -171,31 +166,6 @@ export function SiteHeader() {
                 >
                   <span className="min-w-0 truncate">Settings</span>
                 </Link>
-
-                <div className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-[var(--gamibar-border)] bg-[var(--surface)] px-3 py-2.5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--gamibar-surface)]">
-                      {isDark ? (
-                        <Moon className="size-4 text-[var(--gamibar-brand)]" />
-                      ) : (
-                        <Sun className="size-4 text-amber-500" />
-                      )}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-                        Dark mode
-                      </p>
-                      <p className="text-xs text-[var(--gamibar-text-tertiary)]">
-                        {isDark ? "On" : "Off"}
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={isDark}
-                    onCheckedChange={(enabled) => setTheme(enabled ? "dark" : "light")}
-                    aria-label="Toggle dark mode"
-                  />
-                </div>
               </div>
             </div>
           </div>

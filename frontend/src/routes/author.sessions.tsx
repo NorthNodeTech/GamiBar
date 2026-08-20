@@ -101,6 +101,7 @@ function MySessionsPage() {
     queryKey: ["author-sessions", user?.id],
     enabled: isAuthor && Boolean(user?.id),
     queryFn: () => fetchAuthorSessions(user!.id),
+    retry: false,
   });
 
   const deleteMutation = useMutation({

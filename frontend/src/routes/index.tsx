@@ -20,8 +20,6 @@ import {
   HOMEPAGE_CTA,
   HOMEPAGE_FAQ,
   HOMEPAGE_FAQ_SECTION,
-  HOMEPAGE_INFRASTRUCTURE_FEATURES,
-  HOMEPAGE_INFRASTRUCTURE_SECTION,
   HOMEPAGE_SEO,
   HOMEPAGE_TESTIMONIALS,
   HOMEPAGE_TESTIMONIALS_SECTION,
@@ -135,21 +133,6 @@ function Landing() {
 
       <JourneyTimeline />
 
-      <LandingSection id="why">
-        <SectionHeading
-          title={HOMEPAGE_INFRASTRUCTURE_SECTION.title}
-          description={HOMEPAGE_INFRASTRUCTURE_SECTION.description}
-          className="mb-10 text-center md:mb-14"
-        />
-
-        <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:items-stretch">
-          {HOMEPAGE_INFRASTRUCTURE_FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={i * 0.08} className="h-full">
-              <FeatureImageCard feature={f} />
-            </Reveal>
-          ))}
-        </div>
-      </LandingSection>
 
       <LandingSection id="testimonials">
         <SectionHeading
@@ -176,10 +159,12 @@ function Landing() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/95 via-[#0a0a0f]/72 to-[#0a0a0f]/45" />
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.12),transparent_55%)]" />
 
-                  <p className="relative z-10 text-sm leading-relaxed text-white/90">"{t.quote}"</p>
+                  <p className="relative z-10 text-sm font-semibold leading-relaxed text-white/90">
+                    {t.quote}
+                  </p>
                   <div className="relative z-10 mt-5 flex items-center justify-between border-t border-white/15 pt-4 sm:mt-6">
                     <div>
-                      <p className="text-sm font-bold text-white">{t.name}</p>
+                      <p className="font-display text-lg font-bold text-white">{t.name}</p>
                       <p className="text-xs text-white/65">{t.role}</p>
                     </div>
                     <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" aria-hidden />
@@ -263,48 +248,4 @@ function Landing() {
   );
 }
 
-function FeatureImageCard({
-  feature,
-}: {
-  feature: (typeof HOMEPAGE_INFRASTRUCTURE_FEATURES)[number];
-}) {
-  const Icon = feature.icon;
 
-  return (
-    <Card3DTilt
-      variant="dark"
-      tilt={5}
-      className="group min-h-[20rem] rounded-lg border-white/10 bg-[#0b0b0f] p-0"
-    >
-      <img
-        src={feature.image}
-        alt=""
-        aria-hidden
-        width={1536}
-        height={1024}
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 size-full scale-110 object-cover opacity-35 blur-xl"
-      />
-      <img
-        src={feature.image}
-        alt={feature.imageAlt}
-        width={1536}
-        height={1024}
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 size-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.02] sm:p-5"
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,10,0.04)_0%,rgba(8,8,10,0.34)_42%,rgba(8,8,10,0.95)_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(239,68,68,0.24),transparent_42%)]" />
-
-      <div className="relative z-10 flex h-full min-h-[20rem] flex-col justify-end p-5 text-white sm:p-6">
-        <span className="grid size-10 place-items-center rounded-lg border border-white/15 bg-white/12 text-white shadow-sm backdrop-blur-md">
-          <Icon className="size-5" />
-        </span>
-        <h3 className="mt-4 font-display text-2xl font-black leading-tight">{feature.title}</h3>
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-white/76">{feature.copy}</p>
-      </div>
-    </Card3DTilt>
-  );
-}

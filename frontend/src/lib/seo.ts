@@ -47,10 +47,6 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
     title: "Create an Author Account | GamiBar",
     description: "Create a GamiBar author account to build and host live classroom games.",
   },
-  "/author/reports": {
-    title: "Session Reports | GamiBar",
-    description: "Review participation and performance reports from GamiBar sessions.",
-  },
   "/author/sessions": {
     title: "My sessions | GamiBar",
     description:

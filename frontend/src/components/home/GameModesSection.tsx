@@ -1,111 +1,109 @@
+import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { LandingSection } from "@/components/home/ViewportSection";
-import { SectionCarousel } from "@/components/home/SectionCarousel";
-import { SectionHeading } from "@/components/ui/text-motion";
 import {
-  HOMEPAGE_GAME_MODES,
   HOMEPAGE_GAME_MODES_SECTION,
-  type HomepageGameModeCard,
+  HOMEPAGE_TOOL_WALL,
+  type HomepageToolCard,
 } from "@/content/homepage";
 import { cn } from "@/lib/utils";
 
-type GameCard = HomepageGameModeCard;
-const games: GameCard[] = HOMEPAGE_GAME_MODES;
+type GameCard = HomepageToolCard;
+const games: GameCard[] = HOMEPAGE_TOOL_WALL;
 
 export function GameModesSection() {
-  return (
-    <LandingSection id="games" width="5xl" className="!py-12 md:!py-16">
-      <SectionHeading
-        title={HOMEPAGE_GAME_MODES_SECTION.title}
-        description={HOMEPAGE_GAME_MODES_SECTION.description}
-        align="center"
-        className="mb-8 sm:mb-10 md:text-left md:[&_h2]:mx-0 md:[&_p]:mx-0"
-        titleClassName="font-display text-[clamp(1.5rem,4.5vw,1.875rem)] md:mx-0"
-      />
+  const assessments = useMemo(() => games.filter(g => ["quiz", "polls", "resource_drop"].includes(g.id)), []);
+  const challenges = useMemo(() => games.filter(g => ["jigsaw", "connect_dots", "visual_point"].includes(g.id)), []);
 
-      <div className="md:hidden">
-        <SectionCarousel
-          ariaLabel="Game modes"
-          items={games.map((game) => (
-            <GameModeCard key={game.id} game={game} />
-          ))}
-        />
+  return (
+    <LandingSection id="games" width="7xl" className="bg-[#FAFAFA] !py-16 md:!py-24">
+      {/* Main Section Header */}
+      <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
+        <span className="text-xs font-bold uppercase tracking-widest text-[#FF3B30]">
+          {HOMEPAGE_GAME_MODES_SECTION.eyebrow}
+        </span>
+        <h2 className="mt-4 font-display text-[clamp(2.2rem,5vw,3.4rem)] font-black leading-tight text-[#111111]">
+          {HOMEPAGE_GAME_MODES_SECTION.title}
+        </h2>
+        <p className="mt-4 text-sm sm:text-base text-[#5F6368] leading-relaxed">
+          {HOMEPAGE_GAME_MODES_SECTION.description}
+        </p>
       </div>
 
-      <div className="hidden gap-5 sm:gap-6 md:grid md:grid-cols-2 md:items-stretch xl:grid-cols-5">
-        {games.map((game, i) => (
-          <motion.div
-            key={game.id}
-            className="h-full"
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-40px" }}
-            transition={{ duration: 0.4, delay: i * 0.08 }}
-          >
-            <GameModeCard game={game} />
-          </motion.div>
-        ))}
+      {/* Subsection 1: Quizzes, Polls & Document Sharing */}
+      <div className="mb-16 md:mb-20">
+        <div className="border-l-4 border-[#FF3B30] pl-4 mb-8">
+          <h3 className="font-display text-xl md:text-2xl font-bold text-[#111111]">
+            Live assessment & feedback
+          </h3>
+          <p className="mt-1 text-sm text-[#5F6368]">
+            Test knowledge, collect votes, and share presentation handouts with the room instantly.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+          {assessments.map((game, i) => (
+            <motion.div
+              key={game.id}
+              className="h-full"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+            >
+              <GameModeCard game={game} />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Subsection 2: Interactive Games & Puzzle Challenges */}
+      <div>
+        <div className="border-l-4 border-indigo-500 pl-4 mb-8">
+          <h3 className="font-display text-xl md:text-2xl font-bold text-[#111111]">
+            Gamified games & puzzles
+          </h3>
+          <p className="mt-1 text-sm text-[#5F6368]">
+            Increase engagement with path-matching, image target hunting, and collaborative jigsaw quests.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+          {challenges.map((game, i) => (
+            <motion.div
+              key={game.id}
+              className="h-full"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+            >
+              <GameModeCard game={game} />
+            </motion.div>
+          ))}
+        </div>
       </div>
     </LandingSection>
   );
 }
 
 function GameModeCard({ game }: { game: GameCard }) {
-  const Icon = game.icon;
-
   return (
-    <article className="group relative flex h-full min-h-[19rem] w-full flex-col justify-end overflow-hidden rounded-lg border border-white/10 bg-[#0b0b0f] shadow-[var(--shadow-soft)] transition-shadow duration-300 hover:shadow-[var(--shadow-lift)]">
-      <img
-        src={game.image}
-        alt=""
-        aria-hidden
-        width={800}
-        height={500}
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 size-full scale-110 object-cover opacity-35 blur-xl"
-      />
-      <img
-        src={game.image}
-        alt={game.imageAlt}
-        width={800}
-        height={500}
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 size-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.02] sm:p-5"
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,10,0.06)_0%,rgba(8,8,10,0.34)_42%,rgba(8,8,10,0.95)_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.2),transparent_42%)]" />
-
-      <div className="absolute left-3 top-3 flex items-center gap-2">
-        <span
-          className={cn(
-            "grid size-9 place-items-center rounded-lg shadow-sm",
-            game.tint,
-            game.accent,
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-        <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#111111] shadow-sm backdrop-blur-sm">
-          {game.tag}
-        </span>
+    <a
+      href={game.href}
+      className="group block overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#D9DDE3] hover:shadow-[0_12px_28px_rgba(16,24,40,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30] focus-visible:ring-offset-2"
+    >
+      <div className="relative aspect-video w-full overflow-hidden">
+        <img
+          src={game.image}
+          alt={game.imageAlt}
+          loading="lazy"
+          decoding="async"
+          className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+        />
       </div>
-
-      <div className="relative z-10 p-4 text-white sm:p-5">
-        <h3 className="font-display text-xl font-black leading-tight">{game.title}</h3>
-        <p className="mt-1 text-[11px] font-semibold text-white/62">{game.meta}</p>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/78">{game.copy}</p>
-        <div
-          aria-hidden
-          className="mt-4 inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-xs font-black text-[#111111]"
-        >
-          {game.cta}
-          <ArrowRight className="size-3.5" />
-        </div>
-      </div>
-    </article>
+    </a>
   );
 }

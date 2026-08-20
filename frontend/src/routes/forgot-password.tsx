@@ -3,7 +3,12 @@ import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AuthShell, authFieldClassName, authLabelClassName, authPrimaryButtonClassName } from "@/components/layout/AuthShell";
+import {
+  AuthShell,
+  authFieldClassName,
+  authLabelClassName,
+  authPrimaryButtonClassName,
+} from "@/components/layout/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +33,7 @@ function ForgotPasswordPage() {
 
   return (
     <AuthShell
+      intent="reset"
       title="Reset password"
       subtitle="Enter your email and we'll send you a secure link to reset your password."
       footer={
@@ -79,7 +85,7 @@ function ForgotPasswordPage() {
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Sending…
+              Sending...
             </>
           ) : (
             "Send reset link"

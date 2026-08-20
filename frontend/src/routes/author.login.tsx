@@ -4,11 +4,21 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { AuthShell, authFieldClassName, authLabelClassName, authPrimaryButtonClassName } from "@/components/layout/AuthShell";
+import {
+  AuthShell,
+  authFieldClassName,
+  authLabelClassName,
+  authPrimaryButtonClassName,
+} from "@/components/layout/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
+import {
+  getStoredAuth,
+  isAuthorAuthenticated,
+  sanitizeAuthorRedirect,
+  useAuth,
+} from "@/lib/auth-store";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -42,8 +52,9 @@ function AuthorLoginPage() {
 
   return (
     <AuthShell
+      intent="signin"
       title="Sign in"
-      subtitle="Sign in to create live classroom sessions and host Quiz, Jigsaw, Connect Dots, or Target Hunt games."
+      subtitle="Sign in to create and manage your interactive sessions."
       footer={
         <>
           New here?{" "}
@@ -127,10 +138,10 @@ function AuthorLoginPage() {
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Signing in…
+              Signing in...
             </>
           ) : (
-            "Sign in & create rooms"
+            "Sign in"
           )}
         </Button>
 
@@ -138,7 +149,8 @@ function AuthorLoginPage() {
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
             <p className="font-medium">Email confirmation required</p>
             <p className="mt-1 text-pretty text-amber-900/80 dark:text-amber-100/80">
-              We sent a link to your inbox when you registered. Confirm it first, then sign in again.
+              We sent a link to your inbox when you registered. Confirm it first, then sign in
+              again.
             </p>
             <Button
               type="button"
@@ -162,7 +174,7 @@ function AuthorLoginPage() {
               {resending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Sending…
+                  Sending...
                 </>
               ) : (
                 "Resend confirmation email"

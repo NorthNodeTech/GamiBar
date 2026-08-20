@@ -4,11 +4,21 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { AuthShell, authFieldClassName, authLabelClassName, authPrimaryButtonClassName } from "@/components/layout/AuthShell";
+import {
+  AuthShell,
+  authFieldClassName,
+  authLabelClassName,
+  authPrimaryButtonClassName,
+} from "@/components/layout/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getStoredAuth, isAuthorAuthenticated, sanitizeAuthorRedirect, useAuth } from "@/lib/auth-store";
+import {
+  getStoredAuth,
+  isAuthorAuthenticated,
+  sanitizeAuthorRedirect,
+  useAuth,
+} from "@/lib/auth-store";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -41,8 +51,9 @@ function AuthorRegisterPage() {
 
   return (
     <AuthShell
+      intent="register"
       title="Create account"
-      subtitle="Register once to host live classroom games. Your profile is saved securely in GamiBAR."
+      subtitle="Create your host account and start making sessions interactive."
       footer={
         <>
           Already have an account?{" "}
@@ -144,7 +155,7 @@ function AuthorRegisterPage() {
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Creating account…
+              Creating account...
             </>
           ) : (
             "Create account"

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Volume2, VolumeX, Moon, Sun } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getStoredAuth, useAuth } from "@/lib/auth-store";
 import { usePlayer } from "@/lib/player-store";
-import { useTheme } from "@/lib/theme-store";
 import { sound } from "@/lib/sound";
 
 export const Route = createFileRoute("/settings")({
@@ -33,7 +32,6 @@ export const Route = createFileRoute("/settings")({
 function Settings() {
   const { user } = useAuth();
   const { player } = usePlayer();
-  const { isDark, setTheme } = useTheme();
   const [soundEnabled, setSoundEnabled] = useState(() => !sound.getIsMuted());
   const [reducedMotion, setReducedMotion] = useState(false);
   const [weeklyEmail, setWeeklyEmail] = useState(true);
@@ -72,31 +70,6 @@ function Settings() {
         <Button className="mt-6" onClick={() => toast.success("Settings saved.")}>
           Save changes
         </Button>
-      </Reveal>
-
-      <Reveal delay={0.04} className="panel mt-4 p-7">
-        <h2 className="font-semibold">Appearance</h2>
-        <div className="mt-5 rounded-xl border border-border bg-elevated/50 p-5">
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-start gap-3">
-              {isDark ? (
-                <Moon className="mt-0.5 size-5 text-[var(--gamibar-brand)]" />
-              ) : (
-                <Sun className="mt-0.5 size-5 text-amber-500" />
-              )}
-              <div>
-                <p className="text-sm font-medium">Dark mode</p>
-                <p className="text-xs text-muted-foreground">
-                  Switch the entire site to a dark theme for low-light environments.
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={isDark}
-              onCheckedChange={(enabled) => setTheme(enabled ? "dark" : "light")}
-            />
-          </div>
-        </div>
       </Reveal>
 
       <Reveal delay={0.06} className="panel mt-4 p-7">

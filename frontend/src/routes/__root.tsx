@@ -17,7 +17,6 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { ScrollManager } from "@/components/layout/ScrollManager";
 import { SignatureIntroLoader } from "@/components/layout/SignatureIntroLoader";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { AuthProvider } from "@/lib/auth-store";
 import { PlayerProvider } from "@/lib/player-store";
 import { SessionProvider } from "@/lib/session-store";
@@ -208,7 +207,6 @@ function RootComponent() {
   const isPlayFlow = pathname === "/play" || pathname.startsWith("/play/");
   const isShareFlow = pathname === "/share" || pathname.startsWith("/share/");
   const hideChrome = isAuthPage || isAuthorApp || isJoinFlow || isPlayFlow || isShareFlow;
-  const showFloatingThemeToggle = isAuthPage || isJoinFlow || isPlayFlow || isShareFlow;
   const needsRemoteAuth =
     isAuthPage ||
     isAuthorApp ||
@@ -233,9 +231,6 @@ function RootComponent() {
                 </main>
                 {!hideChrome && <SiteFooter />}
               </div>
-              {showFloatingThemeToggle && (
-                <ThemeToggle className="safe-area-inset-top-right fixed z-[60] shadow-[var(--shadow-soft)]" />
-              )}
               <ThemedToaster />
             </SessionProvider>
           </PlayerProvider>

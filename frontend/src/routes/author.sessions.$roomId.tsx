@@ -55,6 +55,7 @@ function SessionResultsPage() {
       if (!res.ok) throw new Error(res.error);
       return res;
     },
+    retry: false,
   });
 
   const openLiveMutation = useMutation({
