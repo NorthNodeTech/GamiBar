@@ -166,19 +166,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const combinedHeadScript = `${themeInitScript};if("scrollRestoration" in history){try{history.scrollRestoration="manual";}catch(e){}}if(!location.hash){try{window.scrollTo(0,0);}catch(e){}}`;
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      <head suppressHydrationWarning>
         <script
-          dangerouslySetInnerHTML={{
-            __html: `if("scrollRestoration" in history){try{history.scrollRestoration="manual";}catch(e){}}if(!location.hash){try{window.scrollTo(0,0);}catch(e){}}`,
-          }}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: combinedHeadScript }}
         />
         <AnalyticsHeadScripts />
         <HeadContent />
       </head>
-      <body className="bg-background font-sans text-foreground antialiased selection:bg-neutral-200 dark:selection:bg-neutral-700">
+      <body
+        suppressHydrationWarning
+        className="bg-background font-sans text-foreground antialiased selection:bg-neutral-200 dark:selection:bg-neutral-700"
+      >
         {children}
         <Scripts />
       </body>

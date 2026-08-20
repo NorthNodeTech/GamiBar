@@ -1,8 +1,15 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/layout/Logo";
 
+const emptySubscribe = () => () => {};
+
 export function SignatureIntroLoader() {
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const [visible, setVisible] = useState(true);
 
   useLayoutEffect(() => {
@@ -28,6 +35,27 @@ export function SignatureIntroLoader() {
     };
   }, []);
 
+  if (!isClient) {
+    return (
+      <div
+        suppressHydrationWarning
+        className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white text-[#111111]"
+      >
+        <div className="flex flex-col items-center text-center px-4">
+          <div className="grid size-24 place-items-center rounded-3xl bg-[#111111] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.12)]">
+            <Logo size={64} />
+          </div>
+          <h2 className="mt-5 font-display text-2xl font-black tracking-tight text-[#111111]">
+            Gami<span className="font-extrabold text-[#111111]">BAR</span>
+          </h2>
+          <div className="mt-4 h-1 w-32 overflow-hidden rounded-full bg-[#E5E7EB]">
+            <div className="h-full w-0 bg-[#111111] rounded-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AnimatePresence>
       {visible ? (
@@ -37,6 +65,7 @@ export function SignatureIntroLoader() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white text-[#111111]"
+          suppressHydrationWarning
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
