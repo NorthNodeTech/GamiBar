@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/layout/Logo";
 import { NavJoinGame } from "@/components/layout/NavJoinGame";
+import { cn } from "@/lib/utils";
 
 const publicNav = [
   { to: "/#games", label: "Tools", hash: true },
@@ -19,111 +20,113 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="safe-area-top sticky top-0 z-50 w-full max-w-[100vw] border-b border-[var(--gamibar-border)] bg-[var(--gamibar-surface)]/90 backdrop-blur-xl">
-        <div className="safe-area-x mx-auto grid h-14 w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:h-16 md:grid-cols-[auto_1fr_auto] md:gap-4">
-          <Link
-            to="/"
-            className="group col-start-1 row-start-1 flex min-w-0 items-center gap-2.5 sm:gap-3"
-          >
-            <Logo size={36} className="relative top-px" />
-            <span className="truncate font-display text-base font-bold leading-none tracking-tight text-[var(--foreground)] transition-colors group-hover:text-[var(--muted-foreground)] sm:text-lg">
-              Gami<span className="font-black text-red-500">BAR</span>
-            </span>
-          </Link>
+      <header className="sticky top-4 z-50 mx-4 md:mx-auto max-w-5xl rounded-full border border-white/10 bg-black/60 backdrop-blur-md shadow-[0_12px_40px_rgba(0,0,0,0.55)] px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="group flex items-center gap-2.5"
+        >
+          <Logo size={32} tone="on-dark" />
+          <span className="font-display text-sm font-bold leading-none tracking-tight text-white transition-colors group-hover:text-white/80 sm:text-base">
+            Gami<span className="font-black text-red-500">BAR</span>
+          </span>
+        </Link>
 
-          <nav className="col-start-2 row-start-1 hidden items-center justify-self-center gap-0.5 md:flex">
-            {publicNav.map((item) => {
-              const active =
-                !item.hash && (pathname === item.to || pathname.startsWith(`${item.to}/`));
-              if (item.hash) {
-                return (
-                  <a
-                    key={item.label}
-                    href={item.to}
-                    className="rounded-lg px-3 py-2 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-                  >
-                    {item.label}
-                  </a>
-                );
-              }
+        {/* Navigation Links */}
+        <nav className="hidden items-center gap-1 md:flex">
+          {publicNav.map((item) => {
+            const active =
+              !item.hash && (pathname === item.to || pathname.startsWith(`${item.to}/`));
+            if (item.hash) {
               return (
-                <Link
+                <a
                   key={item.label}
-                  to={item.to}
-                  className="relative rounded-lg px-3 py-2 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+                  href={item.to}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium text-white/75 transition-colors hover:text-white hover:bg-white/10"
                 >
-                  {active && (
-                    <span className="absolute inset-0 rounded-lg border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)]" />
-                  )}
-                  <span className="relative z-10">{item.label}</span>
-                </Link>
+                  {item.label}
+                </a>
               );
-            })}
-          </nav>
+            }
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={cn(
+                  "relative rounded-full px-4 py-1.5 text-sm font-medium text-white/75 transition-colors hover:text-white hover:bg-white/10",
+                  active && "bg-white/15 text-white"
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-          <div className="col-start-3 row-start-1 hidden items-center gap-2 md:flex">
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="rounded-xl border-[var(--gamibar-border)] font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]"
-            >
-              <Link to="/author">Workspace</Link>
-            </Button>
-            <NavJoinGame />
-          </div>
+        {/* CTA Buttons */}
+        <div className="hidden items-center gap-3 md:flex">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="rounded-full font-semibold text-white/80 hover:text-white hover:bg-white/15"
+          >
+            <Link to="/author">Workspace</Link>
+          </Button>
+          <NavJoinGame className="rounded-full h-9" />
+        </div>
 
-          <div className="col-start-2 row-start-1 flex shrink-0 justify-self-end md:hidden">
-            <button
-              type="button"
-              className="grid size-11 shrink-0 place-items-center rounded-lg border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-2 text-[var(--foreground)] shadow-sm"
-              onClick={() => setOpen((v) => !v)}
-              aria-label="Toggle navigation"
-              aria-expanded={open}
-              aria-controls="mobile-site-menu"
-            >
-              {open ? <X className="size-5" /> : <Menu className="size-5" />}
-            </button>
-          </div>
+        {/* Mobile Toggle */}
+        <div className="flex items-center md:hidden">
+          <button
+            type="button"
+            className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Toggle navigation"
+            aria-expanded={open}
+            aria-controls="mobile-site-menu"
+          >
+            {open ? <X className="size-4" /> : <Menu className="size-4" />}
+          </button>
         </div>
       </header>
 
       {open && (
         <div
           id="mobile-site-menu"
-          className="fixed inset-0 z-[100] overflow-y-auto bg-[var(--gamibar-surface)] md:hidden"
+          className="fixed inset-0 z-[100] overflow-y-auto bg-black/95 backdrop-blur-lg text-white md:hidden"
         >
-          <div className="safe-area-x flex min-h-dvh flex-col">
-            <div className="safe-area-top flex h-16 items-center justify-between border-b border-[var(--gamibar-border)]">
+          <div className="safe-area-x flex min-h-dvh flex-col p-6">
+            <div className="flex h-16 items-center justify-between border-b border-white/10">
               <Link
                 to="/"
                 onClick={() => setOpen(false)}
                 className="flex min-w-0 items-center gap-2.5"
               >
-                <Logo size={34} />
-                <span className="truncate font-display text-base font-bold leading-none text-[var(--foreground)]">
+                <Logo size={34} tone="on-dark" />
+                <span className="truncate font-display text-base font-bold leading-none text-white">
                   Gami<span className="font-black text-red-500">BAR</span>
                 </span>
               </Link>
               <button
                 type="button"
-                className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-sm transition-colors hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
                 onClick={() => setOpen(false)}
                 aria-label="Close navigation"
               >
-                <X className="size-5" />
+                <X className="size-4" />
               </button>
             </div>
 
-            <div className="flex flex-1 flex-col py-5">
-              <nav className="grid gap-2" aria-label="Mobile primary navigation">
+            <div className="flex flex-1 flex-col py-6">
+              <nav className="grid gap-3" aria-label="Mobile primary navigation">
                 {publicNav.map((item) => {
                   return item.hash ? (
                     <a
                       key={item.label}
                       href={item.to}
                       onClick={() => setOpen(false)}
-                      className="flex min-h-11 items-center rounded-xl px-3 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      className="flex min-h-11 items-center rounded-xl px-4 text-base font-medium text-white/80 transition-colors hover:text-white hover:bg-white/10"
                     >
                       <span className="min-w-0 truncate">{item.label}</span>
                     </a>
@@ -132,7 +135,7 @@ export function SiteHeader() {
                       key={item.label}
                       to={item.to}
                       onClick={() => setOpen(false)}
-                      className="flex min-h-11 items-center rounded-xl px-3 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      className="flex min-h-11 items-center rounded-xl px-4 text-base font-medium text-white/80 transition-colors hover:text-white hover:bg-white/10"
                     >
                       <span className="min-w-0 truncate">{item.label}</span>
                     </Link>
@@ -140,29 +143,29 @@ export function SiteHeader() {
                 })}
               </nav>
 
-              <div className="mt-5 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
+              <div className="mt-8 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
                 <Button
                   asChild
                   variant="outline"
-                  className="h-11 rounded-xl border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] font-semibold text-[var(--foreground)] shadow-sm hover:bg-[var(--surface)]"
+                  className="h-11 rounded-xl border-white/15 bg-white/5 font-semibold text-white hover:bg-white/10 hover:text-white"
                 >
                   <Link to="/author" onClick={() => setOpen(false)}>
-                    <Plus className="size-4" />
+                    <Plus className="size-4 mr-2" />
                     Workspace
                   </Link>
                 </Button>
                 <NavJoinGame
-                  className="h-11 w-full rounded-xl shadow-[0_6px_16px_rgba(239,68,68,0.22)]"
+                  className="h-11 w-full rounded-xl"
                   size="default"
                   onClick={() => setOpen(false)}
                 />
               </div>
 
-              <div className="mt-5 grid gap-2 border-t border-[var(--gamibar-border)] pt-5">
+              <div className="mt-8 grid gap-2 border-t border-white/10 pt-6">
                 <Link
                   to="/settings"
                   onClick={() => setOpen(false)}
-                  className="flex min-h-11 items-center rounded-xl px-3 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  className="flex min-h-11 items-center rounded-xl px-4 text-base font-medium text-white/80 transition-colors hover:text-white hover:bg-white/10"
                 >
                   <span className="min-w-0 truncate">Settings</span>
                 </Link>
