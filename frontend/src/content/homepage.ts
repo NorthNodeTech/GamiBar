@@ -48,23 +48,6 @@ export const HOMEPAGE_HERO = {
     "Teacher leading an interactive GamiBar session while participants join and answer from their phones",
 } as const;
 
-export const HOMEPAGE_HERO_PROOFS = [
-  {
-    icon: QrCode,
-    value: "QR or code",
-    label: "People join in seconds",
-  },
-  {
-    icon: Radio,
-    value: "Live answers",
-    label: "Quizzes, polls, and games",
-  },
-  {
-    icon: MonitorSmartphone,
-    value: "Any device",
-    label: "No account needed to play",
-  },
-] as const;
 
 export const HOMEPAGE_PROBLEM_SECTION = {
   eyebrow: "The problem",
