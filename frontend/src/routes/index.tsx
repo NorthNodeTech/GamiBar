@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { FadeUp, SectionHeading } from "@/components/ui/text-motion";
 import { MagneticButton } from "@/components/home/MagneticButton";
+import { MobileCarousel } from "@/components/ui/MobileCarousel";
 import {
   HOMEPAGE_AUDIENCES,
   HOMEPAGE_AUDIENCE_SECTION,
@@ -158,7 +159,7 @@ function ProblemScene() {
     <LandingSection
       id="problem"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-10 md:!py-18"
     >
       <div className="grid items-center gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:gap-14">
         <div>
@@ -228,7 +229,7 @@ function AudienceScene() {
     <LandingSection
       id="audience"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-10 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_AUDIENCE_SECTION.eyebrow}
@@ -283,16 +284,57 @@ function TestimonialsScene() {
     <LandingSection
       id="testimonials"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-[#FAFAFA] !py-12 md:!py-18"
+      className="flex min-h-[100svh] flex-col justify-center bg-[#FAFAFA] !py-10 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_TESTIMONIALS_SECTION.eyebrow}
         title={HOMEPAGE_TESTIMONIALS_SECTION.title}
         description={HOMEPAGE_TESTIMONIALS_SECTION.description}
-        className="mb-8 text-center md:mb-12"
+        className="mb-6 text-center md:mb-12"
       />
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:items-stretch">
+      {/* Mobile Touch Carousel (< md) */}
+      <div className="block md:hidden">
+        <MobileCarousel>
+          {HOMEPAGE_TESTIMONIALS.map((testimonial) => (
+            <article
+              key={testimonial.name}
+              className="flex h-full w-full flex-col justify-between rounded-[20px] border border-[#E7E9ED] bg-white p-4 shadow-[0_2px_8px_rgba(16,24,40,0.04)]"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <Quote className="size-5 text-[#FF3B30] opacity-90" aria-hidden />
+                  <span className="rounded-full bg-[#FFF1F0] px-2 py-0.5 text-[10px] font-bold text-[#FF3B30]">
+                    {testimonial.tag}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-medium leading-relaxed text-[#2D3139]">
+                  "{testimonial.quote}"
+                </p>
+              </div>
+
+              <div className="mt-4 border-t border-[#EEF0F3] pt-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FF3B30] to-[#FF7B72] font-display text-[11px] font-bold text-white shadow-sm">
+                    {testimonial.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display text-xs font-bold text-[#111111] truncate">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-[10px] font-medium text-[#7A7F87] truncate">
+                      {testimonial.role}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </MobileCarousel>
+      </div>
+
+      {/* Desktop 3-column Grid (>= md) */}
+      <div className="hidden md:grid md:grid-cols-3 items-stretch gap-5">
         {HOMEPAGE_TESTIMONIALS.map((testimonial, index) => (
           <Reveal key={testimonial.name} delay={index * 0.08} className="h-full">
             <article className="flex h-full flex-col justify-between rounded-[22px] border border-[#E7E9ED] bg-white p-5 sm:p-6 shadow-[0_2px_8px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#D9DDE3] hover:shadow-[0_20px_40px_rgba(16,24,40,0.08)]">
@@ -340,7 +382,7 @@ function FaqScene() {
     <LandingSection
       id="faq"
       width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-12 md:!py-18"
+      className="flex min-h-[100svh] flex-col justify-center bg-white !py-10 md:!py-18"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_FAQ_SECTION.eyebrow}
@@ -399,7 +441,7 @@ function FaqScene() {
 function CtaScene() {
   return (
     <LandingSection
-      className="flex min-h-[85svh] flex-col justify-center bg-[#FAFAFA] !py-12 md:!py-18"
+      className="flex min-h-[85svh] flex-col justify-center bg-[#FAFAFA] !py-10 md:!py-18"
       width="6xl"
     >
       <Reveal className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--foreground)] p-6 text-center shadow-lg sm:p-8 md:p-12 dark:bg-[var(--elevated)]">
