@@ -13,12 +13,30 @@ import { cn } from "@/lib/utils";
 type GameCard = HomepageToolCard;
 const games: GameCard[] = HOMEPAGE_TOOL_WALL;
 
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 22 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.215, 0.61, 0.355, 1] as const },
+  },
+};
+
 export function GameModesSection() {
   const assessments = useMemo(() => games.filter(g => ["quiz", "polls", "resource_drop"].includes(g.id)), []);
   const challenges = useMemo(() => games.filter(g => ["jigsaw", "connect_dots", "visual_point"].includes(g.id)), []);
 
   return (
-    <LandingSection id="games" width="7xl" className="bg-[#FAFAFA] !py-16 md:!py-24">
+    <LandingSection id="games" width="7xl" className="bg-[#FAFAFA] min-h-screen flex flex-col justify-center !py-16 md:!py-24">
       {/* Main Section Header */}
       <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
         <span className="text-xs font-bold uppercase tracking-widest text-[#FF3B30]">
@@ -43,20 +61,23 @@ export function GameModesSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-          {assessments.map((game, i) => (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-40px" }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch"
+        >
+          {assessments.map((game) => (
             <motion.div
               key={game.id}
+              variants={itemVariants}
               className="h-full"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
             >
               <GameModeCard game={game} />
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       {/* Subsection 2: Interactive Games & Puzzle Challenges */}
@@ -70,20 +91,23 @@ export function GameModesSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-          {challenges.map((game, i) => (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-40px" }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch"
+        >
+          {challenges.map((game) => (
             <motion.div
               key={game.id}
+              variants={itemVariants}
               className="h-full"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
             >
               <GameModeCard game={game} />
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </LandingSection>
   );
@@ -93,16 +117,29 @@ function GameModeCard({ game }: { game: GameCard }) {
   return (
     <a
       href={game.href}
-      className="group block overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#D9DDE3] hover:shadow-[0_12px_28px_rgba(16,24,40,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30] focus-visible:ring-offset-2"
+      className="group flex h-full w-full flex-col justify-between overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white text-left shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#D9DDE3] hover:shadow-[0_12px_28px_rgba(16,24,40,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30] focus-visible:ring-offset-2"
     >
-      <div className="relative aspect-video w-full overflow-hidden">
-        <img
-          src={game.image}
-          alt={game.imageAlt}
-          loading="lazy"
-          decoding="async"
-          className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
-        />
+      <div className="w-full">
+        {/* Tool Thumbnail (Edge-to-Edge) */}
+        <div className="relative aspect-video w-full overflow-hidden border-b border-[#EEF0F3]">
+          <img
+            src={game.image}
+            alt={game.imageAlt}
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+          />
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-5">
+          <h3 className="font-display text-lg font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30]">
+            {game.title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-[#5F6368]">
+            {game.copy}
+          </p>
+        </div>
       </div>
     </a>
   );

@@ -134,40 +134,45 @@ function Landing() {
       <JourneyTimeline />
 
 
-      <LandingSection id="testimonials">
+      <LandingSection id="testimonials" width="7xl" className="min-h-screen flex flex-col justify-center !py-16 md:!py-24 bg-[#FAFAFA]">
         <SectionHeading
           title={HOMEPAGE_TESTIMONIALS_SECTION.title}
           description={HOMEPAGE_TESTIMONIALS_SECTION.description}
           className="mb-10 text-center md:mb-14"
         />
 
-        <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-3 md:items-stretch">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch">
           {HOMEPAGE_TESTIMONIALS.map((t, i) => (
             <Reveal key={t.name} delay={i * 0.08} className="h-full">
               <Card3DTilt
-                variant="dark"
-                className="flex h-full min-h-[320px] flex-col justify-between overflow-hidden p-0 sm:min-h-[360px]"
+                variant="light"
+                className="flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-[#E7E9ED] bg-white p-0 shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_36px_rgba(16,24,40,0.06)]"
               >
-                <div className="relative flex h-full flex-col justify-between p-6 sm:p-7">
-                  <img
-                    src={t.image}
-                    alt={t.imageAlt}
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/95 via-[#0a0a0f]/72 to-[#0a0a0f]/45" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.12),transparent_55%)]" />
-
-                  <p className="relative z-10 text-sm font-semibold leading-relaxed text-white/90">
-                    {t.quote}
-                  </p>
-                  <div className="relative z-10 mt-5 flex items-center justify-between border-t border-white/15 pt-4 sm:mt-6">
-                    <div>
-                      <p className="font-display text-lg font-bold text-white">{t.name}</p>
-                      <p className="text-xs text-white/65">{t.role}</p>
+                <div className="w-full flex flex-col justify-between h-full">
+                  <div>
+                    {/* Testimonial Photo */}
+                    <div className="relative aspect-video w-full overflow-hidden border-b border-[#EEF0F3]">
+                      <img
+                        src={t.image}
+                        alt={t.imageAlt}
+                        loading="lazy"
+                        className="size-full object-cover"
+                      />
                     </div>
-                    <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" aria-hidden />
+                    {/* Testimonial Content */}
+                    <div className="p-5">
+                      <p className="text-sm font-medium leading-relaxed text-[#5F6368] italic">
+                        "{t.quote}"
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-5 pt-0 mt-4 flex items-center justify-between border-t border-[#EEF0F3] pt-4">
+                    <div>
+                      <p className="font-display text-base font-bold text-[#111111]">{t.name}</p>
+                      <p className="text-xs text-[#5F6368]">{t.role}</p>
+                    </div>
+                    <CheckCircle2 className="size-4 shrink-0 text-[#FF3B30]" aria-hidden />
                   </div>
                 </div>
               </Card3DTilt>
@@ -176,7 +181,7 @@ function Landing() {
         </div>
       </LandingSection>
 
-      <section id="faq" className="mx-auto max-w-4xl scroll-mt-20 px-5 py-16 md:py-20">
+      <LandingSection id="faq" width="5xl" className="min-h-screen flex flex-col justify-center !py-16 md:!py-24 bg-white">
         <SectionHeading
           title={HOMEPAGE_FAQ_SECTION.title}
           className="mb-10 text-center md:mb-12"
@@ -201,9 +206,9 @@ function Landing() {
             ))}
           </Accordion>
         </Reveal>
-      </section>
+      </LandingSection>
 
-      <section className="mx-auto max-w-5xl px-5 pt-6 pb-24 md:pb-28">
+      <LandingSection className="min-h-screen flex flex-col justify-center !py-16 md:!py-24 bg-[#FAFAFA]">
         <Reveal className="relative overflow-hidden rounded-3xl border border-[var(--gamibar-border)] bg-[var(--foreground)] p-10 text-center shadow-lg md:p-16 dark:bg-[var(--elevated)]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.06),transparent_70%)]" />
 
@@ -213,12 +218,11 @@ function Landing() {
             </h2>
           </FadeUp>
           <FadeUp delay={0.08}>
-            <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--background)]/60 dark:text-[var(--muted-foreground)]">
+            <p className="mx-auto mt-4 max-w-xl text-base text-[var(--background)]/80 sm:text-lg dark:text-[var(--muted-foreground)]">
               {HOMEPAGE_CTA.description}
             </p>
           </FadeUp>
-
-          <FadeUp delay={0.14} className="mt-8 flex flex-wrap justify-center gap-4 md:mt-9">
+          <FadeUp delay={0.16} className="mt-8 flex flex-col justify-center items-center gap-3.5 sm:flex-row sm:gap-4">
             <MagneticButton>
               <Button
                 asChild
@@ -243,9 +247,7 @@ function Landing() {
             </MagneticButton>
           </FadeUp>
         </Reveal>
-      </section>
+      </LandingSection>
     </div>
   );
 }
-
-

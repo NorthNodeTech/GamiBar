@@ -17,14 +17,17 @@ const fadeUp = {
 
 export function Hero3D() {
   return (
-    <section className="relative isolate overflow-hidden min-h-[calc(100svh-4rem)] flex items-center bg-[#070707] text-white py-16 sm:py-24">
+    <section className="relative isolate overflow-hidden min-h-screen flex items-center bg-[#070707] text-white py-16 sm:py-24">
       {/* Background Image (No black shade overlay) */}
       <div className="absolute inset-0 z-0 select-none pointer-events-none">
-        <img
+        <motion.img
           src={homeHeroBg}
           alt=""
           aria-hidden
           className="absolute inset-0 size-full object-cover opacity-100"
+          initial={{ scale: 1.06 }}
+          animate={{ scale: 1.0 }}
+          transition={{ duration: 7, ease: "easeOut" }}
         />
       </div>
 

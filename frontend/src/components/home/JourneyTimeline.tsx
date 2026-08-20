@@ -21,7 +21,7 @@ export function JourneyTimeline() {
   const pathLength = useTransform(smoothProgress, [0, 0.9], [0, 1]);
 
   return (
-    <LandingSection id="journey" width="5xl" innerClassName="relative" className="!py-16 md:!py-24">
+    <LandingSection id="journey" width="5xl" innerClassName="relative" className="min-h-screen flex flex-col justify-center !py-16 md:!py-24">
       <div ref={containerRef}>
         <SectionHeading
           title={HOMEPAGE_JOURNEY_SECTION.title}
