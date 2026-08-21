@@ -1,11 +1,12 @@
 import { Link } from "@/lib/navigation";
-import { ArrowRight, CheckCircle2, Quote } from "lucide-react";
+import { ArrowRight, CheckCircle2, QrCode, Quote, Sparkles, Users, Zap } from "lucide-react";
 import { useLayoutEffect } from "react";
 
 import { GameModesSection } from "@/components/home/GameModesSection";
 import { Hero3D } from "@/components/home/Hero3D";
 import { JourneyTimeline } from "@/components/home/JourneyTimeline";
 import { LandingSection } from "@/components/home/ViewportSection";
+import { Logo } from "@/components/layout/Logo";
 import {
   Accordion,
   AccordionContent,
@@ -276,15 +277,11 @@ function TestimonialsScene() {
 }
 
 function FaqScene() {
-  const midIndex = Math.ceil(HOMEPAGE_FAQ.length / 2);
-  const col1 = HOMEPAGE_FAQ.slice(0, midIndex);
-  const col2 = HOMEPAGE_FAQ.slice(midIndex);
-
   return (
     <LandingSection
       id="faq"
-      width="7xl"
-      className="flex min-h-[100svh] flex-col justify-center bg-white !py-10 md:!py-18"
+      width="5xl"
+      className="flex min-h-[90svh] flex-col justify-center bg-white !py-10 md:!py-20"
     >
       <SectionHeading
         eyebrow={HOMEPAGE_FAQ_SECTION.eyebrow}
@@ -293,41 +290,20 @@ function FaqScene() {
         className="mb-8 text-center md:mb-12"
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Reveal delay={0.05} className="h-full">
-          <div className="rounded-[22px] border border-[#CBD5E1] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
-            <Accordion type="single" collapsible className="w-full space-y-2.5">
-              {col1.map((item) => (
+      <div className="mx-auto w-full max-w-3xl">
+        <Reveal delay={0.05} className="w-full">
+          <div className="rounded-[24px] border border-[#CBD5E1] bg-[#FAFAFA] p-5 sm:p-7 shadow-[0_4px_16px_rgba(16,24,40,0.04)]">
+            <Accordion type="single" collapsible className="w-full space-y-3">
+              {HOMEPAGE_FAQ.map((item) => (
                 <AccordionItem
                   key={item.question}
                   value={item.question}
-                  className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-0.5 shadow-sm transition-colors hover:border-[#94A3B8] last:border-b"
+                  className="rounded-2xl border border-[#CBD5E1] bg-white px-5 py-1 shadow-sm transition-all hover:border-[#94A3B8] last:border-b"
                 >
-                  <AccordionTrigger className="text-left text-xs sm:text-[13px] font-bold text-[#111111] hover:no-underline">
+                  <AccordionTrigger className="text-left text-sm sm:text-base font-bold text-[#111111] hover:no-underline py-4">
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-xs sm:text-[13px] leading-relaxed text-[#5F6368] pt-1 pb-2.5">
-                    {item.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.12} className="h-full">
-          <div className="rounded-[22px] border border-[#CBD5E1] bg-[#FAFAFA] p-4 sm:p-5 shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
-            <Accordion type="single" collapsible className="w-full space-y-2.5">
-              {col2.map((item) => (
-                <AccordionItem
-                  key={item.question}
-                  value={item.question}
-                  className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-0.5 shadow-sm transition-colors hover:border-[#94A3B8] last:border-b"
-                >
-                  <AccordionTrigger className="text-left text-xs sm:text-[13px] font-bold text-[#111111] hover:no-underline">
-                    {item.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-xs sm:text-[13px] leading-relaxed text-[#5F6368] pt-1 pb-2.5">
+                  <AccordionContent className="text-xs sm:text-sm leading-relaxed text-[#5F6368] pt-1 pb-4">
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -343,49 +319,90 @@ function FaqScene() {
 function CtaScene() {
   return (
     <LandingSection
-      className="flex min-h-[85svh] flex-col justify-center bg-[#FAFAFA] !py-10 md:!py-18"
-      width="6xl"
+      className="flex min-h-[90svh] flex-col justify-center bg-[#FAFAFA] !py-12 md:!py-24"
+      width="7xl"
     >
-      <Reveal className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--foreground)] p-6 text-center shadow-lg sm:p-8 md:p-12 dark:bg-[var(--elevated)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.08),transparent_70%)]" />
+      <Reveal className="relative overflow-hidden rounded-[36px] border border-[#111111]/10 bg-[#0A0A0A] p-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.25)] sm:p-14 lg:p-20 text-white">
+        {/* Left Side Ambient Brand Logo Watermark (Reduced Opacity) */}
+        <div className="pointer-events-none absolute -left-12 -top-12 sm:-left-8 sm:top-1/2 sm:-translate-y-1/2 opacity-[0.07] sm:opacity-[0.09] select-none transition-opacity">
+          <Logo size={420} className="size-[280px] sm:size-[440px]" />
+        </div>
 
-        <FadeUp>
-          <h2 className="mx-auto max-w-3xl font-display text-[clamp(1.5rem,3.4vw,2.4rem)] font-black leading-tight text-[var(--background)] dark:text-[var(--foreground)]">
-            {HOMEPAGE_CTA.title}
-          </h2>
-        </FadeUp>
-        <FadeUp delay={0.08}>
-          <p className="mx-auto mt-3 max-w-xl text-xs sm:text-sm leading-relaxed text-[var(--background)]/80 dark:text-[var(--muted-foreground)]">
-            {HOMEPAGE_CTA.description}
-          </p>
-        </FadeUp>
-        <FadeUp
-          delay={0.16}
-          className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-3.5"
-        >
-          <MagneticButton>
-            <Button
-              asChild
-              size="lg"
-              className="h-11 rounded-xl bg-[var(--background)] px-6 text-xs sm:text-sm font-semibold text-[var(--foreground)] shadow-md transition-all hover:opacity-90 dark:bg-[var(--gamibar-brand)] dark:text-white dark:hover:bg-[var(--gamibar-brand-hover)]"
-            >
-              <Link to="/author/create">
-                {HOMEPAGE_CTA.primaryCta} <ArrowRight className="ml-2 size-3.5" />
-              </Link>
-            </Button>
-          </MagneticButton>
+        {/* Ambient Radial Gradient Accent */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,59,48,0.12),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(255,255,255,0.05),transparent_60%)]" />
 
-          <MagneticButton>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-11 rounded-xl border-[var(--background)]/20 bg-[var(--background)]/5 px-6 text-xs sm:text-sm font-semibold text-[var(--background)] transition-all hover:bg-[var(--background)]/10 dark:border-[var(--gamibar-border)] dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--surface)]"
-            >
-              <Link to="/join">{HOMEPAGE_CTA.secondaryCta}</Link>
-            </Button>
-          </MagneticButton>
-        </FadeUp>
+        <div className="relative z-10 mx-auto max-w-3xl">
+          <FadeUp>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-md">
+              <Sparkles className="size-3.5 text-[#FF3B30]" /> Interactive Classroom & Workshop
+              Platform
+            </div>
+          </FadeUp>
+
+          <FadeUp delay={0.06}>
+            <h2 className="mt-6 font-display text-[clamp(2rem,4.2vw,3.4rem)] font-black leading-[1.08] tracking-tight text-white">
+              Turn every session into an unforgettable live room.
+            </h2>
+          </FadeUp>
+
+          <FadeUp delay={0.12}>
+            <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-white/80">
+              Launch real-time quizzes, opinion polls, interactive image puzzles, diagram labeling,
+              and instant QR file sharing in seconds.
+            </p>
+          </FadeUp>
+
+          {/* Feature Highlights Badges */}
+          <FadeUp delay={0.16}>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-xs font-semibold text-white/90">
+              <span className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 border border-white/15 backdrop-blur-sm shadow-sm">
+                <Zap className="size-3.5 text-[#FF3B30]" /> 6 Interactive Tool Modes
+              </span>
+              <span className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 border border-white/15 backdrop-blur-sm shadow-sm">
+                <Users className="size-3.5 text-[#FF3B30]" /> No App or Sign-Up for Players
+              </span>
+              <span className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 border border-white/15 backdrop-blur-sm shadow-sm">
+                <QrCode className="size-3.5 text-[#FF3B30]" /> Instant QR File Sharing
+              </span>
+            </div>
+          </FadeUp>
+
+          {/* Action Buttons */}
+          <FadeUp
+            delay={0.22}
+            className="mt-9 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4"
+          >
+            <MagneticButton>
+              <Button
+                asChild
+                size="lg"
+                className="h-13 rounded-full bg-white px-8 text-sm font-bold text-[#111111] shadow-[0_10px_30px_rgba(255,255,255,0.25)] transition-all hover:bg-white/90 hover:scale-105"
+              >
+                <Link to="/author/create">
+                  + Create a room now <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </MagneticButton>
+
+            <MagneticButton>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-13 rounded-full border-white/25 bg-white/10 px-8 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
+              >
+                <Link to="/join">Join live room</Link>
+              </Button>
+            </MagneticButton>
+          </FadeUp>
+
+          <FadeUp delay={0.28}>
+            <p className="mt-6 text-[11px] font-medium text-white/50">
+              Free forever for essential hosting · Set up in under 60 seconds
+            </p>
+          </FadeUp>
+        </div>
       </Reveal>
     </LandingSection>
   );

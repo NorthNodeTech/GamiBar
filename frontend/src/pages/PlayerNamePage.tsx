@@ -131,8 +131,8 @@ export default function NicknamePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-white px-5 py-12">
-      <div className="grid size-14 place-items-center rounded-2xl bg-[#111111] p-2.5 shadow-sm">
-        <Logo size={44} />
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-[#111111] p-2.5 shadow-sm">
+        <Logo size={34} />
       </div>
       <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--gamibar-brand)]">
         {roomName || "Loading…"}

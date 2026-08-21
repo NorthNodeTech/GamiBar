@@ -9,6 +9,7 @@ import {
   FileClock,
   FileText,
   Loader2,
+  Lock,
   Maximize2,
   Minimize2,
   Plus,
@@ -339,14 +340,14 @@ export default function QRFilePage() {
                           isSelected
                             ? "border-[#111111] bg-[#111111] text-white shadow-sm"
                             : isLocked
-                              ? "border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] hover:border-amber-300 hover:text-amber-700"
+                              ? "border-[#E5E7EB] bg-[#F9FAFB] text-[#71717A] hover:border-[#111111] hover:text-[#111111]"
                               : "border-[#D1D5DB] bg-white text-[#4B5563] hover:bg-[#F3F4F6]",
                         )}
                       >
                         <span>{days} Days</span>
                         {isLocked && (
-                          <span className="flex items-center text-[10px] text-amber-600 font-extrabold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                            🔒 Pro
+                          <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#111111] bg-[#ECECEE] px-1.5 py-0.5 rounded border border-[#D4D4D8]">
+                            <Lock className="size-2.5 text-[#111111]" /> Pro
                           </span>
                         )}
                       </button>

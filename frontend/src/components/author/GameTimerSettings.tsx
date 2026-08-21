@@ -106,10 +106,10 @@ function CircularTimerDial({
   openEnded?: boolean;
 }) {
   const dialRef = useRef<HTMLDivElement>(null);
-  const size = 212;
-  const stroke = 12;
-  const radius = 86;
-  const innerSize = (radius - stroke / 2) * 2 - 28;
+  const size = 148;
+  const stroke = 9;
+  const radius = 58;
+  const innerSize = (radius - stroke / 2) * 2 - 18;
   const circumference = 2 * Math.PI * radius;
   const progress = openEnded ? 0 : (value - min) / (max - min);
   const dash = progress * circumference;
@@ -184,31 +184,31 @@ function CircularTimerDial({
         >
           <span
             className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-xl",
+              "grid size-6 shrink-0 place-items-center rounded-lg",
               style.soft,
               style.text,
             )}
           >
-            {openEnded ? <InfinityIcon className="size-4" /> : <Clock className="size-4" />}
+            {openEnded ? <InfinityIcon className="size-3.5" /> : <Clock className="size-3.5" />}
           </span>
-          <p className="mt-1.5 font-display text-[2rem] font-extrabold leading-none tracking-tight text-[#111111] sm:text-[2.15rem]">
+          <p className="mt-0.5 font-display text-[1.45rem] font-extrabold leading-none tracking-tight text-[#111111]">
             {openEnded ? "Open" : formatTimerSeconds(value)}
           </p>
           {openEnded && (
-            <p className="mt-1.5 text-[10px] font-medium leading-tight text-[#737373]">No limit</p>
+            <p className="mt-0.5 text-[9px] font-medium leading-tight text-[#737373]">No limit</p>
           )}
         </div>
 
         {!openEnded && (
           <span
-            className="absolute size-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-[#111111] shadow-md transition-all duration-200"
+            className="absolute size-[14px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[2.5px] border-white bg-[#111111] shadow-md transition-all duration-200"
             style={{ left: thumb.x, top: thumb.y }}
           />
         )}
       </div>
 
       {!openEnded && (
-        <p className="mt-2 text-[11px] font-medium text-[#737373]">Drag the ring to adjust</p>
+        <p className="mt-1 text-[10px] font-medium text-[#737373]">Drag ring to adjust</p>
       )}
     </div>
   );
@@ -245,71 +245,67 @@ export function GameTimerSettings({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-[24px] border bg-white",
+        "flex h-full flex-col justify-between rounded-2xl border bg-white p-4 shadow-sm",
         style.ring,
-        style.glow,
         className,
       )}
     >
-      <div className="px-4 pt-5 text-center sm:px-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#737373]">
-          Timer style
-        </p>
-        <div className="mx-auto mt-3 grid max-w-sm grid-cols-2 rounded-xl bg-[var(--gamibar-page)] p-1">
-          {(
-            [
-              ["overall", "Whole game"],
-              ["per_question", mode === "connect_dots" ? "Each pair" : "Each question"],
-            ] as const
-          ).map(([nextMode, label]) => (
-            <button
-              key={nextMode}
-              type="button"
-              aria-pressed={timerMode === nextMode}
-              onClick={() => onTimerModeChange(nextMode)}
-              className={cn(
-                "rounded-lg px-3 py-2 text-xs font-bold transition-all",
-                timerMode === nextMode
-                  ? "bg-white text-[#111111] shadow-sm"
-                  : "text-[#737373] hover:text-[#111111]",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1 text-sm text-[#525252]">
-          {openEnded
-            ? "Participants play until they finish - no countdown on screen."
-            : timerMode === "per_question"
-              ? `${mode === "connect_dots" ? "Every pair" : "Every question"} gets a fresh ${formatTimerLong(displayValue)} countdown.`
-              : `Participants must finish before ${formatTimerLong(displayValue)}.`}
-        </p>
-      </div>
-
-      <div className="px-4 py-2 sm:px-5">
-        <CircularTimerDial
-          value={displayValue}
-          min={bounds.min}
-          max={bounds.max}
-          step={bounds.step}
-          onChange={(next) => onChange(clampTimer(mode, next, timerMode))}
-          style={style}
-          openEnded={openEnded}
-        />
-        {!openEnded && (
-          <div className="mx-auto mt-1 flex w-[212px] justify-between text-[10px] font-semibold text-[#737373]">
-            <span>{formatTimerSeconds(bounds.min)}</span>
-            <span>{formatTimerSeconds(bounds.max)}</span>
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#737373]">
+            Timer style
+          </p>
+          <div className="grid grid-cols-2 rounded-lg bg-[var(--gamibar-page)] p-0.5">
+            {(
+              [
+                ["overall", "Whole game"],
+                ["per_question", mode === "connect_dots" ? "Each pair" : "Per question"],
+              ] as const
+            ).map(([nextMode, label]) => (
+              <button
+                key={nextMode}
+                type="button"
+                aria-pressed={timerMode === nextMode}
+                onClick={() => onTimerModeChange(nextMode)}
+                className={cn(
+                  "rounded-md px-2 py-1 text-[10px] font-bold transition-all",
+                  timerMode === nextMode
+                    ? "bg-white text-[#111111] shadow-xs"
+                    : "text-[#737373] hover:text-[#111111]",
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <div className="my-2.5 flex justify-center">
+          <CircularTimerDial
+            value={displayValue}
+            min={bounds.min}
+            max={bounds.max}
+            step={bounds.step}
+            onChange={(next) => onChange(clampTimer(mode, next, timerMode))}
+            style={style}
+            openEnded={openEnded}
+          />
+        </div>
+
+        <p className="text-center text-[11px] leading-snug text-[#525252]">
+          {openEnded
+            ? "Play at own pace — no countdown."
+            : timerMode === "per_question"
+              ? `${formatTimerLong(displayValue)} per question (auto-skips).`
+              : `${formatTimerLong(displayValue)} total game (auto-submits).`}
+        </p>
       </div>
 
-      <div className="border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/70 px-4 py-4 sm:px-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#737373]">
+      <div className="mt-3 border-t border-[var(--gamibar-border)] pt-2.5">
+        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#737373]">
           Quick presets
         </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
           {presets.map((preset) => {
             const active =
               preset.seconds == null
@@ -321,9 +317,9 @@ export function GameTimerSettings({
                 type="button"
                 onClick={() => onChange(preset.seconds)}
                 className={cn(
-                  "rounded-full border px-3.5 py-2 text-xs font-semibold transition-all",
+                  "rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition-all",
                   active
-                    ? "border-[#111111] bg-[#111111] text-white shadow-md"
+                    ? "border-[#111111] bg-[#111111] text-white shadow-xs"
                     : "border-[var(--gamibar-border)] bg-white text-[#525252] hover:border-[#111111] hover:text-[#111111]",
                 )}
               >
@@ -337,9 +333,9 @@ export function GameTimerSettings({
           <button
             type="button"
             onClick={() => onChange(clampTimer(mode, suggestedSeconds, timerMode))}
-            className="mt-4 w-full text-center text-xs font-semibold text-[#525252] underline-offset-2 hover:text-[#111111] hover:underline"
+            className="mt-2 block w-full text-center text-[10px] font-medium text-[#525252] underline-offset-2 hover:text-[#111111] hover:underline"
           >
-            Prefer a countdown? Tap to set a {formatTimerSeconds(suggestedSeconds)} suggested limit.
+            Set suggested {formatTimerSeconds(suggestedSeconds)} limit
           </button>
         )}
       </div>

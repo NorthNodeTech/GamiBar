@@ -85,17 +85,17 @@ export function Hero3D() {
       </div>
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-start px-4 sm:px-6 lg:px-8">
-        <div className="max-w-xl text-left drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
+        <div className="max-w-2xl text-left drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
           {/* Headline */}
           <motion.h1
             custom={0.04}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="font-display text-[clamp(1.85rem,4.2vw,3.15rem)] font-black leading-[1.08] tracking-tight text-white"
+            className="font-display text-[clamp(2.35rem,5vw,4.1rem)] font-black leading-[1.06] tracking-tight text-white"
           >
             {HOMEPAGE_HERO.headlinePrefix}
-            <span className="mt-1.5 block text-[clamp(1.45rem,3.2vw,2.35rem)] text-[#FF3B30]">
+            <span className="mt-2 block text-[clamp(1.75rem,3.6vw,2.85rem)] text-[#FF3B30]">
               {HOMEPAGE_HERO.headlineAccent}
             </span>
           </motion.h1>

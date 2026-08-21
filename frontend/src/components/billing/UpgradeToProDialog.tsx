@@ -129,20 +129,20 @@ export function UpgradeToProDialog({
         {/* Feature Highlights Grid */}
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-[#F8F9FB] p-3 text-xs border border-[#EEF0F4]">
           <div className="flex items-center gap-2 font-medium text-[#374151]">
-            <Check className="size-4 text-emerald-600 shrink-0 font-bold" />
-            <span>⚡ Unlimited Active Rooms</span>
+            <Check className="size-3.5 text-[#111111] shrink-0 stroke-[2.5]" />
+            <span>Unlimited Active Rooms</span>
           </div>
           <div className="flex items-center gap-2 font-medium text-[#374151]">
-            <Check className="size-4 text-emerald-600 shrink-0 font-bold" />
-            <span>⚡ Unlimited AI Generations</span>
+            <Check className="size-3.5 text-[#111111] shrink-0 stroke-[2.5]" />
+            <span>Unlimited AI Generations</span>
           </div>
           <div className="flex items-center gap-2 font-medium text-[#374151]">
-            <Check className="size-4 text-emerald-600 shrink-0 font-bold" />
-            <span>👥 Up to 200 Live Players</span>
+            <Check className="size-3.5 text-[#111111] shrink-0 stroke-[2.5]" />
+            <span>Up to 200 Live Players</span>
           </div>
           <div className="flex items-center gap-2 font-medium text-[#374151]">
-            <Check className="size-4 text-emerald-600 shrink-0 font-bold" />
-            <span>📁 28-day QRFile Retention</span>
+            <Check className="size-3.5 text-[#111111] shrink-0 stroke-[2.5]" />
+            <span>28-day QRFile Retention</span>
           </div>
         </div>
 

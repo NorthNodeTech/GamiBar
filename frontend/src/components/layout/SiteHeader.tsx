@@ -20,9 +20,9 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-4 z-50 mx-4 md:mx-auto max-w-5xl lg:max-w-6xl rounded-full border border-white/15 bg-black/60 backdrop-blur-xl shadow-[0_16px_50px_rgba(0,0,0,0.5)] px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[92%] md:w-[70%] max-w-[1150px] rounded-full border border-white/15 bg-black/75 backdrop-blur-2xl shadow-[0_16px_50px_rgba(0,0,0,0.6)] px-4 sm:px-6 md:px-7 h-15 sm:h-16 flex items-center justify-between transition-all duration-300">
         {/* Brand Logo */}
-        <Link to="/" className="group flex items-center gap-3">
+        <Link to="/" className="group flex items-center gap-3 shrink-0">
           <Logo size={46} />
           <span className="font-display text-base font-bold leading-none tracking-tight text-white transition-colors group-hover:text-white/80 sm:text-lg">
             Gami<span className="font-black text-[#FF3B30]">BAR</span>
@@ -30,7 +30,7 @@ export function SiteHeader() {
         </Link>
 
         {/* Center Navigation Links */}
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1.5 md:flex">
           {publicNav.map((item) => {
             const active =
               !item.hash && (pathname === item.to || pathname.startsWith(`${item.to}/`));
@@ -39,7 +39,7 @@ export function SiteHeader() {
                 <a
                   key={item.label}
                   href={item.to}
-                  className="rounded-full px-4 py-1.5 text-sm font-medium text-white/75 transition-colors hover:text-white hover:bg-white/10"
+                  className="rounded-full px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:text-white hover:bg-white/10"
                 >
                   {item.label}
                 </a>
@@ -50,7 +50,7 @@ export function SiteHeader() {
                 key={item.label}
                 to={item.to}
                 className={cn(
-                  "relative rounded-full px-4 py-1.5 text-sm font-medium text-white/75 transition-colors hover:text-white hover:bg-white/10",
+                  "relative rounded-full px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:text-white hover:bg-white/10",
                   active && "bg-white/15 text-white",
                 )}
               >
@@ -61,15 +61,15 @@ export function SiteHeader() {
         </nav>
 
         {/* Action Buttons */}
-        <div className="hidden items-center gap-2.5 md:flex">
+        <div className="hidden items-center gap-3 shrink-0 md:flex">
           <Button
             asChild
             size="sm"
-            className="rounded-full border border-white/20 bg-white/10 px-4 text-xs font-bold text-white shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:text-white h-9"
+            className="rounded-full border border-white/20 bg-white/10 px-5 text-xs font-bold text-white shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:text-white h-10"
           >
             <Link to="/author/create">Create room</Link>
           </Button>
-          <NavJoinGame className="rounded-full bg-[#FF3B30] hover:bg-[#E6332B] h-9 px-4 text-xs font-bold text-white shadow-[0_4px_16px_rgba(255,59,48,0.4)]" />
+          <NavJoinGame className="rounded-full bg-[#FF3B30] hover:bg-[#E6332B] h-10 px-5 text-xs font-bold text-white shadow-[0_4px_16px_rgba(255,59,48,0.4)]" />
         </div>
 
         {/* Mobile Hamburger Toggle */}

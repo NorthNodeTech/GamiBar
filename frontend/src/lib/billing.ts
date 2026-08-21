@@ -128,6 +128,68 @@ declare global {
 }
 
 let checkoutScriptPromise: Promise<void> | null = null;
+const RAZORPAY_IFRAME_ALLOW = "payment *; accelerometer *; gyroscope *; magnetometer *";
+
+function publicCheckoutLogoUrl(): string | undefined {
+  const currentHostname = typeof window !== "undefined" ? window.location.hostname : undefined;
+  if (currentHostname && isLoopbackHost(currentHostname)) return undefined;
+
+  const configuredPublicUrl = import.meta.env.VITE_PUBLIC_APP_URL?.trim();
+  const candidates = [
+    configuredPublicUrl,
+    typeof window !== "undefined" ? window.location.origin : undefined,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const url = new URL("/apple-touch-icon.png", candidate);
+      if (url.protocol === "https:" && !isLoopbackHost(url.hostname)) {
+        return url.toString();
+      }
+    } catch {
+      // Ignore malformed local env values and continue without a checkout logo.
+    }
+  }
+
+  return undefined;
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname.endsWith(".localhost")
+  );
+}
+
+function allowRazorpayIframeFeatures(): () => void {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") {
+    return () => undefined;
+  }
+
+  const apply = (node: Node) => {
+    if (!(node instanceof HTMLIFrameElement)) return;
+    const src = node.getAttribute("src") ?? "";
+    if (!src.includes("razorpay.com")) return;
+    node.setAttribute("allow", RAZORPAY_IFRAME_ALLOW);
+  };
+
+  document.querySelectorAll('iframe[src*="razorpay.com"]').forEach(apply);
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach(apply);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  const timeout = window.setTimeout(() => observer.disconnect(), 15_000);
+
+  return () => {
+    window.clearTimeout(timeout);
+    observer.disconnect();
+  };
+}
 
 export function fetchBillingStatus(): Promise<BillingStatus> {
   return apiFetch<BillingStatus>("/api/billing/status");
@@ -176,16 +238,14 @@ export async function openRazorpayCheckout(
   if (!Razorpay)
     throw new Error("Razorpay Checkout did not load. Check your connection and retry.");
 
-  const logoUrl =
-    typeof window !== "undefined" && window.location.origin
-      ? `${window.location.origin}/apple-touch-icon.png`
-      : undefined;
+  const logoUrl = publicCheckoutLogoUrl();
 
   return new Promise<RazorpaySuccess>((resolve, reject) => {
     let completed = false;
+    const stopAllowingIframeFeatures = allowRazorpayIframeFeatures();
     const checkout = new Razorpay({
       key: configuration.keyId,
-      image: logoUrl,
+      ...(logoUrl ? { image: logoUrl } : {}),
       order_id: configuration.orderId,
       subscription_id: configuration.subscriptionId,
       ...(configuration.orderId
@@ -199,11 +259,15 @@ export async function openRazorpayCheckout(
       modal: {
         confirm_close: true,
         ondismiss: () => {
-          if (!completed) reject(new Error("Checkout was closed before payment completed."));
+          stopAllowingIframeFeatures();
+          if (!completed) {
+            reject(new Error("Checkout was closed before payment completed."));
+          }
         },
       },
       handler: (result) => {
         completed = true;
+        stopAllowingIframeFeatures();
         resolve(result);
       },
     });

@@ -86,26 +86,57 @@ export function AiGenerateQuestionsPanel({
     setPending(true);
 
     const completed: QuizQuestionGenerationResponse[] = [];
-    try {
-      for (let index = 0; index < requestedCount; index += 1) {
+    const CONCURRENCY = Math.min(3, requestedCount);
+    let nextIndex = 0;
+
+    const worker = async () => {
+      while (nextIndex < requestedCount && !cancelRequested.current) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+
+        let retries = 2;
+        let lastErr: unknown = null;
+        let response: QuizQuestionGenerationResponse | null = null;
+
+        while (retries >= 0 && !cancelRequested.current) {
+          try {
+            response = await generateAiQuestion({
+              kind: "quiz_question",
+              mode,
+              topic: cleanTopic,
+              audience: cleanAudience,
+              guidance: guidance.trim(),
+              questionNumber: currentIndex + 1,
+              totalQuestions: requestedCount,
+              avoidQuestions: [
+                ...existingQuestions.filter((question) => question.trim()),
+                ...completed.map((question) => question.question),
+              ],
+            });
+            break;
+          } catch (err) {
+            lastErr = err;
+            retries -= 1;
+            if (retries >= 0 && !cancelRequested.current) {
+              await new Promise((resolve) => setTimeout(resolve, 800));
+            }
+          }
+        }
+
         if (cancelRequested.current) break;
-        const response = await generateAiQuestion({
-          kind: "quiz_question",
-          mode,
-          topic: cleanTopic,
-          audience: cleanAudience,
-          guidance: guidance.trim(),
-          questionNumber: index + 1,
-          totalQuestions: requestedCount,
-          avoidQuestions: [
-            ...existingQuestions.filter((question) => question.trim()),
-            ...completed.map((question) => question.question),
-          ],
-        });
-        if (cancelRequested.current) break;
+
+        if (!response) {
+          throw lastErr || new Error(`Could not generate question ${currentIndex + 1}.`);
+        }
+
         completed.push(response);
         setGenerated([...completed]);
       }
+    };
+
+    try {
+      const workers = Array.from({ length: CONCURRENCY }, () => worker());
+      await Promise.all(workers);
 
       if (!cancelRequested.current && completed.length === requestedCount) {
         toast.success(`${completed.length} questions are ready to review.`);

@@ -368,52 +368,32 @@ export const HOMEPAGE_FAQ = [
   {
     question: "Is GamiBar only quizzes, or are there other activity modes?",
     answer:
-      "GamiBar is a full interactive session platform with 6 distinct tool modes: Quiz Battle (rapid-fire timed trivia), Polls & Surveys (live feedback & opinion bars), Jigsaw Mission (gamified puzzle unlocking), Connect Dots (interactive concept matching), Target Hunt (visual diagram labeling & hot-spot discovery), and Resource Drop (instant QR-based lecture file sharing).",
+      "GamiBar is a complete interactive session platform with 6 distinct tool modes: Quiz Battle (timed multiple-choice), Live Polls (real-time opinion distributions), Jigsaw Mission (gamified image puzzle challenges), Connect Dots (interactive concept matching), Target Hunt (visual hotspot discovery), and QRFile (instant QR-based lecture file sharing).",
   },
   {
     question: "Do students or participants need to install an app or create an account?",
     answer:
-      "No. Joining and playing are always free. Participants do not need an app, account, subscription, or purchase. They simply scan the host's room QR code or type the 6-digit room code into their phone's browser to join instantly with a nickname.",
+      "No. Joining and playing are always free. Participants do not need an app, account, or login. They simply scan your room QR code or enter the 6-digit room code on their phone browser to join instantly with a nickname.",
   },
   {
-    question: "How does live synchronization work between host and participants?",
+    question: "Can I upload my own questions, diagrams, images, and lecture files?",
     answer:
-      "GamiBar uses high-performance real-time synchronization. When the host changes questions, reveals answers, or starts a puzzle round, all participant phones and the main projector screen update simultaneously with zero latency.",
+      "Yes. You have full authoring control: create multiple-choice question banks with timers, upload diagrams for Target Hunt and Jigsaw puzzles, configure term pairs for Connect Dots, and upload PDF or PPT slide decks for QR downloads.",
   },
   {
-    question: "Can I upload my own questions, diagrams, images, and lecture decks?",
+    question: "How does QRFile file sharing work and how long are documents kept?",
     answer:
-      "Yes. You have complete authoring control: create custom multiple-choice question banks with timers, upload custom images for Jigsaw puzzles, mark custom interactive coordinates for Target Hunt diagrams, set term-definition pairs for Connect Dots, and upload PDF/PPT decks for Resource Drop.",
-  },
-  {
-    question: "How does Resource Drop file sharing work and how long are documents kept?",
-    answer:
-      "Resource Drop eliminates the hassle of emailing slides or sharing links after class. Hosts upload PDF, PPT, PPTX, DOC, or DOCX files once. Participants scan the room QR to download the files directly. Hosts select 7, 14, or 28-day retention periods, after which files are securely and automatically cleaned up.",
-  },
-  {
-    question: "How do Jigsaw Mission, Connect Dots, and Target Hunt work in live sessions?",
-    answer:
-      "In Jigsaw Mission, correct answers unlock pieces of a hidden image until the full picture is solved. Connect Dots allows students to drag and connect matching terms on touchscreens. Target Hunt displays an anatomical, map, or mechanical diagram where participants must tap the exact coordinate to answer.",
-  },
-  {
-    question: "Where are participant scores, rankings, and session histories saved?",
-    answer:
-      "During the activity, live leaderboards with streak bonuses and XP points display on the main screen. After the round ends, full session summaries, response distributions, and participant results are automatically saved in the host's Workspace dashboard for future review.",
+      "QRFile lets you upload presentations, worksheets, or lecture handouts once. A live QR code is generated so your audience can download files instantly. You can choose retention periods from 7 to 28 days, after which files are securely cleaned up.",
   },
   {
     question: "Which devices and browsers are supported?",
     answer:
-      "GamiBar is fully responsive and web-based. It runs on any modern browser (Chrome, Safari, Firefox, Edge) across iOS, Android, macOS, Windows, Linux, Chromebooks, and interactive smartboards with full touch and mouse support.",
-  },
-  {
-    question: "How many participants can join a live room at once?",
-    answer:
-      "GamiBar's architecture is optimized for low-bandwidth environments and high concurrency. It handles everything from small group tutorials (10-20 students) to packed university lecture halls and corporate webinars (hundreds of live participants).",
+      "GamiBar is 100% web-based and responsive. It works seamlessly across iOS, Android, macOS, Windows, Linux, Chromebooks, and interactive touch smartboards on all modern browsers (Chrome, Safari, Edge, Firefox).",
   },
   {
     question: "Is GamiBar free for teachers, educators, and workshop facilitators?",
     answer:
-      "Yes. Educators can register for a free account, create unlimited live rooms, build reusable question templates, and host interactive sessions immediately without any credit card required.",
+      "Yes. You can register for a free account, create live rooms, build custom question templates, and host interactive sessions immediately without a credit card.",
   },
 ] as const;
 

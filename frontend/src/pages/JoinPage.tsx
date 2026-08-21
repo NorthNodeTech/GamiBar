@@ -122,11 +122,11 @@ export default function JoinCodePage() {
         </Link>
 
         <Link to="/" className="mt-4 flex items-center justify-center gap-3">
-          <div className="grid size-14 place-items-center rounded-2xl bg-[#111111] p-2.5 shadow-sm">
-            <Logo size={44} />
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-[#111111] p-2.5 shadow-sm">
+            <Logo size={34} />
           </div>
           <span className="font-display text-2xl font-bold tracking-tight text-[#111111]">
-            Gami<span className="text-red-500">BAR</span>
+            Gami<span className="text-[#FF3B30]">BAR</span>
           </span>
         </Link>
 

@@ -201,18 +201,63 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          {/* Center Scan / Join QR FAB (Create or join) */}
+          {/* Create FAB */}
+          <Link
+            to="/author/create"
+            title="Create room"
+            aria-label="Create room"
+            aria-current={pathname.startsWith("/author/create") ? "page" : undefined}
+            className="group relative -top-3 flex flex-1 flex-col items-center justify-center tap-target"
+          >
+            <div
+              className={cn(
+                "grid size-11 place-items-center rounded-full text-white shadow-[0_6px_16px_rgba(15,23,42,0.3)] ring-[3px] ring-white transition-all duration-150 active:scale-90 group-hover:scale-105",
+                pathname.startsWith("/author/create")
+                  ? "bg-[#FF3B30] shadow-[0_6px_18px_rgba(255,59,48,0.4)]"
+                  : "bg-gradient-to-b from-[#1E293B] via-[#111827] to-[#0A0E1A]",
+              )}
+            >
+              <Plus className="size-5 text-white stroke-[2.5]" />
+            </div>
+            <span
+              className={cn(
+                "mt-0.5 whitespace-nowrap text-[10px] tracking-tight",
+                pathname.startsWith("/author/create")
+                  ? "font-extrabold text-[#FF3B30]"
+                  : "font-extrabold text-[#111111]",
+              )}
+            >
+              Create
+            </span>
+          </Link>
+
+          {/* Join FAB */}
           <Link
             to="/join"
-            title="Create or join"
-            aria-label="Create or join"
-            className="group relative -top-3.5 flex flex-1 flex-col items-center justify-center tap-target"
+            title="Join room"
+            aria-label="Join room"
+            aria-current={pathname.startsWith("/join") ? "page" : undefined}
+            className="group relative -top-3 flex flex-1 flex-col items-center justify-center tap-target"
           >
-            <div className="grid size-11 place-items-center rounded-full bg-gradient-to-b from-[#1E293B] via-[#111827] to-[#0A0E1A] text-white shadow-[0_6px_16px_rgba(15,23,42,0.3)] ring-[3px] ring-white transition-all duration-150 active:scale-90 group-hover:scale-105">
+            <div
+              className={cn(
+                "grid size-11 place-items-center rounded-full text-white shadow-[0_6px_16px_rgba(15,23,42,0.3)] ring-[3px] ring-white transition-all duration-150 active:scale-90 group-hover:scale-105",
+                pathname.startsWith("/join")
+                  ? "bg-[#FF3B30] shadow-[0_6px_18px_rgba(255,59,48,0.4)]"
+                  : "bg-gradient-to-b from-[#1E293B] via-[#111827] to-[#0A0E1A]",
+              )}
+            >
               <ScanLine className="size-5 text-white stroke-[2.25]" />
             </div>
-            <span className="mt-0.5 whitespace-nowrap text-[10px] font-extrabold tracking-tight text-[#111111]">
-              Create or join
+            <span
+              className={cn(
+                "mt-0.5 whitespace-nowrap text-[10px] tracking-tight",
+                pathname.startsWith("/join")
+                  ? "font-extrabold text-[#FF3B30]"
+                  : "font-extrabold text-[#111111]",
+              )}
+            >
+              Join
             </span>
           </Link>
 
@@ -222,13 +267,13 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             title="Tools"
             aria-label="Tools"
             aria-current={
-              pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+              pathname.startsWith("/author/tools") && !pathname.startsWith("/author/create")
                 ? "page"
                 : undefined
             }
             className={cn(
               "flex flex-1 flex-col items-center justify-center py-1 transition-all active:scale-95",
-              pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+              pathname.startsWith("/author/tools") && !pathname.startsWith("/author/create")
                 ? "text-[#111111]"
                 : "text-[#8A8F98] hover:text-[#111111]",
             )}
@@ -236,7 +281,7 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             <Wrench
               className="size-5 shrink-0"
               strokeWidth={
-                pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+                pathname.startsWith("/author/tools") && !pathname.startsWith("/author/create")
                   ? 2.5
                   : 2
               }
@@ -244,7 +289,7 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             <span
               className={cn(
                 "mt-0.5 text-[10px] tracking-tight",
-                pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+                pathname.startsWith("/author/tools") && !pathname.startsWith("/author/create")
                   ? "font-extrabold text-[#111111]"
                   : "font-medium text-[#717680]",
               )}

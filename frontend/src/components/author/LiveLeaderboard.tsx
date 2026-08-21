@@ -1,4 +1,4 @@
-import { Crown, Medal, Trophy } from "lucide-react";
+import { Crown, Flag, Medal, Trophy } from "lucide-react";
 
 import { formatDuration } from "@shared/game/ranking";
 import { cn } from "@/lib/utils";
@@ -159,14 +159,13 @@ function PodiumSpot({
       >
         <span
           className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold",
-            rank === 1 && "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300",
-            rank === 2 && "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
-            rank === 3 &&
-              "bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300",
+            "grid size-10 shrink-0 place-items-center rounded-full text-sm font-extrabold",
+            rank === 1 && "bg-[#111111] text-white",
+            rank === 2 && "bg-[#E5E7EB] text-[#111111]",
+            rank === 3 && "bg-[#F3F4F6] text-[#374151] border border-[#E5E7EB]",
           )}
         >
-          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
+          {rank}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-[var(--foreground)]">{row.displayName}</p>
@@ -249,8 +248,8 @@ export function CompletionTimeline({
               {i < items.length - 1 && (
                 <span className="absolute left-[11px] top-6 h-[calc(100%-12px)] w-px bg-[var(--gamibar-border)]" />
               )}
-              <span className="relative z-10 mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[var(--game-connect-dots-soft)] text-[10px]">
-                🏁
+              <span className="relative z-10 mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[#111111] text-white">
+                <Flag className="size-3" />
               </span>
               <div className="min-w-0 flex-1 rounded-xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-3 py-2.5">
                 <p className="text-sm text-[var(--muted-foreground)]">

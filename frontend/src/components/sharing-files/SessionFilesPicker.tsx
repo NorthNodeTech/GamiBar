@@ -1,4 +1,4 @@
-import { FileText, Paperclip, Trash2, Upload } from "lucide-react";
+import { FileText, Lock, Paperclip, Trash2, Upload } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -130,7 +130,7 @@ export function SessionFilesPicker({
                     selected
                       ? "bg-[#111111] text-white"
                       : isLocked
-                        ? "bg-[#F1F5F9] text-[#64748B] hover:border-amber-300 hover:text-amber-700"
+                        ? "bg-[#F4F4F5] text-[#71717A] hover:text-[#111111]"
                         : "bg-[var(--gamibar-page)] text-[#525252] hover:bg-[var(--gamibar-brand-soft)] hover:text-[var(--gamibar-brand)]",
                     disabled && "cursor-default opacity-75",
                   )}
@@ -138,8 +138,8 @@ export function SessionFilesPicker({
                 >
                   <span>{days} days</span>
                   {isLocked && (
-                    <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
-                      🔒
+                    <span className="flex items-center gap-0.5 text-[9px] font-bold text-[#111111] bg-[#E4E4E7] px-1 py-0.5 rounded border border-[#D4D4D8]">
+                      <Lock className="size-2 text-[#111111]" /> Pro
                     </span>
                   )}
                 </button>

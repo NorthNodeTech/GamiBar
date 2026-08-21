@@ -110,6 +110,14 @@ export default function StudentPlayPage() {
       reconnectToken,
     });
   const expiringStepRef = useRef<string | null>(null);
+  const [overallTimedOut, setOverallTimedOut] = useState(false);
+
+  const handleOverallTimerExpired = useCallback(() => {
+    setOverallTimedOut(true);
+    toast.error("Time's up! Session auto-submitted.");
+    void refresh();
+  }, [refresh]);
+
   const handleQuestionTimerExpired = useCallback(
     async (stepId: string) => {
       if (!reconnectToken || expiringStepRef.current === stepId) return;
@@ -199,6 +207,7 @@ export default function StudentPlayPage() {
 
   const room = snapshot.room;
   const timerMode = (room.payload.timerMode ?? "overall") as TimerMode;
+
   const questionTimer = snapshot.questionTimer as {
     stepId: string;
     endsAt: number;
@@ -207,14 +216,24 @@ export default function StudentPlayPage() {
   const activeEndsAt = questionTimer?.endsAt ?? room.endsAt;
   const onActiveTimerExpired = questionTimer
     ? (stepId?: string) => void handleQuestionTimerExpired(stepId ?? questionTimer.stepId)
-    : undefined;
+    : timerMode === "overall" && room.endsAt
+      ? handleOverallTimerExpired
+      : undefined;
   const gameFinished = room.status === "FINISHED" || room.status === "CANCELLED";
   const displayName = participant?.displayName ?? "Participant";
-  const studentFinished = isStudentSessionFinished({
-    room,
-    answeredCount: snapshot.myAnswers.length,
-    attemptCompleted: Boolean(snapshot.myAttempt?.completed),
-  });
+
+  const isOverallExpired =
+    timerMode === "overall" &&
+    room.endsAt != null &&
+    (Date.now() >= room.endsAt || overallTimedOut);
+
+  const studentFinished =
+    isOverallExpired ||
+    isStudentSessionFinished({
+      room,
+      answeredCount: snapshot.myAnswers.length,
+      attemptCompleted: Boolean(snapshot.myAttempt?.completed),
+    });
   const isQuiz = room.mode === "quiz" && room.payload.mode === "quiz";
   const showLeaderboard =
     gameFinished || (isQuiz && studentFinished && room.showLeaderboardToStudents);
@@ -712,8 +731,8 @@ function QuizPlay({
       {/* Main question area — ~75% on desktop */}
       <div className="flex min-w-0 flex-1 flex-col lg:w-[75%] lg:max-w-[75%] lg:pr-8">
         <div className="flex items-center justify-between gap-3">
-          <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
-            <Logo size={32} />
+          <div className="flex size-11 items-center justify-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+            <Logo size={26} />
           </div>
           <TimerBar
             endsAt={timerEndsAt}
@@ -1103,8 +1122,8 @@ function PollPlay({
   return (
     <div className="mx-auto flex min-h-dvh-screen w-full max-w-5xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
       <div className="flex items-center justify-between gap-3">
-        <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
-          <Logo size={32} />
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+          <Logo size={26} />
         </div>
         <TimerBar
           endsAt={timerEndsAt}
@@ -1509,8 +1528,8 @@ function VisualPointPlay({
   return (
     <div className="mx-auto flex min-h-dvh-screen w-full max-w-5xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
       <div className="flex items-center justify-between gap-3">
-        <div className="grid size-11 place-items-center rounded-2xl bg-[#111111] p-2 shadow-sm">
-          <Logo size={32} />
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+          <Logo size={26} />
         </div>
         <TimerBar
           endsAt={timerEndsAt}

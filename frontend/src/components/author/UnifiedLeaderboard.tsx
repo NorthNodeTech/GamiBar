@@ -139,14 +139,8 @@ function RankBadge({ rank, compact }: { rank: number; compact?: boolean }) {
 
   if (compact) {
     return (
-      <span className="inline-flex min-w-7 items-center text-[var(--muted-foreground)]">
-        {rank <= 3 ? (
-          <span aria-label={`${rankLabel} place`}>
-            {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
-          </span>
-        ) : (
-          rank
-        )}
+      <span className="inline-flex min-w-7 items-center font-bold text-[var(--foreground)]">
+        #{rank}
       </span>
     );
   }
@@ -154,17 +148,16 @@ function RankBadge({ rank, compact }: { rank: number; compact?: boolean }) {
   return (
     <span
       className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-xs font-bold text-[var(--muted-foreground)]",
-        rank === 1 &&
-          "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300",
-        rank === 2 &&
-          "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-400/30 dark:bg-slate-400/15 dark:text-slate-300",
-        rank === 3 &&
-          "border-orange-200 bg-orange-100 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-300",
+        "grid size-9 shrink-0 place-items-center rounded-full border text-xs font-black",
+        rank === 1 && "border-[#111111] bg-[#111111] text-white",
+        rank === 2 && "border-[#E5E7EB] bg-[#E5E7EB] text-[#111111]",
+        rank === 3 && "border-[#E5E7EB] bg-[#F3F4F6] text-[#374151]",
+        rank > 3 &&
+          "border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[var(--muted-foreground)]",
       )}
       aria-label={`${rankLabel} place`}
     >
-      {rank <= 3 ? (rank === 1 ? "1" : rank === 2 ? "2" : "3") : rank}
+      {rank}
     </span>
   );
 }

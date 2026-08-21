@@ -108,7 +108,7 @@ services:
         value: strict-origin-when-cross-origin
       - path: /*
         name: Permissions-Policy
-        value: camera=(self), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com"), usb=()
+        value: camera=(self), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com"), accelerometer=(self "https://checkout.razorpay.com" "https://api.razorpay.com"), gyroscope=(self "https://checkout.razorpay.com" "https://api.razorpay.com"), magnetometer=(self "https://checkout.razorpay.com" "https://api.razorpay.com"), usb=()
       - path: /*
         name: Content-Security-Policy
         value: >-

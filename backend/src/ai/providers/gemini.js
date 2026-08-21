@@ -1,33 +1,51 @@
 import { HttpError } from "../../http-error.js";
-import { getGeminiClient, getGeminiModel } from "../gemini-client.js";
+import { getAllGeminiClients, getGeminiModel, hasGeminiKey } from "../gemini-client.js";
 
 export const geminiProvider = {
   id: "gemini",
   label: "Gemini",
   isConfigured() {
-    return Boolean(process.env.GEMINI_API_KEY?.trim());
+    return hasGeminiKey();
   },
-  async generateJson({ prompt, schema, timeoutMs }) {
-    try {
-      const interaction = await getGeminiClient().interactions.create(
-        {
+  async generateJson({ prompt, schema, timeoutMs = 25000 }) {
+    const clients = getAllGeminiClients();
+    let lastError = null;
+
+    // Try available Gemini clients in the pool (e.g. Key 1, Key 2)
+    for (let attempt = 0; attempt < clients.length; attempt += 1) {
+      const client = clients[attempt];
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Gemini request timed out")), timeoutMs),
+        );
+
+        const requestPromise = client.models.generateContent({
           model: getGeminiModel(),
-          input: prompt,
-          response_format: {
-            type: "text",
-            mime_type: "application/json",
-            schema,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            ...(schema ? { responseSchema: schema } : {}),
           },
-        },
-        { timeout: timeoutMs, maxRetries: 0 },
-      );
-      return interaction?.output_text ?? interaction?.outputText ?? "";
-    } catch (err) {
-      console.warn("Gemini generation failed", {
-        name: err instanceof Error ? err.name : "UnknownError",
-        message: err instanceof Error ? err.message : "Unknown provider error",
-      });
-      throw new HttpError("Gemini could not generate options right now.", 502);
+        });
+
+        const response = await Promise.race([requestPromise, timeoutPromise]);
+        const text = response?.text?.trim();
+        if (text) {
+          return text;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`Gemini client [key #${attempt + 1}] failed`, {
+          name: err instanceof Error ? err.name : "UnknownError",
+          message: err instanceof Error ? err.message : "Unknown error",
+        });
+        // If there are more clients in the pool, loop immediately to the next key!
+      }
     }
+
+    throw new HttpError(
+      lastError?.message || "Gemini could not generate content right now.",
+      502,
+    );
   },
 };

@@ -191,7 +191,9 @@ export default function CreateRoomWizard() {
   const [jigsawTemplateId, setJigsawTemplateId] = useState<JigsawTemplateId>(
     DEFAULT_JIGSAW_TEMPLATE_ID,
   );
-  const [timerSeconds, setTimerSeconds] = useState<number | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState<number | null>(() =>
+    defaultTimerSeconds("quiz", "overall"),
+  );
   const [timerMode, setTimerMode] = useState<TimerMode>("overall");
   const timerDisplayLabel = `${formatTimerLong(timerSeconds)}${
     timerMode === "per_question" && timerSeconds != null
@@ -381,7 +383,7 @@ export default function CreateRoomWizard() {
       skipModeStep.current = false;
     }
     setMode(next);
-    setTimerSeconds(null);
+    setTimerSeconds(defaultTimerSeconds(next, "overall"));
     setTimerMode("overall");
     if (modeUsesQuestions(next)) {
       setQuestions(emptyQuizQuestions(next));
@@ -822,70 +824,41 @@ export default function CreateRoomWizard() {
 
             {step === "configure" && mode && (
               <div className="grid gap-5">
-                <GameTimerSettings
-                  mode={mode}
-                  timerMode={timerMode}
-                  value={timerSeconds}
-                  onTimerModeChange={(nextTimerMode) => {
-                    setTimerMode(nextTimerMode);
-                    setTimerSeconds((current) =>
-                      current == null
-                        ? nextTimerMode === "per_question"
-                          ? defaultTimerSeconds(mode, nextTimerMode)
-                          : null
-                        : clampTimer(mode, current, nextTimerMode),
-                    );
-                  }}
-                  onChange={setTimerSeconds}
-                />
+                {mode !== "quiz" && mode !== "quiz_jigsaw" && mode !== "jigsaw" && (
+                  <GameTimerSettings
+                    mode={mode}
+                    timerMode={timerMode}
+                    value={timerSeconds}
+                    onTimerModeChange={(nextTimerMode) => {
+                      setTimerMode(nextTimerMode);
+                      setTimerSeconds(defaultTimerSeconds(mode, nextTimerMode));
+                    }}
+                    onChange={setTimerSeconds}
+                  />
+                )}
 
                 {mode === "quiz" && (
-                  <>
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[#111111]">
-                          {questions.length} question{questions.length === 1 ? "" : "s"}
-                        </p>
-                        <p className="text-xs text-[#737373]">
-                          One attempt per question · accuracy-first ranking
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={questions.length <= GAME_CONFIG.quiz.minQuestions}
-                          onClick={removeQuizQuestion}
-                        >
-                          Remove
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={
-                            GAME_CONFIG.quiz.maxQuestions > 0 &&
-                            questions.length >= GAME_CONFIG.quiz.maxQuestions
-                          }
-                          onClick={addQuizQuestion}
-                        >
-                          Add question
-                        </Button>
-                      </div>
-                    </div>
-                    <QuizEditor
-                      mode="quiz"
-                      questions={questions}
-                      activeQ={activeQ}
-                      setActiveQ={setActiveQ}
-                      setQuestions={setQuestions}
-                      progress={quizProgress}
-                      generationContext={aiGenerationContext}
-                    />
-                  </>
+                  <QuizEditor
+                    mode="quiz"
+                    questions={questions}
+                    activeQ={activeQ}
+                    setActiveQ={setActiveQ}
+                    setQuestions={setQuestions}
+                    progress={quizProgress}
+                    generationContext={aiGenerationContext}
+                    timerNode={
+                      <GameTimerSettings
+                        mode={mode}
+                        timerMode={timerMode}
+                        value={timerSeconds}
+                        onTimerModeChange={(nextTimerMode) => {
+                          setTimerMode(nextTimerMode);
+                          setTimerSeconds(defaultTimerSeconds(mode, nextTimerMode));
+                        }}
+                        onChange={setTimerSeconds}
+                      />
+                    }
+                  />
                 )}
 
                 {mode === "polls" && (
@@ -949,6 +922,18 @@ export default function CreateRoomWizard() {
                       progress={quizProgress}
                       accent="purple"
                       generationContext={aiGenerationContext}
+                      timerNode={
+                        <GameTimerSettings
+                          mode={mode}
+                          timerMode={timerMode}
+                          value={timerSeconds}
+                          onTimerModeChange={(nextTimerMode) => {
+                            setTimerMode(nextTimerMode);
+                            setTimerSeconds(defaultTimerSeconds(mode, nextTimerMode));
+                          }}
+                          onChange={setTimerSeconds}
+                        />
+                      }
                     />
                     <JigsawUploader
                       jigsawUrl={jigsawUrl}
@@ -1100,6 +1085,18 @@ export default function CreateRoomWizard() {
                       progress={quizProgress}
                       accent="jigsaw"
                       generationContext={aiGenerationContext}
+                      timerNode={
+                        <GameTimerSettings
+                          mode={mode}
+                          timerMode={timerMode}
+                          value={timerSeconds}
+                          onTimerModeChange={(nextTimerMode) => {
+                            setTimerMode(nextTimerMode);
+                            setTimerSeconds(defaultTimerSeconds(mode, nextTimerMode));
+                          }}
+                          onChange={setTimerSeconds}
+                        />
+                      }
                     />
                     {!jigsawImageSource ? (
                       <JigsawImageSourceSelector onSelect={setJigsawImageSource} />
@@ -1411,6 +1408,7 @@ function QuizEditor({
   progress,
   generationContext,
   accent = "default",
+  timerNode,
 }: {
   mode: Extract<GameMode, "quiz" | "quiz_jigsaw" | "jigsaw">;
   questions: QuizQuestionDraft[];
@@ -1420,25 +1418,13 @@ function QuizEditor({
   progress: { done: number; total: number; complete: boolean };
   generationContext: AiGenerationContext;
   accent?: "default" | "purple" | "jigsaw";
+  timerNode?: ReactNode;
 }) {
   const q = questions[activeQ]!;
   const options = QUIZ_OPTION_IDS;
   const currentComplete = isQuizQuestionComplete(q);
   const hasNext = activeQ < questions.length - 1;
   const hasPrev = activeQ > 0;
-  const pct = Math.round((progress.done / progress.total) * 100);
-  const accentBadge =
-    accent === "purple"
-      ? "bg-[#EDE9FE] text-[#5B21B6]"
-      : accent === "jigsaw"
-        ? "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw-deep)]"
-        : "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]";
-  const accentBar =
-    accent === "purple"
-      ? "bg-gradient-to-r from-[#7C3AED] to-[#5B21B6]"
-      : accent === "jigsaw"
-        ? "bg-gradient-to-r from-[var(--game-jigsaw)] to-[var(--game-jigsaw-deep)]"
-        : "bg-gradient-to-r from-[var(--game-quiz)] to-[var(--game-quiz-deep)]";
   const maxQuestionCount =
     mode === "quiz"
       ? GAME_CONFIG.quiz.maxQuestions
@@ -1452,6 +1438,35 @@ function QuizEditor({
 
   const update = (patch: Partial<QuizQuestionDraft>) => {
     setQuestions((prev) => prev.map((item, i) => (i === activeQ ? { ...item, ...patch } : item)));
+  };
+
+  const addQuestion = () => {
+    if (maxQuestionCount > 0 && questions.length >= maxQuestionCount) {
+      toast.error(`Maximum ${maxQuestionCount} questions.`);
+      return;
+    }
+    const nextQuestionId = `q-${Date.now()}`;
+    const nextQuestion: QuizQuestionDraft = {
+      id: nextQuestionId,
+      prompt: "",
+      options: { A: "", B: "", C: "", D: "" },
+      correctOption: null,
+    };
+    setQuestions((prev) => [...prev, nextQuestion]);
+    setActiveQ(questions.length);
+  };
+
+  const deleteQuestion = () => {
+    const minCount =
+      mode === "quiz_jigsaw"
+        ? GAME_CONFIG.quiz_jigsaw.questionCount
+        : GAME_CONFIG.quiz.minQuestions;
+    if (questions.length <= minCount) {
+      toast.error(`Keep at least ${minCount} question${minCount === 1 ? "" : "s"}.`);
+      return;
+    }
+    setQuestions((prev) => prev.filter((_, i) => i !== activeQ));
+    setActiveQ(Math.max(0, activeQ - 1));
   };
 
   const applyGeneratedQuestions = (generated: QuizQuestionGenerationResponse[]) => {
@@ -1487,37 +1502,21 @@ function QuizEditor({
   };
 
   return (
-    <div className="grid gap-4">
-      <AiGenerateQuestionsPanel
-        mode={mode}
-        initialTopic={generationContext.subject}
-        availableSlots={availableAiSlots}
-        existingQuestions={questions.map((question) => question.prompt)}
-        onApply={applyGeneratedQuestions}
-      />
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-[#111111]">
-            Question deck · {progress.done}/{progress.total}
-          </p>
-          <p className="text-xs text-[#737373]">
-            Tap a number, fill the prompt and four choices, then mark the correct letter.
-          </p>
+    <div className="grid gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-stretch">
+        {timerNode && <div className="flex flex-col lg:col-span-4 xl:col-span-4">{timerNode}</div>}
+        <div className={timerNode ? "flex flex-col lg:col-span-8 xl:col-span-8" : "col-span-12"}>
+          <AiGenerateQuestionsPanel
+            mode={mode}
+            initialTopic={generationContext.subject}
+            availableSlots={availableAiSlots}
+            existingQuestions={questions.map((question) => question.prompt)}
+            onApply={applyGeneratedQuestions}
+          />
         </div>
-        <span className={cn("rounded-full px-3 py-1 text-xs font-bold", accentBadge)}>
-          {pct}% ready
-        </span>
       </div>
 
-      <div className="h-2 overflow-hidden rounded-full bg-[var(--gamibar-page)]">
-        <div
-          className={cn("h-full rounded-full transition-all duration-300", accentBar)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {questions.map((item, i) => {
           const done = isQuizQuestionComplete(item);
           return (
@@ -1538,12 +1537,41 @@ function QuizEditor({
             </button>
           );
         })}
+
+        {(maxQuestionCount === 0 || questions.length < maxQuestionCount) && (
+          <button
+            type="button"
+            title="Add question"
+            aria-label="Add question"
+            onClick={addQuestion}
+            className="grid size-9 place-items-center rounded-xl border border-dashed border-[#CBD5E1] bg-white text-[#111111] transition-all hover:border-[#111111] hover:bg-[#F8F9FA] active:scale-95 shadow-sm"
+          >
+            <Plus className="size-4" />
+          </button>
+        )}
       </div>
 
       <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
-        <Label className="text-xs uppercase tracking-wider text-[#737373]">
-          Question {activeQ + 1}
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs uppercase tracking-wider text-[#737373]">
+            Question {activeQ + 1} of {questions.length}
+          </Label>
+          {questions.length >
+            (mode === "quiz_jigsaw"
+              ? GAME_CONFIG.quiz_jigsaw.questionCount
+              : GAME_CONFIG.quiz.minQuestions) && (
+            <button
+              type="button"
+              onClick={deleteQuestion}
+              title="Delete this question"
+              aria-label="Delete this question"
+              className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#737373] transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 className="size-3.5 text-[#737373] transition-colors group-hover:text-red-600" />
+              <span>Delete</span>
+            </button>
+          )}
+        </div>
         <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
           <Input
             value={q.prompt}
@@ -1564,7 +1592,6 @@ function QuizEditor({
             }}
             disabled={!q.prompt.trim()}
             buttonLabel="Generate options"
-            dialogTitle="Review answer choices"
             onApply={(response) => {
               if (response.kind !== "quiz_options") return;
               update({ options: response.options, correctOption: response.correctOption });
@@ -1798,7 +1825,7 @@ function PollBuilder({
         />
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {questions.map((question, index) => {
           const done = progress.done > index && question.prompt.trim();
           return (
@@ -1819,17 +1846,43 @@ function PollBuilder({
             </button>
           );
         })}
+
+        {questions.length < GAME_CONFIG.polls.maxQuestions && (
+          <button
+            type="button"
+            title="Add question"
+            aria-label="Add question"
+            onClick={() => addQuestion()}
+            className="grid size-9 place-items-center rounded-xl border border-dashed border-[#CBD5E1] bg-white text-[#111111] transition-all hover:border-[#111111] hover:bg-[#F8F9FA] active:scale-95 shadow-sm"
+          >
+            <Plus className="size-4" />
+          </button>
+        )}
       </div>
 
       <div className="grid gap-4 rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_13rem] md:items-end">
           <div className="grid gap-2">
-            <Label
-              htmlFor="poll-question-prompt"
-              className="text-xs uppercase tracking-wider text-[#737373]"
-            >
-              Question {activeIndex + 1}
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label
+                htmlFor="poll-question-prompt"
+                className="text-xs uppercase tracking-wider text-[#737373]"
+              >
+                Question {activeIndex + 1} of {questions.length}
+              </Label>
+              {questions.length > GAME_CONFIG.polls.minQuestions && (
+                <button
+                  type="button"
+                  onClick={removeQuestion}
+                  title="Delete this question"
+                  aria-label="Delete this question"
+                  className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#737373] transition-colors hover:bg-red-50 hover:text-red-600"
+                >
+                  <Trash2 className="size-3.5 text-[#737373] transition-colors group-hover:text-red-600" />
+                  <span>Delete</span>
+                </button>
+              )}
+            </div>
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
               <Input
                 id="poll-question-prompt"
@@ -1852,7 +1905,6 @@ function PollBuilder({
                   }}
                   disabled={!q.prompt.trim()}
                   buttonLabel="Generate choices"
-                  dialogTitle="Review poll choices"
                   onApply={(response) => {
                     if (response.kind !== "poll_options") return;
                     update({
@@ -2769,7 +2821,6 @@ function ConnectDotsPairEditor({
                 }}
                 disabled={!pair.question.trim()}
                 buttonLabel="Generate answer"
-                dialogTitle="Review matching answer"
                 className="h-9"
                 onApply={(response) => {
                   if (response.kind !== "connect_dots_answer") return;

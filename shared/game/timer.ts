@@ -84,13 +84,13 @@ export function timerBounds(
 }
 
 export function defaultTimerSeconds(mode: GameMode, timerMode: TimerMode = "overall"): number | null {
-  if (timerMode === "per_question") return 30;
-  if (mode === "quiz") return GAME_CONFIG.quiz.timeLimitSeconds;
-  if (mode === "quiz_jigsaw") return GAME_CONFIG.quiz_jigsaw.timeLimitSeconds;
-  if (mode === "jigsaw") return GAME_CONFIG.jigsaw.timeLimitSeconds;
-  if (mode === "visual_point") return GAME_CONFIG.visual_point.timeLimitSeconds;
-  if (mode === "polls") return GAME_CONFIG.polls.timeLimitSeconds;
-  return GAME_CONFIG.connect_dots.timeLimitSeconds;
+  if (timerMode === "per_question") return 15;
+  if (mode === "quiz") return 180;
+  if (mode === "quiz_jigsaw") return 300;
+  if (mode === "jigsaw") return 180;
+  if (mode === "visual_point") return 180;
+  if (mode === "polls") return 180;
+  return GAME_CONFIG.connect_dots.timeLimitSeconds ?? 60;
 }
 
 export function formatTimerSeconds(total: number | null): string {
