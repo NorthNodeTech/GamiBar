@@ -24,6 +24,22 @@ export default function StudentLobbyPage() {
   const roomId = snapshot?.ok ? snapshot.room.id : null;
 
   useEffect(() => {
+    if (!snapshot?.ok) return;
+    const room = snapshot.room;
+    const isResourceDrop = Boolean(
+      ("isResourceDrop" in room.payload && room.payload.isResourceDrop === true) ||
+      room.subject === "Resource Drop" ||
+      room.name === "Presentation Resources" ||
+      room.name === "Presentation Resource" ||
+      room.name.toLowerCase().includes("presentation resource") ||
+      room.name.toLowerCase().includes("qr drop") ||
+      room.name.toLowerCase().includes("qrfile") ||
+      room.name.toLowerCase().includes("resource drop"),
+    );
+    if (isResourceDrop) {
+      navigate({ to: "/share/$shareSlug", params: { shareSlug: room.code } });
+      return;
+    }
     if (!roomStatus || !roomId) return;
     if (roomStatus === "COUNTDOWN" || roomStatus === "LIVE") {
       setCountdown(3);
@@ -31,7 +47,7 @@ export default function StudentLobbyPage() {
     if (roomStatus === "FINISHED" || roomStatus === "CANCELLED") {
       navigate({ to: "/play/$roomId", params: { roomId } });
     }
-  }, [roomId, roomStatus, navigate]);
+  }, [roomId, roomStatus, snapshot, navigate]);
 
   useEffect(() => {
     if (countdown == null) return;

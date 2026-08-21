@@ -82,6 +82,20 @@ export default function JoinCodePage() {
           setJoinError("This room is closed.");
           return;
         }
+        const isResourceDrop = Boolean(
+          ("isResourceDrop" in snap.room.payload && snap.room.payload.isResourceDrop === true) ||
+          snap.room.subject === "Resource Drop" ||
+          snap.room.name === "Presentation Resources" ||
+          snap.room.name === "Presentation Resource" ||
+          snap.room.name.toLowerCase().includes("presentation resource") ||
+          snap.room.name.toLowerCase().includes("qr drop") ||
+          snap.room.name.toLowerCase().includes("qrfile") ||
+          snap.room.name.toLowerCase().includes("resource drop"),
+        );
+        if (isResourceDrop) {
+          navigate({ to: "/share/$shareSlug", params: { shareSlug: clean } });
+          return;
+        }
         navigate({ to: "/join/name", search: { code: clean } });
       } catch {
         setJoinError("Could not validate room. Check your connection and try again.");

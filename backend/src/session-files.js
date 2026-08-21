@@ -234,8 +234,28 @@ async function teacherSummary(admin, room) {
   };
 }
 
-async function publicList(admin, shareSlug) {
-  const share = await shareBySlug(admin, shareSlug);
+async function publicList(admin, shareSlug, code) {
+  const queryParam = (shareSlug || code || "").trim();
+  let share = null;
+
+  if (/^[1-9][0-9]{5}$/.test(queryParam)) {
+    const { data: room, error: roomErr } = await admin
+      .from("gamibar_rooms")
+      .select("id, code, name, status, author_id, author_token_hash")
+      .eq("code", queryParam)
+      .maybeSingle();
+    if (roomErr) throw roomErr;
+    if (!room) throw new HttpError("This resource drop is not active.", 404);
+    share = await ensureShare(admin, room.id);
+    const files = await activeFilesForRoom(admin, room.id);
+    return {
+      room: publicRoom(room),
+      shareSlug: share.share_slug,
+      files: files.map(publicFile),
+    };
+  }
+
+  share = await shareBySlug(admin, queryParam);
   const { data: room, error: roomError } = await admin
     .from("gamibar_rooms")
     .select("id, code, name, status, author_id, author_token_hash")
@@ -255,7 +275,20 @@ async function publicList(admin, shareSlug) {
 async function downloadFile(admin, body) {
   const shareSlug = stringBody(body, "shareSlug");
   const fileId = stringBody(body, "fileId");
-  const share = await shareBySlug(admin, shareSlug);
+  let share = null;
+
+  if (/^[1-9][0-9]{5}$/.test(shareSlug)) {
+    const { data: room, error: roomErr } = await admin
+      .from("gamibar_rooms")
+      .select("id")
+      .eq("code", shareSlug)
+      .maybeSingle();
+    if (roomErr) throw roomErr;
+    if (!room) throw new HttpError("This resource drop is not active.", 404);
+    share = await ensureShare(admin, room.id);
+  } else {
+    share = await shareBySlug(admin, shareSlug);
+  }
 
   const { data: file, error } = await admin
     .from("gamibar_session_files")

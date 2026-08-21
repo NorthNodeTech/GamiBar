@@ -43,6 +43,20 @@ export default function NicknamePage() {
           setPageState("missing");
           return;
         }
+        const isResourceDrop = Boolean(
+          ("isResourceDrop" in snap.room.payload && snap.room.payload.isResourceDrop === true) ||
+          snap.room.subject === "Resource Drop" ||
+          snap.room.name === "Presentation Resources" ||
+          snap.room.name === "Presentation Resource" ||
+          snap.room.name.toLowerCase().includes("presentation resource") ||
+          snap.room.name.toLowerCase().includes("qr drop") ||
+          snap.room.name.toLowerCase().includes("qrfile") ||
+          snap.room.name.toLowerCase().includes("resource drop"),
+        );
+        if (isResourceDrop) {
+          navigate({ to: "/share/$shareSlug", params: { shareSlug: clean } });
+          return;
+        }
         setRoomName(snap.room.name);
         setAuthorName(snap.room.authorName);
         setModeLabel(GAME_MODE_META[snap.room.mode].title);
@@ -55,7 +69,7 @@ export default function NicknamePage() {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, navigate]);
 
   const avatarLetter = useMemo(
     () => (name.trim() ? name.trim().slice(0, 1).toUpperCase() : "?"),
