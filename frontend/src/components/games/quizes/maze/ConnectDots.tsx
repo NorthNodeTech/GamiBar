@@ -233,16 +233,18 @@ export function ConnectDots({
 
       drawingRef.current = true;
       setActivePairId(pairId);
-      setPaths((prev) => {
-        if (!prev[pairId]) return prev;
-        const next = { ...prev };
-        delete next[pairId];
-        pushHistory(prev);
-        return next;
-      });
+      if (paths[pairId]) {
+        pushHistory(paths);
+        setPaths((prev) => {
+          if (!prev[pairId]) return prev;
+          const next = { ...prev };
+          delete next[pairId];
+          return next;
+        });
+      }
       setDraft([cell]);
     },
-    [board, disabled, lockedPairIds, pushHistory],
+    [board, disabled, lockedPairIds, paths, pushHistory],
   );
 
   const extendTo = useCallback(
@@ -300,12 +302,10 @@ export function ConnectDots({
       return;
     }
 
-    setPaths((prev) => {
-      pushHistory(prev);
-      return { ...prev, [pair.id]: path };
-    });
+    pushHistory(paths);
+    setPaths((prev) => ({ ...prev, [pair.id]: path }));
     setDraft([]);
-  }, [activePairId, board, draft, pushHistory]);
+  }, [activePairId, board, draft, paths, pushHistory]);
 
   const flashReject = useCallback(
     (pairId: string) => {
@@ -340,16 +340,14 @@ export function ConnectDots({
           return;
         }
 
-        setPaths((prev) => {
-          pushHistory(prev);
-          return { ...prev, [from.pairId]: solutionPath };
-        });
+        pushHistory(paths);
+        setPaths((prev) => ({ ...prev, [from.pairId]: solutionPath }));
         return;
       }
 
       flashReject(from.pairId);
     },
-    [flashReject, linkFrom, lockedPairIds, occupied, pushHistory, solution],
+    [flashReject, linkFrom, lockedPairIds, occupied, paths, pushHistory, solution],
   );
 
   const onLinkPointerDown = (e: React.PointerEvent) => {

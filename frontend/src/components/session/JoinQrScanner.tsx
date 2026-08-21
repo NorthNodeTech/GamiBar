@@ -58,8 +58,10 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
   const [scanning, setScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
 
-  onCodeRef.current = onCode;
-  onErrorRef.current = onError;
+  useEffect(() => {
+    onCodeRef.current = onCode;
+    onErrorRef.current = onError;
+  }, [onCode, onError]);
 
   const handleScan = useCallback((raw: string, scanner: Html5Qrcode) => {
     if (handledRef.current) return;

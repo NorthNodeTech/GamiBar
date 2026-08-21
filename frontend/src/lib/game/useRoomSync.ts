@@ -27,7 +27,9 @@ export function useRoomSync(args: RoomSyncArgs) {
   const [refreshGeneration, setRefreshGeneration] = useState(0);
 
   const argsRef = useRef(args);
-  argsRef.current = args;
+  useEffect(() => {
+    argsRef.current = args;
+  }, [args]);
   const realtimeStatusRef = useRef<RealtimeConnectionStatus>("connecting");
   const fetchGenerationRef = useRef(0);
 
