@@ -62,14 +62,25 @@ export function getNextGeminiClient() {
 }
 
 /**
- * Returns all initialized Gemini clients in the pool to allow multi-key retry/fallback.
+ * Returns all initialized Gemini clients in the pool ordered starting from preferred index (odd/even balancing).
  */
-export function getAllGeminiClients() {
+export function getGeminiClientsOrdered(preferredIndex = 0) {
   const pool = initClientPool();
   if (pool.length === 0) {
     throw new HttpError("Gemini API key is not configured.", 503);
   }
-  return pool;
+  if (pool.length === 1) return pool;
+
+  const startIndex = Math.abs(preferredIndex) % pool.length;
+  const ordered = [];
+  for (let i = 0; i < pool.length; i++) {
+    ordered.push(pool[(startIndex + i) % pool.length]);
+  }
+  return ordered;
+}
+
+export function getAllGeminiClients() {
+  return initClientPool();
 }
 
 export function getGeminiClient() {

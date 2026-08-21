@@ -64,8 +64,9 @@ export type QuizQuestionGenerationRequest = {
   topic: string;
   audience: string;
   guidance?: string;
-  questionNumber: number;
-  totalQuestions: number;
+  count?: number;
+  questionNumber?: number;
+  totalQuestions?: number;
   avoidQuestions?: string[];
 };
 
@@ -74,6 +75,11 @@ export type QuizQuestionGenerationResponse = {
   question: string;
   options: Record<QuizOptionId, string>;
   correctOption: QuizOptionId;
+};
+
+export type QuizQuestionsBatchGenerationResponse = {
+  kind: "quiz_questions_batch";
+  questions: QuizQuestionGenerationResponse[];
 };
 
 export function generateAiOptions(request: AiGenerationRequest): Promise<AiGenerationResponse> {
@@ -86,11 +92,23 @@ export function generateAiOptions(request: AiGenerationRequest): Promise<AiGener
 
 export function generateAiQuestion(
   request: QuizQuestionGenerationRequest,
-): Promise<QuizQuestionGenerationResponse> {
-  return apiFetch<QuizQuestionGenerationResponse>("/api/ai/generate-question", {
-    method: "POST",
-    json: request,
-    // Includes a sleeping Render free service waking plus the bounded provider failover deadline.
-    timeoutMs: AI_REQUEST_TIMEOUT_MS,
-  });
+): Promise<QuizQuestionGenerationResponse | QuizQuestionsBatchGenerationResponse> {
+  return apiFetch<QuizQuestionGenerationResponse | QuizQuestionsBatchGenerationResponse>(
+    "/api/ai/generate-question",
+    {
+      method: "POST",
+      json: request,
+      timeoutMs: AI_REQUEST_TIMEOUT_MS,
+    },
+  );
+}
+
+export async function generateAiQuestionsBatch(
+  request: QuizQuestionGenerationRequest,
+): Promise<QuizQuestionGenerationResponse[]> {
+  const response = await generateAiQuestion(request);
+  if (response.kind === "quiz_questions_batch") {
+    return response.questions;
+  }
+  return [response as QuizQuestionGenerationResponse];
 }

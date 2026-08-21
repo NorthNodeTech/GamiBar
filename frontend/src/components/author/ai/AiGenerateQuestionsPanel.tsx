@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  generateAiQuestion,
+  generateAiQuestionsBatch,
   type QuizQuestionGenerationResponse,
 } from "@/lib/ai/option-generation";
 import type { GameMode } from "@shared/game/types";
@@ -86,31 +86,33 @@ export function AiGenerateQuestionsPanel({
     setPending(true);
 
     const completed: QuizQuestionGenerationResponse[] = [];
-    const CONCURRENCY = Math.min(3, requestedCount);
-    let nextIndex = 0;
+    const BATCH_SIZE = 5;
 
-    const worker = async () => {
-      while (nextIndex < requestedCount && !cancelRequested.current) {
-        const currentIndex = nextIndex;
-        nextIndex += 1;
+    try {
+      let remaining = requestedCount;
+      let batchIndex = 0;
+
+      while (remaining > 0 && !cancelRequested.current) {
+        const currentBatchSize = Math.min(BATCH_SIZE, remaining);
 
         let retries = 2;
+        let batchQuestions: QuizQuestionGenerationResponse[] | null = null;
         let lastErr: unknown = null;
-        let response: QuizQuestionGenerationResponse | null = null;
 
         while (retries >= 0 && !cancelRequested.current) {
           try {
-            response = await generateAiQuestion({
+            batchQuestions = await generateAiQuestionsBatch({
               kind: "quiz_question",
               mode,
               topic: cleanTopic,
               audience: cleanAudience,
               guidance: guidance.trim(),
-              questionNumber: currentIndex + 1,
+              count: currentBatchSize,
+              questionNumber: batchIndex + 1,
               totalQuestions: requestedCount,
               avoidQuestions: [
-                ...existingQuestions.filter((question) => question.trim()),
-                ...completed.map((question) => question.question),
+                ...existingQuestions.filter((q) => q.trim()),
+                ...completed.map((q) => q.question),
               ],
             });
             break;
@@ -125,20 +127,17 @@ export function AiGenerateQuestionsPanel({
 
         if (cancelRequested.current) break;
 
-        if (!response) {
-          throw lastErr || new Error(`Could not generate question ${currentIndex + 1}.`);
+        if (!batchQuestions || batchQuestions.length === 0) {
+          throw lastErr || new Error("Could not generate questions for this topic.");
         }
 
-        completed.push(response);
+        completed.push(...batchQuestions);
         setGenerated([...completed]);
+        remaining -= batchQuestions.length;
+        batchIndex += 1;
       }
-    };
 
-    try {
-      const workers = Array.from({ length: CONCURRENCY }, () => worker());
-      await Promise.all(workers);
-
-      if (!cancelRequested.current && completed.length === requestedCount) {
+      if (!cancelRequested.current && completed.length > 0) {
         toast.success(`${completed.length} questions are ready to review.`);
       }
     } catch (error) {

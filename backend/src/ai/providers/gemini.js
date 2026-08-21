@@ -1,5 +1,5 @@
 import { HttpError } from "../../http-error.js";
-import { getAllGeminiClients, getGeminiModel, hasGeminiKey } from "../gemini-client.js";
+import { getGeminiClientsOrdered, getGeminiModel, hasGeminiKey } from "../gemini-client.js";
 
 export const geminiProvider = {
   id: "gemini",
@@ -7,8 +7,8 @@ export const geminiProvider = {
   isConfigured() {
     return hasGeminiKey();
   },
-  async generateJson({ prompt, schema, timeoutMs = 25000 }) {
-    const clients = getAllGeminiClients();
+  async generateJson({ prompt, schema, timeoutMs = 25000, requestIndex = 0 }) {
+    const clients = getGeminiClientsOrdered(requestIndex);
     let lastError = null;
 
     // Try available Gemini clients in the pool (e.g. Key 1, Key 2)

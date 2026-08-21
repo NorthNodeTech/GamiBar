@@ -15,16 +15,14 @@ import { configuredAiProviderIds } from "./providers/index.js";
 const activeAiAuthors = new Set();
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 40,
+  limit: 200,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   validate: { trustProxy: false },
   handler: (_req, res) => {
-    res
-      .status(429)
-      .json({
-        error: "GamiBAR AI needs a short break. Please wait and try again.",
-      });
+    res.status(429).json({
+      error: "GamiBAR AI needs a short break. Please wait a moment and try again.",
+    });
   },
 });
 
@@ -62,12 +60,17 @@ export function registerAiRoutes(app) {
 }
 
 async function runAiGeneration(authorId, generate) {
-  if (activeAiAuthors.has(authorId)) {
-    throw new HttpError(
-      "Wait for the current AI generation to finish before starting another.",
-      429,
-    );
+  const startTime = Date.now();
+  while (activeAiAuthors.has(authorId)) {
+    if (Date.now() - startTime > 30000) {
+      throw new HttpError(
+        "Wait for the current AI generation to finish before starting another.",
+        429,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
   }
+
   activeAiAuthors.add(authorId);
   let leaseAcquired = false;
   try {
