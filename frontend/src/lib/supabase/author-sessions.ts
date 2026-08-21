@@ -14,6 +14,7 @@ export type AuthorSessionSummary = {
   playerCount: number;
   questionCount: number;
   duplicatedFromName: string | null;
+  roundCount?: number;
 };
 
 export function fetchAuthorSessions(authorId: string, limit = 50) {

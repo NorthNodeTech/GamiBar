@@ -121,6 +121,7 @@ function publicRoom(stored: StoredRoom, opts?: { includeSecrets?: boolean }) {
     endsAt: room.endsAt,
     finishedAt: room.finishedAt,
     showLeaderboardToStudents: room.showLeaderboardToStudents,
+    roundHistory: room.roundHistory ?? [],
     ...(opts?.includeSecrets && room.duplicatedFromName
       ? { duplicatedFromName: room.duplicatedFromName }
       : {}),
@@ -482,6 +483,16 @@ async function finalizeGame(stored: StoredRoom) {
   finalizeModeIncompleteAttempts(stored, finishedAt);
 
   const rows = computeLeaderboard(stored);
+  const currentRoundNumber = (stored.room.roundHistory?.length ?? 0) + 1;
+  const roundRecord = {
+    roundNumber: currentRoundNumber,
+    startedAt: stored.room.startedAt ?? finishedAt,
+    finishedAt,
+    participantCount: stored.participants.size,
+    leaderboard: rows,
+  };
+  stored.room.roundHistory = [...(stored.room.roundHistory ?? []), roundRecord];
+
   pushEvent(stored, { type: "game_stopped", finishedAt });
   pushEvent(stored, { type: "game_finished", finishedAt, rows });
   await persist(stored);
@@ -1070,14 +1081,12 @@ export async function restartGame(input: {
   stored.room.endsAt = null;
   stored.events = [];
 
-  for (const p of stored.participants.values()) {
-    p.status = "ONLINE";
-  }
+  stored.participants.clear();
   stored.attempts.clear();
   stored.quizAnswers.clear();
   stored.visualPointAnswers.clear();
 
-  await resetRoomRecords(input.roomId);
+  await resetRoomRecords(input.roomId, stored.room.roundHistory ?? []);
   await persist(stored);
 
   return {

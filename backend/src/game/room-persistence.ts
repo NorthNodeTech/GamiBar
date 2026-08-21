@@ -18,6 +18,7 @@ import type {
   QuizQuestionDraft,
   Room,
   RoomEvent,
+  RoomRoundRecord,
   TimerMode,
   VisualPointAnswerRecord,
   VisualPointQuestionDraft,
@@ -295,7 +296,10 @@ function parsePayload(
 
 function configFromPayload(
   payload: GamePayload,
-  settings?: Pick<Room, "showLeaderboardToStudents" | "duplicatedFromName">,
+  settings?: Pick<
+    Room,
+    "showLeaderboardToStudents" | "duplicatedFromName" | "roundHistory"
+  >,
 ): Record<string, unknown> {
   let base: Record<string, unknown>;
   if (payload.mode === "quiz") {
@@ -345,6 +349,9 @@ function configFromPayload(
   if (settings?.duplicatedFromName) {
     base.duplicatedFromName = settings.duplicatedFromName;
   }
+  if (settings?.roundHistory && settings.roundHistory.length > 0) {
+    base.roundHistory = settings.roundHistory;
+  }
   return base;
 }
 
@@ -374,6 +381,13 @@ function readDuplicatedFromName(config: unknown): string | null {
 function readShowLeaderboardToStudents(config: unknown): boolean {
   const raw = (config ?? {}) as Record<string, unknown>;
   return raw.showLeaderboardToStudents === true;
+}
+
+function readRoundHistory(config: unknown): RoomRoundRecord[] {
+  const raw = (config ?? {}) as Record<string, unknown>;
+  return Array.isArray(raw.roundHistory)
+    ? (raw.roundHistory as RoomRoundRecord[])
+    : [];
 }
 
 async function jigsawPublicUrl(storagePath: string): Promise<string> {
@@ -763,6 +777,7 @@ function buildStoredRoom(
   authorToken = "",
   showLeaderboardToStudents = false,
   duplicatedFromName: string | null = null,
+  roundHistory: RoomRoundRecord[] = [],
 ): StoredRoom {
   const quizAnswers = new Map<string, Map<string, QuizAnswer>>();
   for (const answer of answers) {
@@ -799,19 +814,20 @@ function buildStoredRoom(
 
   const attemptMap = new Map<string, Attempt>();
   for (const attempt of attempts) {
+    const rawPayload = (attempt.payload ?? {}) as Record<string, unknown>;
+    const wrongCount =
+      typeof rawPayload.wrongCount === "number" ? rawPayload.wrongCount : 0;
     attemptMap.set(attempt.participant_id, {
       id: attempt.id,
       participantId: attempt.participant_id,
-      progress: Number(attempt.progress),
+      progress: attempt.progress,
       correctCount: attempt.correct_count,
-      wrongCount: readWrongCount(
-        (attempt.payload ?? {}) as Record<string, unknown>,
-      ),
+      wrongCount,
       durationMs: attempt.duration_ms,
       completed: attempt.completed,
       completedAt: ms(attempt.completed_at),
-      score: attempt.score == null ? null : Number(attempt.score),
-      payload: (attempt.payload ?? {}) as Record<string, unknown>,
+      score: attempt.score,
+      payload: rawPayload,
     });
   }
 
@@ -848,6 +864,7 @@ function buildStoredRoom(
       finishedAt: ms(row.finished_at),
       showLeaderboardToStudents,
       duplicatedFromName,
+      roundHistory,
     },
     participants: participantMap,
     quizAnswers,
@@ -917,6 +934,7 @@ async function loadRoomBundle(
     authorToken,
     readShowLeaderboardToStudents(row.config),
     readDuplicatedFromName(row.config),
+    readRoundHistory(row.config),
   );
 }
 
@@ -1119,6 +1137,7 @@ export async function persist(stored: StoredRoom) {
     config: configFromPayload(initialPayload, {
       showLeaderboardToStudents: room.showLeaderboardToStudents,
       duplicatedFromName: room.duplicatedFromName,
+      roundHistory: room.roundHistory,
     }),
     max_participants: room.maxParticipants,
     expires_at: iso(room.expiresAt),
@@ -1145,6 +1164,7 @@ export async function persist(stored: StoredRoom) {
         config: configFromPayload(payload, {
           showLeaderboardToStudents: room.showLeaderboardToStudents,
           duplicatedFromName: room.duplicatedFromName,
+          roundHistory: room.roundHistory,
         }),
       })
       .eq("id", room.id);
@@ -1166,6 +1186,7 @@ export async function persist(stored: StoredRoom) {
         config: configFromPayload(payload, {
           showLeaderboardToStudents: room.showLeaderboardToStudents,
           duplicatedFromName: room.duplicatedFromName,
+          roundHistory: room.roundHistory,
         }),
       })
       .eq("id", room.id);
@@ -1320,7 +1341,22 @@ export function ensureAttempt(
   return attempt;
 }
 
-export async function resetRoomRecords(roomId: string): Promise<void> {
+export async function resetRoomRecords(
+  roomId: string,
+  roundHistory: RoomRoundRecord[] = [],
+): Promise<void> {
+  const { data: roomRow } = await supabase
+    .from("gamibar_rooms")
+    .select("config")
+    .eq("id", roomId)
+    .maybeSingle();
+
+  const currentConfig = (roomRow?.config ?? {}) as Record<string, unknown>;
+  const newConfig = {
+    ...currentConfig,
+    roundHistory,
+  };
+
   await supabase
     .from("gamibar_rooms")
     .update({
@@ -1329,9 +1365,11 @@ export async function resetRoomRecords(roomId: string): Promise<void> {
       finished_at: null,
       ends_at: null,
       events: [],
+      config: newConfig,
     })
     .eq("id", roomId);
 
+  await supabase.from("gamibar_participants").delete().eq("room_id", roomId);
   await supabase.from("gamibar_attempts").delete().eq("room_id", roomId);
   await supabase.from("gamibar_quiz_answers").delete().eq("room_id", roomId);
   await supabase.from("gamibar_visual_point_answers").delete().eq("room_id", roomId);

@@ -54,6 +54,7 @@ export default function AuthorRoomPage() {
   const [leaderboardBusy, setLeaderboardBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<LiveRoomAction | null>(null);
+  const [selectedRound, setSelectedRound] = useState<number | "current">("current");
 
   useEffect(() => {
     if (!authorToken && user?.id && roomId) {
@@ -317,6 +318,56 @@ export default function AuthorRoomPage() {
   const pollResults =
     room.mode === "polls" ? (snapshot.pollResults as PollResults | undefined) : undefined;
 
+  const roundHistory = (room as Room).roundHistory ?? [];
+
+  let displayedLeaderboard = leaderboard;
+  let displayedTitle = isLive ? "Live leaderboard" : "Final standings";
+  let displayedSubtitle: string | undefined = undefined;
+
+  if (selectedRound !== "current") {
+    const pastRound = roundHistory.find((r) => r.roundNumber === selectedRound);
+    if (pastRound) {
+      displayedLeaderboard = pastRound.leaderboard;
+      displayedTitle = `Round ${pastRound.roundNumber} Standings`;
+      displayedSubtitle = `${pastRound.participantCount} participants · Finished at ${new Date(pastRound.finishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    }
+  }
+
+  const roundTabs =
+    roundHistory.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[var(--gamibar-page)] p-1">
+        <button
+          type="button"
+          onClick={() => setSelectedRound("current")}
+          className={cn(
+            "rounded-lg px-2.5 py-1 text-xs font-bold transition-all",
+            selectedRound === "current"
+              ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+          )}
+        >
+          {isLive
+            ? "Live Round"
+            : `Latest Round (${roundHistory.length + (room.status === "FINISHED" ? 0 : 1)})`}
+        </button>
+        {roundHistory.map((r) => (
+          <button
+            key={r.roundNumber}
+            type="button"
+            onClick={() => setSelectedRound(r.roundNumber)}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-xs font-bold transition-all",
+              selectedRound === r.roundNumber
+                ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
+                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+            )}
+          >
+            Round {r.roundNumber}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
   const statusHint = inLobby
     ? "Share the QR or code below. Start when at least one participant has joined."
     : isLive
@@ -447,8 +498,11 @@ export default function AuthorRoomPage() {
             {room.mode !== "polls" && (
               <UnifiedLeaderboard
                 mode={room.mode}
-                rows={leaderboard}
-                finished={room.status === "FINISHED"}
+                rows={displayedLeaderboard}
+                finished={selectedRound !== "current" || room.status === "FINISHED"}
+                title={displayedTitle}
+                subtitle={displayedSubtitle}
+                headerExtra={roundTabs}
               />
             )}
             {room.mode === "polls" && pollResults && <PollResultsPanel results={pollResults} />}

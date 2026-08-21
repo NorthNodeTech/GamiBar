@@ -2,7 +2,7 @@ import { useParams } from "@/lib/navigation";
 import { Link, useNavigate } from "@/lib/navigation";
 import { useMutation, useQuery } from "@/lib/query";
 import { ArrowLeft, Play, Trophy } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { RoomCodeDisplay } from "@/components/author/RoomCodeDisplay";
@@ -40,6 +40,7 @@ export default function SessionResultsPage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthor } = useAuth();
+  const [selectedRound, setSelectedRound] = useState<number | "latest">("latest");
 
   const resultsQuery = useQuery({
     queryKey: ["author-session-results", user?.id, roomId],
@@ -74,6 +75,53 @@ export default function SessionResultsPage() {
   });
 
   const data = resultsQuery.data;
+  const roundHistory = data?.room?.roundHistory ?? [];
+
+  let displayedLeaderboard = data?.leaderboard ?? [];
+  let displayedTitle = "Final standings";
+  let displayedSubtitle: string | undefined = undefined;
+
+  if (selectedRound !== "latest") {
+    const pastRound = roundHistory.find((r) => r.roundNumber === selectedRound);
+    if (pastRound) {
+      displayedLeaderboard = pastRound.leaderboard;
+      displayedTitle = `Round ${pastRound.roundNumber} Standings`;
+      displayedSubtitle = `${pastRound.participantCount} participants · Finished at ${new Date(pastRound.finishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    }
+  }
+
+  const roundTabs =
+    roundHistory.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[var(--gamibar-page)] p-1">
+        <button
+          type="button"
+          onClick={() => setSelectedRound("latest")}
+          className={cn(
+            "rounded-lg px-2.5 py-1 text-xs font-bold transition-all",
+            selectedRound === "latest"
+              ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+          )}
+        >
+          Latest Round ({roundHistory.length + (data?.room.status === "FINISHED" ? 0 : 1)})
+        </button>
+        {roundHistory.map((r) => (
+          <button
+            key={r.roundNumber}
+            type="button"
+            onClick={() => setSelectedRound(r.roundNumber)}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-xs font-bold transition-all",
+              selectedRound === r.roundNumber
+                ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
+                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+            )}
+          >
+            Round {r.roundNumber}
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   useEffect(() => {
     const payload = data?.room?.payload as { isResourceDrop?: unknown } | undefined;
@@ -135,7 +183,7 @@ export default function SessionResultsPage() {
         ) : (
           <>
             {/* 1. TOP: Leaderboard */}
-            {data.leaderboard.length === 0 ? (
+            {displayedLeaderboard.length === 0 ? (
               <div className="author-card mt-5 border-dashed px-6 py-14 text-center">
                 <Trophy className="mx-auto size-8 text-[var(--muted-foreground)]" />
                 <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No results yet</p>
@@ -144,8 +192,11 @@ export default function SessionResultsPage() {
               <div className="mt-5">
                 <UnifiedLeaderboard
                   mode={data.room.mode}
-                  rows={data.leaderboard}
+                  rows={displayedLeaderboard}
                   finished={data.room.status === "FINISHED" || data.room.status === "CANCELLED"}
+                  title={displayedTitle}
+                  subtitle={displayedSubtitle}
+                  headerExtra={roundTabs}
                 />
               </div>
             )}

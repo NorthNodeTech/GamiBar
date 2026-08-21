@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { Medal, Trophy } from "lucide-react";
 
 import type { GameMode } from "@shared/game/config";
@@ -15,12 +16,18 @@ export function UnifiedLeaderboard({
   finished,
   highlightParticipantId,
   className,
+  title,
+  subtitle,
+  headerExtra,
 }: {
   mode: GameMode;
   rows: LeaderboardRow[];
   finished?: boolean;
   highlightParticipantId?: string;
   className?: string;
+  title?: string;
+  subtitle?: string;
+  headerExtra?: ReactNode;
 }) {
   const isQuiz = mode === "quiz" || mode === "quiz_jigsaw";
   const performanceHeader = isQuiz ? "Score" : "Performance";
@@ -33,18 +40,21 @@ export function UnifiedLeaderboard({
       )}
     >
       <div className="border-b border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-4 sm:px-6">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--foreground)] text-[var(--background)]">
-            <Trophy className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="break-words font-display text-base font-bold leading-tight text-[var(--foreground)] sm:text-lg">
-              {finished ? "Final standings" : "Live leaderboard"}
-            </h2>
-            <p className="mt-1 max-w-full text-xs leading-snug text-[var(--muted-foreground)]">
-              {leaderboardRankingHint(mode)}
-            </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--foreground)] text-[var(--background)]">
+              <Trophy className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="break-words font-display text-base font-bold leading-tight text-[var(--foreground)] sm:text-lg">
+                {title ?? (finished ? "Final standings" : "Live leaderboard")}
+              </h2>
+              <p className="mt-1 max-w-full text-xs leading-snug text-[var(--muted-foreground)]">
+                {subtitle ?? leaderboardRankingHint(mode)}
+              </p>
+            </div>
           </div>
+          {headerExtra ? <div className="shrink-0">{headerExtra}</div> : null}
         </div>
       </div>
 

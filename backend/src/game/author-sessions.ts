@@ -24,6 +24,11 @@ function readDuplicatedFromName(config: unknown): string | null {
     : null;
 }
 
+function readRoundCount(config: unknown): number {
+  const raw = (config ?? {}) as Record<string, unknown>;
+  return Array.isArray(raw.roundHistory) ? raw.roundHistory.length : 0;
+}
+
 export async function fetchAuthorSessions(authorId: string, limit = 50) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -44,6 +49,7 @@ export async function fetchAuthorSessions(authorId: string, limit = 50) {
     playerCount: row.gamibar_participants?.[0]?.count ?? 0,
     questionCount: questionCountFromConfig(row.mode, row.config),
     duplicatedFromName: readDuplicatedFromName(row.config),
+    roundCount: readRoundCount(row.config),
   }));
 }
 

@@ -245,6 +245,16 @@ export type Room = {
   showLeaderboardToStudents: boolean;
   /** Author-only label — not shown to students. */
   duplicatedFromName?: string | null;
+  /** Past completed session rounds and standings history. */
+  roundHistory?: RoomRoundRecord[];
+};
+
+export type RoomRoundRecord = {
+  roundNumber: number;
+  startedAt: number;
+  finishedAt: number;
+  participantCount: number;
+  leaderboard: LeaderboardRow[];
 };
 
 export type Participant = {

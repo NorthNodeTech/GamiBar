@@ -8,6 +8,7 @@ import {
   Play,
   Plus,
   QrCode,
+  RotateCcw,
   Search,
   Trash2,
   Users,
@@ -438,6 +439,12 @@ function MyGameCard({
               <Users className="size-3.5" />
               {session.playerCount}
             </span>
+            {session.roundCount && session.roundCount > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">
+                <RotateCcw className="size-3" />
+                {session.roundCount > 1 ? `${session.roundCount} rounds` : `1 round`}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
