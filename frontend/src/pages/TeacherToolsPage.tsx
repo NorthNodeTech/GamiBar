@@ -95,44 +95,8 @@ const fileSharingTags = ["PDF", "PPT", "PPTX", "DOC", "DOCX", "7/14/28 days"];
 export default function ToolsPage() {
   return (
     <AuthorShell>
-      <div className="mx-auto w-full max-w-[72rem] py-1 text-[#111111] sm:py-5">
-        <header className="hidden sm:grid gap-5 border-b border-[#E7E9ED] pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase text-[#FF3B30]">
-              No more boring classrooms, no more boring sessions
-            </p>
-            <h1 className="mt-3 font-display text-[2rem] font-bold leading-tight text-[#111111] sm:text-[2.5rem]">
-              Tools
-            </h1>
-            <p className="mt-3 max-w-2xl text-[15px] leading-6 text-[#5F6368]">
-              Everything you need to make your next session interactive.
-            </p>
-          </div>
-
-          <div className="grid gap-2 min-[430px]:grid-cols-2 lg:w-[21rem]">
-            <Button
-              asChild
-              className="h-12 rounded-xl bg-[#111111] px-5 text-sm font-semibold text-white shadow-none hover:bg-[#2A2A2A]"
-            >
-              <Link to="/author/create">
-                <Plus className="size-4" />
-                Create room
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="h-12 rounded-xl border-[#D9DDE3] bg-white px-5 text-sm font-semibold text-[#111111] shadow-none hover:bg-[#F3F4F6]"
-            >
-              <Link to="/author/sessions">
-                <QrCode className="size-4" />
-                My sessions
-              </Link>
-            </Button>
-          </div>
-        </header>
-
-        <div className="space-y-10 sm:space-y-14 pt-2 sm:pt-10">
+      <div className="mx-auto w-full max-w-[72rem] py-2 text-[#111111] sm:py-6">
+        <div className="space-y-10 sm:space-y-12">
           <ToolSection
             eyebrow="Quick checks"
             title="Simple Quiz and Polls"

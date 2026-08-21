@@ -104,6 +104,7 @@ export type RazorpaySuccess = {
 
 type RazorpayOptions = {
   key: string;
+  image?: string;
   order_id?: string;
   subscription_id?: string;
   amount?: number;
@@ -175,10 +176,16 @@ export async function openRazorpayCheckout(
   if (!Razorpay)
     throw new Error("Razorpay Checkout did not load. Check your connection and retry.");
 
+  const logoUrl =
+    typeof window !== "undefined" && window.location.origin
+      ? `${window.location.origin}/apple-touch-icon.png`
+      : undefined;
+
   return new Promise<RazorpaySuccess>((resolve, reject) => {
     let completed = false;
     const checkout = new Razorpay({
       key: configuration.keyId,
+      image: logoUrl,
       order_id: configuration.orderId,
       subscription_id: configuration.subscriptionId,
       ...(configuration.orderId

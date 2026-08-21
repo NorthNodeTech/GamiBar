@@ -16,7 +16,7 @@ function navItemActive(pathname: string, item: AuthorNavItem, onLiveRoom: boolea
 
 function navLinkClass(active: boolean) {
   return cn(
-    "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200",
+    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200",
     active
       ? "bg-[#111111] text-white shadow-xs font-bold"
       : "text-[#5F6368] hover:bg-white hover:text-[#111111] hover:shadow-xs",
@@ -49,7 +49,7 @@ export function AuthorShell({ children }: { children: ReactNode }) {
         aria-current={active ? "page" : undefined}
         className={navLinkClass(active)}
       >
-        <Icon className="size-3.5 shrink-0" strokeWidth={active ? 2.5 : 2} />
+        <Icon className="size-4 shrink-0" strokeWidth={active ? 2.5 : 2} />
         <span>{item.label}</span>
       </Link>
     );
@@ -59,25 +59,25 @@ export function AuthorShell({ children }: { children: ReactNode }) {
     <div className="author-shell flex min-h-dvh flex-col overflow-x-clip bg-[#F8F9FB]">
       <header className="sticky top-0 z-30 border-b border-[#E7E9ED]/80 bg-white/85 backdrop-blur-xl transition-all">
         <div className="mx-auto max-w-[80rem] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-15 items-center justify-between gap-3 sm:h-16">
+          <div className="flex h-16 items-center justify-between gap-4 sm:h-[76px]">
             {/* Brand Logo */}
             <Link
               to="/author"
-              className="group flex min-w-0 shrink-0 items-center gap-2.5 transition-transform active:scale-98"
+              className="group flex min-w-0 shrink-0 items-center gap-2.5 sm:gap-3 transition-transform active:scale-98"
               aria-label="GamiBar Portal Home"
             >
               <div className="relative grid place-items-center">
                 <img
                   src={logoBlack}
                   alt="GamiBar"
-                  className="h-7 w-auto object-contain transition-transform duration-300 group-hover:scale-105 sm:h-8"
+                  className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105 sm:h-12"
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="truncate font-display text-base font-extrabold tracking-tight text-[#111111] sm:text-lg">
+              <div className="flex items-center gap-2">
+                <span className="truncate font-display text-xl font-extrabold tracking-tight text-[#111111] sm:text-2xl">
                   Gami<span className="font-black text-[#FF3B30]">BAR</span>
                 </span>
-                <span className="hidden rounded-md border border-[#E5E7EB] bg-[#F8F9FA] px-1.5 py-0.5 text-[10px] font-bold text-[#6B7280] lg:inline-flex">
+                <span className="hidden rounded-md border border-[#E5E7EB] bg-[#F8F9FA] px-2 py-0.5 text-xs font-bold text-[#6B7280] lg:inline-flex">
                   Host
                 </span>
               </div>
@@ -88,11 +88,11 @@ export function AuthorShell({ children }: { children: ReactNode }) {
               className="hidden flex-1 items-center justify-center sm:flex"
               aria-label="Main navigation"
             >
-              <div className="flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-[#F1F3F6]/90 p-1 shadow-xs backdrop-blur-md">
+              <div className="flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-[#F1F3F6]/90 p-1.5 shadow-xs backdrop-blur-md">
                 {authorNavItems.map((item) => renderNavLink(item))}
                 {onLiveRoom && (
-                  <span className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-[#FF3B30] animate-pulse">
-                    <span className="size-1.5 rounded-full bg-[#FF3B30]" />
+                  <span className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-[#FF3B30] animate-pulse">
+                    <span className="size-2 rounded-full bg-[#FF3B30]" />
                     Live Session
                   </span>
                 )}
@@ -100,21 +100,21 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             </nav>
 
             {/* Action Buttons & Profile */}
-            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-2.5 sm:gap-3.5">
               {/* Desktop Create Room & Join Room Action Buttons */}
-              <div className="hidden items-center gap-2 sm:flex">
+              <div className="hidden items-center gap-2.5 sm:flex">
                 <Link
                   to="/join"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#D9DDE3] bg-white px-3.5 text-xs font-bold text-[#374151] shadow-xs transition-all hover:border-[#111111] hover:text-[#111111] hover:shadow-sm active:scale-95"
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D9DDE3] bg-white px-4.5 text-sm font-bold text-[#374151] shadow-xs transition-all hover:border-[#111111] hover:text-[#111111] hover:shadow-sm active:scale-95"
                 >
-                  <ScanLine className="size-3.5 text-[#5F6368]" strokeWidth={2.25} />
+                  <ScanLine className="size-4 text-[#5F6368]" strokeWidth={2.25} />
                   <span>Join room</span>
                 </Link>
                 <Link
                   to="/author/create"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-b from-[#1E293B] to-[#0F172A] px-4 text-xs font-bold text-white shadow-xs transition-all hover:scale-[1.02] hover:shadow-sm active:scale-95 border border-white/10"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-b from-[#1E293B] to-[#0F172A] px-5 text-sm font-bold text-white shadow-xs transition-all hover:scale-[1.02] hover:shadow-sm active:scale-95 border border-white/10"
                 >
-                  <Plus className="size-3.5 stroke-[2.5]" />
+                  <Plus className="size-4 stroke-[2.5]" />
                   <span>Create room</span>
                 </Link>
               </div>
@@ -161,17 +161,17 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             }}
           />
         </div>
-        <main className="relative px-4 py-4 pb-[max(3.75rem,calc(3.25rem+env(safe-area-inset-bottom)))] sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
+        <main className="relative px-4 py-4 pb-[max(4.25rem,calc(3.75rem+env(safe-area-inset-bottom)))] sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
           {children}
         </main>
       </div>
 
-      {/* Mobile Bottom Dock Navigation (Compact Sleek Bar with Large Icons) */}
+      {/* Mobile Bottom Dock Navigation with Text Labels */}
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E7E9ED]/90 bg-white/90 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
         aria-label="Mobile navigation"
       >
-        <div className="mx-auto flex h-13 max-w-xs items-center justify-around px-5 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex h-14 max-w-sm items-center justify-around px-4 pb-[env(safe-area-inset-bottom)]">
           {/* Home */}
           <Link
             to="/author"
@@ -179,33 +179,41 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             aria-label="Home"
             aria-current={pathname === "/author" || pathname === "/author/" ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center justify-center p-1 transition-transform active:scale-90",
+              "flex flex-1 flex-col items-center justify-center py-1 transition-all active:scale-95",
               pathname === "/author" || pathname === "/author/"
                 ? "text-[#111111]"
                 : "text-[#8A8F98] hover:text-[#111111]",
             )}
           >
             <Home
-              className="size-6 shrink-0"
+              className="size-5 shrink-0"
               strokeWidth={pathname === "/author" || pathname === "/author/" ? 2.5 : 2}
             />
-            {pathname === "/author" || pathname === "/author/" ? (
-              <span className="mt-0.5 size-1 rounded-full bg-[#111111]" />
-            ) : (
-              <span className="mt-0.5 size-1" />
-            )}
+            <span
+              className={cn(
+                "mt-0.5 text-[10px] tracking-tight",
+                pathname === "/author" || pathname === "/author/"
+                  ? "font-extrabold text-[#111111]"
+                  : "font-medium text-[#717680]",
+              )}
+            >
+              Home
+            </span>
           </Link>
 
-          {/* Center Scan / Join QR FAB (PhonePe Style) */}
+          {/* Center Scan / Join QR FAB (Create or join) */}
           <Link
             to="/join"
-            title="Scan QR / Join Game"
-            aria-label="Scan QR or Enter Room Code"
-            className="group relative -top-3 flex flex-col items-center justify-center tap-target"
+            title="Create or join"
+            aria-label="Create or join"
+            className="group relative -top-3.5 flex flex-1 flex-col items-center justify-center tap-target"
           >
-            <div className="grid size-12 place-items-center rounded-full bg-gradient-to-b from-[#1E293B] via-[#111827] to-[#0A0E1A] text-white shadow-[0_6px_16px_rgba(15,23,42,0.35)] ring-[3px] ring-white transition-all duration-150 active:scale-90 group-hover:scale-105">
-              <ScanLine className="size-6 text-white stroke-[2.25]" />
+            <div className="grid size-11 place-items-center rounded-full bg-gradient-to-b from-[#1E293B] via-[#111827] to-[#0A0E1A] text-white shadow-[0_6px_16px_rgba(15,23,42,0.3)] ring-[3px] ring-white transition-all duration-150 active:scale-90 group-hover:scale-105">
+              <ScanLine className="size-5 text-white stroke-[2.25]" />
             </div>
+            <span className="mt-0.5 whitespace-nowrap text-[10px] font-extrabold tracking-tight text-[#111111]">
+              Create or join
+            </span>
           </Link>
 
           {/* Tools */}
@@ -219,25 +227,30 @@ export function AuthorShell({ children }: { children: ReactNode }) {
                 : undefined
             }
             className={cn(
-              "flex flex-col items-center justify-center p-1 transition-transform active:scale-90",
+              "flex flex-1 flex-col items-center justify-center py-1 transition-all active:scale-95",
               pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
                 ? "text-[#111111]"
                 : "text-[#8A8F98] hover:text-[#111111]",
             )}
           >
             <Wrench
-              className="size-6 shrink-0"
+              className="size-5 shrink-0"
               strokeWidth={
                 pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
                   ? 2.5
                   : 2
               }
             />
-            {pathname.startsWith("/author/tools") || pathname.startsWith("/author/create") ? (
-              <span className="mt-0.5 size-1 rounded-full bg-[#111111]" />
-            ) : (
-              <span className="mt-0.5 size-1" />
-            )}
+            <span
+              className={cn(
+                "mt-0.5 text-[10px] tracking-tight",
+                pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+                  ? "font-extrabold text-[#111111]"
+                  : "font-medium text-[#717680]",
+              )}
+            >
+              Tools
+            </span>
           </Link>
         </div>
       </nav>
