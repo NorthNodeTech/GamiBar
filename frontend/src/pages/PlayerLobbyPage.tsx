@@ -11,7 +11,8 @@ import { useRoomSync } from "@/lib/game/useRoomSync";
 
 export default function StudentLobbyPage() {
   const navigate = useNavigate();
-  const { code } = useSearch();
+  const search = useSearch<{ code?: string }>();
+  const code = search.code ? normalizeRoomCode(search.code) : undefined;
   const participant = loadParticipantSession();
   const reconnectToken =
     participant && participant.code === code ? participant.reconnectToken : undefined;
@@ -22,32 +23,32 @@ export default function StudentLobbyPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const roomStatus = snapshot?.ok ? snapshot.room.status : null;
   const roomId = snapshot?.ok ? snapshot.room.id : null;
+  const roomCode = snapshot?.ok ? snapshot.room.code : null;
+  const isResourceDrop = Boolean(
+    snapshot?.ok &&
+    (("isResourceDrop" in snapshot.room.payload && snapshot.room.payload.isResourceDrop === true) ||
+      snapshot.room.subject === "Resource Drop" ||
+      snapshot.room.name === "Presentation Resources" ||
+      snapshot.room.name === "Presentation Resource" ||
+      snapshot.room.name.toLowerCase().includes("presentation resource") ||
+      snapshot.room.name.toLowerCase().includes("qr drop") ||
+      snapshot.room.name.toLowerCase().includes("qrfile") ||
+      snapshot.room.name.toLowerCase().includes("resource drop")),
+  );
 
   useEffect(() => {
-    if (!snapshot?.ok) return;
-    const room = snapshot.room;
-    const isResourceDrop = Boolean(
-      ("isResourceDrop" in room.payload && room.payload.isResourceDrop === true) ||
-      room.subject === "Resource Drop" ||
-      room.name === "Presentation Resources" ||
-      room.name === "Presentation Resource" ||
-      room.name.toLowerCase().includes("presentation resource") ||
-      room.name.toLowerCase().includes("qr drop") ||
-      room.name.toLowerCase().includes("qrfile") ||
-      room.name.toLowerCase().includes("resource drop"),
-    );
-    if (isResourceDrop) {
-      navigate({ to: "/share/$shareSlug", params: { shareSlug: room.code } });
+    if (isResourceDrop && roomCode) {
+      navigate({ to: "/share/$shareSlug", params: { shareSlug: roomCode } });
       return;
     }
     if (!roomStatus || !roomId) return;
     if (roomStatus === "COUNTDOWN" || roomStatus === "LIVE") {
-      setCountdown(3);
+      setCountdown((prev) => (prev == null ? 3 : prev));
     }
     if (roomStatus === "FINISHED" || roomStatus === "CANCELLED") {
       navigate({ to: "/play/$roomId", params: { roomId } });
     }
-  }, [roomId, roomStatus, snapshot, navigate]);
+  }, [roomId, roomStatus, isResourceDrop, roomCode, navigate]);
 
   useEffect(() => {
     if (countdown == null) return;

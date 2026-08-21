@@ -17,7 +17,8 @@ import { fetchSharedSessionFiles } from "@/lib/sharing-files/session-files";
 
 export default function NicknamePage() {
   const navigate = useNavigate();
-  const { code } = useSearch();
+  const search = useSearch<{ code?: string }>();
+  const cleanCode = normalizeRoomCode(search.code);
   const [name, setName] = useState("");
   const [roomName, setRoomName] = useState("");
   const [authorName, setAuthorName] = useState("");
@@ -29,16 +30,15 @@ export default function NicknamePage() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const clean = normalizeRoomCode(code);
-      if (!isValidRoomCodeFormat(clean)) {
-        if (!cancelled) setPageState("missing");
-        return;
-      }
+    if (!isValidRoomCodeFormat(cleanCode)) {
+      setPageState("missing");
+      return;
+    }
 
-      if (!cancelled) setPageState("loading");
+    setPageState("loading");
+    void (async () => {
       try {
-        const snap = await getRoomSnapshotFn({ data: { code: clean } });
+        const snap = await getRoomSnapshotFn({ data: { code: cleanCode } });
         if (cancelled) return;
         if (!snap.ok) {
           setPageState("missing");
@@ -57,7 +57,7 @@ export default function NicknamePage() {
 
         if (!isResourceDrop && snap.room.mode === "polls") {
           try {
-            const filesSummary = await fetchSharedSessionFiles(clean);
+            const filesSummary = await fetchSharedSessionFiles(cleanCode);
             if (filesSummary?.files?.length > 0) {
               isResourceDrop = true;
             }
@@ -67,7 +67,7 @@ export default function NicknamePage() {
         }
 
         if (isResourceDrop) {
-          navigate({ to: "/share/$shareSlug", params: { shareSlug: clean } });
+          navigate({ to: "/share/$shareSlug", params: { shareSlug: cleanCode } });
           return;
         }
         setRoomName(snap.room.name);
@@ -79,10 +79,11 @@ export default function NicknamePage() {
         if (!cancelled) setPageState("missing");
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [code, navigate]);
+  }, [cleanCode, navigate]);
 
   const avatarLetter = useMemo(
     () => (name.trim() ? name.trim().slice(0, 1).toUpperCase() : "?"),

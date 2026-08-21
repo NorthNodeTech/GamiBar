@@ -7,7 +7,7 @@ import {
   useSearchParams,
   type LinkProps as ReactRouterLinkProps,
 } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 
 type SearchValue = string | number | boolean | null | undefined;
 type Search = Record<string, SearchValue>;
@@ -51,15 +51,18 @@ type NavigateOptions = {
 
 export function useNavigate() {
   const navigate = useReactRouterNavigate();
-  return (options: NavigateOptions | string) => {
-    if (typeof options === "string") {
-      navigate(options);
-      return;
-    }
-    navigate(withSearch(interpolatePath(options.to, options.params), options.search), {
-      replace: options.replace,
-    });
-  };
+  return useCallback(
+    (options: NavigateOptions | string) => {
+      if (typeof options === "string") {
+        navigate(options);
+        return;
+      }
+      navigate(withSearch(interpolatePath(options.to, options.params), options.search), {
+        replace: options.replace,
+      });
+    },
+    [navigate],
+  );
 }
 
 export function useRouterState<T>({
@@ -89,7 +92,11 @@ export function useSearch<T extends Record<string, string | undefined> = Record<
   _options?: unknown,
 ) {
   const [params] = useSearchParams();
-  return Object.fromEntries(params.entries()) as T;
+  const searchString = params.toString();
+  return useMemo(() => {
+    const currentParams = new URLSearchParams(searchString);
+    return Object.fromEntries(currentParams.entries()) as T;
+  }, [searchString]);
 }
 
 export function useParams<T extends Record<string, string> = Record<string, string>>(): T {
