@@ -99,7 +99,7 @@ export default function NicknamePage() {
       <PageErrorState
         title="Room not found"
         message={
-          code
+          cleanCode
             ? friendlyGameError(null, "That room code was not found or the game has ended.")
             : "Enter a valid 6-digit room code to continue."
         }
@@ -113,7 +113,7 @@ export default function NicknamePage() {
   }
 
   const handleEnter = async () => {
-    const clean = normalizeRoomCode(code);
+    const clean = cleanCode;
     setLoading(true);
     setJoinError(null);
     try {
