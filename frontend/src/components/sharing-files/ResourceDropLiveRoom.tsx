@@ -36,6 +36,7 @@ import {
   validateSessionShareFiles,
   type SessionFileSummary,
 } from "@/lib/sharing-files/session-files";
+import { getJoinUrl } from "@/lib/game/join-url";
 import type { Room } from "@shared/game/types";
 
 type ResourceDropLiveRoomProps = {
@@ -70,8 +71,7 @@ export function ResourceDropLiveRoom({
   );
 
   const fallbackJoinUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return `${window.location.origin}/join?code=${room.code}`;
+    return getJoinUrl(room.code);
   }, [room.code]);
 
   const qrValue = shareUrl || fallbackJoinUrl;

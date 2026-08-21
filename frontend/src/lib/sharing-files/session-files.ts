@@ -138,20 +138,7 @@ export async function createSharedFileDownloadUrl(
 }
 
 export function getSessionFileShareUrl(shareSlug: string): string {
-  let origin = "";
-  if (typeof window !== "undefined") {
-    if (
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1" ||
-      !PUBLIC_APP_URL
-    ) {
-      origin = window.location.origin;
-    } else {
-      origin = PUBLIC_APP_URL;
-    }
-  } else {
-    origin = PUBLIC_APP_URL || "";
-  }
+  const origin = PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
   return origin ? `${origin}/share/${shareSlug}` : `/share/${shareSlug}`;
 }
 
