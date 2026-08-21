@@ -1038,8 +1038,11 @@ export async function listCodes(): Promise<Set<string>> {
 
 export async function verifyAuthorToken(
   stored: StoredRoom,
-  token: string,
+  token?: string,
+  authorId?: string,
 ): Promise<boolean> {
+  if (authorId && stored.room.authorId && stored.room.authorId === authorId) return true;
+  if (!token) return false;
   if (stored.authorToken && stored.authorToken === token) return true;
   return (await hashToken(token)) === stored.authorTokenHash;
 }
@@ -1315,4 +1318,21 @@ export function ensureAttempt(
     stored.attempts.set(participantId, attempt);
   }
   return attempt;
+}
+
+export async function resetRoomRecords(roomId: string): Promise<void> {
+  await supabase
+    .from("gamibar_rooms")
+    .update({
+      status: "LOBBY",
+      started_at: null,
+      finished_at: null,
+      ends_at: null,
+      events: [],
+    })
+    .eq("id", roomId);
+
+  await supabase.from("gamibar_attempts").delete().eq("room_id", roomId);
+  await supabase.from("gamibar_quiz_answers").delete().eq("room_id", roomId);
+  await supabase.from("gamibar_visual_point_answers").delete().eq("room_id", roomId);
 }

@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { Radio, Users, WifiOff } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Sparkles, Users, WifiOff } from "lucide-react";
 
 import { avatarTone } from "@/components/session/LobbyRing";
 import { GAME_MODE_META, type GameMode } from "@shared/game/config";
@@ -31,173 +31,140 @@ export function LobbyWall({
   return (
     <div
       className={cn(
-        "relative isolate overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-4 shadow-[var(--shadow-soft)] sm:p-6",
+        "relative isolate flex min-h-[460px] flex-col justify-between overflow-hidden rounded-[28px] border border-black/10 bg-white p-5 shadow-xl sm:p-7",
         className,
       )}
     >
+      {/* Background Ambience */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_100%_0%,rgba(239,68,68,0.1),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(255,59,48,0.06),transparent_70%)]"
       />
 
-      <div className="relative flex items-start justify-between gap-4 border-b border-[var(--gamibar-border)] pb-4 sm:pb-5">
+      {/* Header Bar */}
+      <div className="relative flex flex-wrap items-center justify-between gap-4 border-b border-black/5 pb-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--gamibar-brand)]">
-            Live lobby
-          </p>
-          <h2 className="mt-1 font-display text-xl font-extrabold text-[var(--foreground)] sm:text-2xl">
+          <div className="flex items-center gap-2">
+            <span className="flex size-2 rounded-full bg-[#FF3B30] animate-pulse" />
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#FF3B30]">
+              Waiting Lobby
+            </p>
+          </div>
+          <h2 className="mt-1 font-display text-2xl font-black text-[#111111] sm:text-3xl">
             {joined === 0
-              ? "Waiting for participants"
-              : `${joined} participant${joined === 1 ? "" : "s"} in the lobby`}
+              ? "Waiting for participants…"
+              : `${joined} Player${joined === 1 ? "" : "s"} In Room`}
           </h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Ready to start when you are.
+          <p className="mt-0.5 text-xs font-medium text-[#5F6368]">
+            Names pop up live on this screen as players join.
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 pt-0.5 text-[var(--foreground)]">
-          <Users className="size-4 text-[var(--gamibar-brand)] sm:size-5" />
-          <span className="font-display text-2xl font-bold tabular-nums leading-none sm:text-3xl">
-            {joined}
-          </span>
-          <span className="hidden text-[10px] font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)] sm:block">
+        <div className="flex items-center gap-2 rounded-2xl border border-black/10 bg-[#F8F9FA] px-4 py-2 text-[#111111] shadow-xs">
+          <Users className="size-5 text-[#FF3B30]" />
+          <span className="font-display text-3xl font-black tabular-nums">{joined}</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#5F6368]">
             Joined
           </span>
         </div>
       </div>
 
-      <div className="relative mt-4 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_13rem] lg:items-start lg:gap-6">
-        <section className="min-w-0" aria-labelledby="lobby-roster-heading">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3
-              id="lobby-roster-heading"
-              className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]"
-            >
-              Participant roster
-            </h3>
-            {joined > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
-                <span className="size-1.5 rounded-full bg-[var(--game-connect-dots)]" />
-                Live
-              </span>
-            )}
-          </div>
-
-          {joined === 0 ? (
-            <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-[var(--gamibar-border)] bg-[var(--surface)]/55 px-5 py-8 text-center">
-              <div>
-                <span className="mx-auto grid size-10 place-items-center rounded-xl bg-[var(--gamibar-brand-soft)] text-[var(--gamibar-brand)]">
-                  <Users className="size-5" />
-                </span>
-                <p className="mt-3 text-sm font-semibold text-[var(--foreground)]">
-                  No participants yet
-                </p>
-                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                  Joined names will appear in this roster.
-                </p>
+      {/* Main Bubble Area */}
+      <div className="relative my-4 flex-1">
+        {joined === 0 ? (
+          <div className="grid min-h-[300px] place-items-center rounded-2xl border-2 border-dashed border-black/10 bg-[#FAFAFA] p-8 text-center">
+            <div className="max-w-sm">
+              <div className="mx-auto grid size-16 place-items-center rounded-3xl bg-black text-[#FF3B30] shadow-lg shadow-black/10">
+                <Sparkles className="size-8" />
               </div>
+              <p className="mt-4 font-display text-lg font-black text-[#111111]">
+                No players joined yet
+              </p>
+              <p className="mt-1.5 text-xs font-medium leading-relaxed text-[#5F6368]">
+                Scan the QR code or enter the 6-digit room code on your phone to pop up here!
+              </p>
             </div>
-          ) : (
-            <motion.ul
-              layout={!reduceMotion}
-              className="grid min-w-0 grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(9.5rem,9.5rem))] sm:gap-3"
-            >
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-center gap-3 p-2 sm:gap-3.5">
+            <AnimatePresence mode="popLayout">
               {participants.map((participant, index) => {
                 const disconnected = participant.status === "DISCONNECTED";
 
                 return (
-                  <motion.li
-                    layout={!reduceMotion}
+                  <motion.div
                     key={participant.id}
-                    initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    layout={!reduceMotion}
+                    initial={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : {
+                            opacity: 0,
+                            scale: 0.2,
+                            y: 25,
+                            rotate: (index % 5) - 2,
+                          }
+                    }
+                    animate={{
+                      opacity: 1,
+                      scale: 1,
+                      y: 0,
+                      rotate: 0,
+                    }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    whileHover={reduceMotion ? undefined : { scale: 1.06, y: -2 }}
                     transition={{
                       type: "spring",
-                      stiffness: 420,
-                      damping: 30,
-                      delay: index * 0.025,
+                      stiffness: 450,
+                      damping: 22,
+                      mass: 0.8,
                     }}
-                    className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--surface)] px-3 py-3 shadow-sm"
+                    className={cn(
+                      "group relative flex items-center gap-2.5 rounded-full border border-black/10 bg-white py-2 pl-2 pr-4 shadow-md transition-shadow hover:shadow-lg",
+                      disconnected && "opacity-60 grayscale",
+                    )}
                   >
+                    {/* Pop-in sparkle accent */}
+                    <span className="pointer-events-none absolute -right-1 -top-1 size-3 rounded-full bg-[#FF3B30] opacity-80 animate-ping" />
+
+                    {/* Avatar Circle */}
                     <span
                       aria-hidden
                       className={cn(
-                        "grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold ring-1",
+                        "grid size-10 shrink-0 place-items-center rounded-full font-display text-sm font-black text-[#111111] shadow-xs ring-2 ring-white",
                         avatarTone(participant.displayName),
-                        disconnected && "grayscale",
                       )}
                     >
                       {participant.displayName.slice(0, 1).toUpperCase()}
                     </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-[var(--foreground)]">
+
+                    {/* Name & status */}
+                    <div className="min-w-0 pr-1">
+                      <span className="block max-w-[160px] truncate font-display text-sm font-black tracking-tight text-[#111111] sm:max-w-[200px]">
                         {participant.displayName}
                       </span>
-                      <span
-                        className={cn(
-                          "mt-0.5 flex items-center gap-1 text-[10px] font-medium",
-                          disconnected
-                            ? "text-[var(--gamibar-text-tertiary)]"
-                            : "text-[var(--game-connect-dots-deep)]",
-                        )}
-                      >
-                        {disconnected ? (
-                          <WifiOff className="size-2.5" />
-                        ) : (
-                          <Radio className="size-2.5" />
-                        )}
-                        {disconnected ? "Reconnecting" : "Ready"}
-                      </span>
-                    </span>
-                  </motion.li>
+                      {disconnected && (
+                        <span className="flex items-center gap-1 text-[9px] font-bold text-[#5F6368]">
+                          <WifiOff className="size-2.5" /> Reconnecting
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
                 );
               })}
-            </motion.ul>
-          )}
-        </section>
-
-        <aside className="overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--surface)]">
-          <div className="flex min-w-0 items-center gap-3 p-3 lg:block lg:p-0">
-            {catalog && (
-              <div className="relative size-16 shrink-0 overflow-hidden rounded-xl lg:aspect-[16/10] lg:size-auto lg:rounded-none">
-                <img
-                  src={catalog.preview}
-                  alt=""
-                  aria-hidden
-                  className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-lg"
-                  loading="lazy"
-                />
-                <img
-                  src={catalog.preview}
-                  alt=""
-                  className="relative z-10 size-full object-contain p-1.5"
-                  loading="lazy"
-                />
-                <div
-                  aria-hidden
-                  className={cn(
-                    "absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-40",
-                    catalog.accentClass,
-                  )}
-                />
-              </div>
-            )}
-            <div className="min-w-0 lg:p-4">
-              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-brand)]">
-                {ModeIcon && <ModeIcon className="size-3" />}
-                Up next
-              </p>
-              <p className="mt-1 truncate font-display text-sm font-bold text-[var(--foreground)] lg:whitespace-normal">
-                {GAME_MODE_META[mode].title}
-              </p>
-              {roomName && (
-                <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)] lg:mt-1 lg:whitespace-normal lg:break-words">
-                  {roomName}
-                </p>
-              )}
-            </div>
+            </AnimatePresence>
           </div>
-        </aside>
+        )}
+      </div>
+
+      {/* Footer Info Pill */}
+      <div className="relative flex items-center justify-between rounded-2xl border border-black/5 bg-[#F8F9FA] px-4 py-2.5 text-xs">
+        <div className="flex items-center gap-2 font-bold text-[#111111]">
+          {ModeIcon && <ModeIcon className="size-4 text-[#FF3B30]" />}
+          <span>{GAME_MODE_META[mode].title}</span>
+          {roomName && <span className="text-[#5F6368] font-medium">· {roomName}</span>}
+        </div>
+        <span className="font-semibold text-[#5F6368]">Projector View · Ready to host</span>
       </div>
     </div>
   );
@@ -220,7 +187,7 @@ export function ParticipantStrip({
             key={p.id}
             title={p.displayName}
             className={cn(
-              "grid size-9 place-items-center rounded-full border-2 border-[var(--gamibar-surface)] text-xs font-bold shadow-sm",
+              "grid size-9 place-items-center rounded-full border-2 border-white text-xs font-bold shadow-xs",
               avatarTone(p.displayName),
             )}
           >
@@ -228,12 +195,12 @@ export function ParticipantStrip({
           </span>
         ))}
         {participants.length > 8 && (
-          <span className="grid size-9 place-items-center rounded-full border-2 border-[var(--gamibar-surface)] bg-[var(--foreground)] text-[10px] font-bold text-[var(--background)] shadow-sm">
+          <span className="grid size-9 place-items-center rounded-full border-2 border-white bg-[#111111] text-[10px] font-bold text-white shadow-xs">
             +{participants.length - 8}
           </span>
         )}
       </div>
-      <span className="whitespace-nowrap text-sm font-medium text-[var(--muted-foreground)]">
+      <span className="whitespace-nowrap text-sm font-semibold text-[#5F6368]">
         {participants.length} in session
       </span>
     </div>

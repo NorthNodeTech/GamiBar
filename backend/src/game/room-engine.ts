@@ -18,6 +18,7 @@ import {
   listCodes,
   persist,
   reserveParticipantJoin,
+  resetRoomRecords,
   verifyAuthorToken,
   copyJigsawAssetBetweenRooms,
   copyVisualPointAssetsBetweenRooms,
@@ -755,6 +756,7 @@ export async function getRoomSnapshot(input: {
   roomId?: string;
   code?: string;
   authorToken?: string;
+  authorId?: string;
   reconnectToken?: string;
 }) {
   const code = input.code ? normalizeRoomCode(input.code) : undefined;
@@ -766,7 +768,8 @@ export async function getRoomSnapshot(input: {
   if (!stored) return { ok: false as const, error: "Room not found." };
 
   const isAuthor = Boolean(
-    input.authorToken && (await verifyAuthorToken(stored, input.authorToken)),
+    (input.authorId && stored.room.authorId === input.authorId) ||
+    (input.authorToken && (await verifyAuthorToken(stored, input.authorToken, input.authorId))),
   );
   if (isRoomExpired(stored) && !isAuthor) {
     return {
@@ -975,7 +978,7 @@ export async function claimAuthorSession(input: {
     };
   }
 
-  const authorToken = createId("author");
+  const authorToken = stored.authorToken || createId("author");
   stored.authorToken = authorToken;
   stored.authorTokenHash = await hashToken(authorToken);
   await persist(stored);
@@ -989,7 +992,8 @@ export async function claimAuthorSession(input: {
 
 export async function startGame(input: {
   roomId: string;
-  authorToken: string;
+  authorToken?: string;
+  authorId?: string;
 }) {
   const initial = await loadById(input.roomId);
   if (!initial) return { ok: false as const, error: "Room not found." };
@@ -997,9 +1001,16 @@ export async function startGame(input: {
   const countdownSeconds = 3;
   const limit = resolvePayloadTimeLimit(initial.room.payload);
   const timerMode = resolvePayloadTimerMode(initial.room.payload);
+  const tokenToUse = input.authorToken || initial.authorToken || createId("author");
+  if (!initial.authorToken) {
+    initial.authorToken = tokenToUse;
+    initial.authorTokenHash = await hashToken(tokenToUse);
+    await persist(initial);
+  }
+
   const reservation = await beginRoomGame({
     roomId: input.roomId,
-    authorToken: input.authorToken,
+    authorToken: tokenToUse,
     overallLimitSeconds:
       timerMode === "overall" && limit != null ? limit : null,
     countdownSeconds,
@@ -1019,10 +1030,14 @@ export async function startGame(input: {
   return { ok: true as const, room: publicRoom(stored), countdownSeconds };
 }
 
-export async function stopGame(input: { roomId: string; authorToken: string }) {
+export async function stopGame(input: {
+  roomId: string;
+  authorToken?: string;
+  authorId?: string;
+}) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (!(await verifyAuthorToken(stored, input.authorToken))) {
+  if (!(await verifyAuthorToken(stored, input.authorToken, input.authorId))) {
     return { ok: false as const, error: "Only the host can stop the game." };
   }
   if (stored.room.status !== "LIVE" && stored.room.status !== "COUNTDOWN") {
@@ -1038,14 +1053,48 @@ export async function stopGame(input: { roomId: string; authorToken: string }) {
   };
 }
 
+export async function restartGame(input: {
+  roomId: string;
+  authorToken?: string;
+  authorId?: string;
+}) {
+  const stored = await loadById(input.roomId);
+  if (!stored) return { ok: false as const, error: "Room not found." };
+  if (!(await verifyAuthorToken(stored, input.authorToken, input.authorId))) {
+    return { ok: false as const, error: "Only the host can restart the game." };
+  }
+
+  stored.room.status = "LOBBY";
+  stored.room.startedAt = null;
+  stored.room.finishedAt = null;
+  stored.room.endsAt = null;
+  stored.events = [];
+
+  for (const p of stored.participants.values()) {
+    p.status = "ONLINE";
+  }
+  stored.attempts.clear();
+  stored.quizAnswers.clear();
+  stored.visualPointAnswers.clear();
+
+  await resetRoomRecords(input.roomId);
+  await persist(stored);
+
+  return {
+    ok: true as const,
+    room: publicRoom(stored),
+  };
+}
+
 export async function setShowLeaderboardToStudents(input: {
   roomId: string;
-  authorToken: string;
+  authorToken?: string;
+  authorId?: string;
   enabled: boolean;
 }) {
   const stored = await loadById(input.roomId);
   if (!stored) return { ok: false as const, error: "Room not found." };
-  if (!(await verifyAuthorToken(stored, input.authorToken))) {
+  if (!(await verifyAuthorToken(stored, input.authorToken, input.authorId))) {
     return {
       ok: false as const,
       error: "Only the host can change this setting.",

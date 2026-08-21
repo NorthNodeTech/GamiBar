@@ -17,13 +17,25 @@ export type ParticipantSession = {
 };
 
 export function saveAuthorRoom(session: AuthorRoomSession) {
-  sessionStorage.setItem(AUTHOR_KEY, JSON.stringify(session));
+  if (storageAvailable("sessionStorage")) {
+    sessionStorage.setItem(AUTHOR_KEY, JSON.stringify(session));
+  }
+  if (storageAvailable("localStorage")) {
+    localStorage.setItem(`${AUTHOR_KEY}.${session.roomId}`, JSON.stringify(session));
+  }
 }
 
-export function loadAuthorRoom(): AuthorRoomSession | null {
+export function loadAuthorRoom(roomId?: string): AuthorRoomSession | null {
   try {
-    const raw = sessionStorage.getItem(AUTHOR_KEY);
-    return raw ? (JSON.parse(raw) as AuthorRoomSession) : null;
+    if (roomId && storageAvailable("localStorage")) {
+      const byRoom = localStorage.getItem(`${AUTHOR_KEY}.${roomId}`);
+      if (byRoom) return JSON.parse(byRoom) as AuthorRoomSession;
+    }
+    if (storageAvailable("sessionStorage")) {
+      const raw = sessionStorage.getItem(AUTHOR_KEY);
+      if (raw) return JSON.parse(raw) as AuthorRoomSession;
+    }
+    return null;
   } catch {
     return null;
   }

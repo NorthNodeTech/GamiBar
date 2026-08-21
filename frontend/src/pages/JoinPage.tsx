@@ -29,7 +29,9 @@ type JoinMode = "scan" | "code";
 
 export default function JoinCodePage() {
   const navigate = useNavigate();
-  const { code: preset, mode: initialMode } = useSearch();
+  const search = useSearch<{ code?: string; mode?: string }>();
+  const preset = search.code;
+  const initialMode = search.mode;
   const [mode, setMode] = useState<JoinMode>(initialMode === "scan" ? "scan" : "code");
   const [code, setCode] = useState(preset ?? "");
   const [loading, setLoading] = useState(false);

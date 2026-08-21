@@ -71,20 +71,36 @@ export async function claimAuthorSessionFn({
   return gameAction("claim-author-session", data);
 }
 
-export async function startGameFn({ data }: { data: { roomId: string; authorToken: string } }) {
-  return gameAction("start-game", data, false);
+export async function startGameFn({
+  data,
+}: {
+  data: { roomId: string; authorToken?: string; authorId?: string };
+}) {
+  return gameAction("start-game", data, true);
 }
 
-export async function stopGameFn({ data }: { data: { roomId: string; authorToken: string } }) {
-  return gameAction("stop-game", data, false);
+export async function stopGameFn({
+  data,
+}: {
+  data: { roomId: string; authorToken?: string; authorId?: string };
+}) {
+  return gameAction("stop-game", data, true);
+}
+
+export async function restartGameFn({
+  data,
+}: {
+  data: { roomId: string; authorToken?: string; authorId?: string };
+}) {
+  return gameAction("restart-game", data, true);
 }
 
 export async function setShowLeaderboardToStudentsFn({
   data,
 }: {
-  data: { roomId: string; authorToken: string; enabled: boolean };
+  data: { roomId: string; authorToken?: string; authorId?: string; enabled: boolean };
 }) {
-  return gameAction("set-student-leaderboard", data, false);
+  return gameAction("set-student-leaderboard", data, true);
 }
 
 export async function submitQuizAnswerFn({

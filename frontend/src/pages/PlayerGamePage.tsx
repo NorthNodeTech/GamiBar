@@ -152,6 +152,12 @@ export default function StudentPlayPage() {
     });
   }, [reconnectToken, participant]);
 
+  useEffect(() => {
+    if (snapshot?.ok && (snapshot.room.status === "LOBBY" || snapshot.room.status === "READY")) {
+      navigate({ to: "/play/lobby/$roomId", params: { roomId } });
+    }
+  }, [snapshot, roomId, navigate]);
+
   if (!reconnectToken) {
     return <RejoinPrompt roomId={roomId} />;
   }
@@ -758,7 +764,7 @@ function QuizPlay({
             {questions.map((q, i) => {
               const completed = localAnsweredIds.has(q.id);
               const isCurrent = firstUnansweredIndex >= 0 && i === firstUnansweredIndex;
-              const reachable = i <= maxViewIndex;
+              const reachable = timerMode !== "per_question" && i <= maxViewIndex;
               return (
                 <button
                   key={q.id}
@@ -770,7 +776,7 @@ function QuizPlay({
                   onClick={() => goToQuestion(i)}
                   className={cn(
                     "tap-target grid size-9 place-items-center rounded-full text-base leading-none transition-transform active:scale-95",
-                    !reachable && "cursor-not-allowed opacity-35",
+                    !reachable && "cursor-default opacity-40",
                     completed && "text-[var(--gamibar-brand)]",
                     isCurrent && !completed && "text-[var(--foreground)]",
                     !completed && !isCurrent && "text-[var(--gamibar-border)]",
@@ -807,41 +813,43 @@ function QuizPlay({
           </p>
         ) : null}
 
-        <div className="mt-4 space-y-2 lg:mt-5">
-          <p className="text-center text-xs font-semibold text-[var(--muted-foreground)]">
-            {isAnswered
-              ? timedOutIds.has(current.id)
-                ? "Time expired for this question"
-                : "Reviewing your answer"
-              : isActive
-                ? "Your turn"
-                : ""}
-          </p>
-          <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canGoBack}
-              onClick={() => setViewIndex((i) => Math.max(0, i - 1))}
-              className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
-            >
-              <ChevronLeft className="mr-1 size-4" />
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canGoForward}
-              onClick={() => setViewIndex((i) => Math.min(maxViewIndex, i + 1))}
-              className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
-            >
-              Next
-              <ChevronRight className="ml-1 size-4" />
-            </Button>
+        {timerMode !== "per_question" && (
+          <div className="mt-4 space-y-2 lg:mt-5">
+            <p className="text-center text-xs font-semibold text-[var(--muted-foreground)]">
+              {isAnswered
+                ? timedOutIds.has(current.id)
+                  ? "Time expired for this question"
+                  : "Reviewing your answer"
+                : isActive
+                  ? "Your turn"
+                  : ""}
+            </p>
+            <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canGoBack}
+                onClick={() => setViewIndex((i) => Math.max(0, i - 1))}
+                className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
+              >
+                <ChevronLeft className="mr-1 size-4" />
+                Back
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canGoForward}
+                onClick={() => setViewIndex((i) => Math.min(maxViewIndex, i + 1))}
+                className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
+              >
+                Next
+                <ChevronRight className="ml-1 size-4" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <h1
           id={`quiz-question-${current.id}`}

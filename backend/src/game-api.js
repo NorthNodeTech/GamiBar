@@ -10,6 +10,7 @@ import {
   joinRoom,
   reconnectParticipant,
   recordConnectDotsIncorrectAttempt,
+  restartGame,
   rotateJigsawMissionTile,
   setShowLeaderboardToStudents,
   startGame,
@@ -51,6 +52,7 @@ const PUBLIC_ROOM_ACTIONS = new Set([
   "reconnect-participant",
   "start-game",
   "stop-game",
+  "restart-game",
   "set-student-leaderboard",
 ]);
 
@@ -87,6 +89,7 @@ const gameActions = {
   },
   "start-game": { auth: false, handler: startGame },
   "stop-game": { auth: false, handler: stopGame },
+  "restart-game": { auth: false, handler: restartGame },
   "set-student-leaderboard": {
     auth: false,
     handler: setShowLeaderboardToStudents,
@@ -138,6 +141,17 @@ export function registerGameRoutes(app) {
       if (req.params.action === "join-room") {
         const user = await optionalUser(req);
         data = { ...data, userId: user?.id ?? null };
+      } else if (
+        req.params.action === "stop-game" ||
+        req.params.action === "start-game" ||
+        req.params.action === "restart-game" ||
+        req.params.action === "set-student-leaderboard" ||
+        req.params.action === "room-snapshot"
+      ) {
+        const user = await optionalUser(req);
+        if (user?.id) {
+          data = { ...data, authorId: user.id };
+        }
       } else if (action.authUserField) {
         const user = await requireAuthor(
           req,

@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@/lib/query";
 import {
   ArrowRight,
   Copy,
-  Eye,
   Gamepad2,
   Loader2,
   Play,
@@ -457,28 +456,15 @@ function MyGameCard({
           </Button>
         ) : (
           <>
-            {canOpenLive ? (
-              <Button
-                type="button"
-                size="sm"
-                className="col-span-2 h-10 rounded-lg bg-[var(--foreground)] px-3 text-xs text-[var(--background)] hover:opacity-90 sm:col-span-1 sm:h-8 sm:px-2.5"
-                disabled={busy}
-                onClick={onOpenLive}
-              >
-                <Play className="mr-1 size-3 fill-current" />
-                Open live
-              </Button>
-            ) : null}
             <Button
-              asChild
-              variant="ghost"
+              type="button"
               size="sm"
-              className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
+              className="col-span-2 h-10 rounded-lg bg-[var(--foreground)] px-3 text-xs text-[var(--background)] hover:opacity-90 sm:col-span-1 sm:h-8 sm:px-2.5"
+              disabled={busy}
+              onClick={onOpenLive}
             >
-              <Link to="/author/sessions/$roomId" params={{ roomId: session.id }}>
-                <Eye className="mr-1 size-3" />
-                {isFinished ? "Results" : "Summary"}
-              </Link>
+              <Play className="mr-1 size-3 fill-current" />
+              {isFinished ? "Open room" : "Open live"}
             </Button>
             <Button
               type="button"

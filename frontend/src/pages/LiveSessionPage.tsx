@@ -1,11 +1,9 @@
 import { useParams } from "@/lib/navigation";
-import { Link } from "@/lib/navigation";
-import { Clock, Play, Plus, Sparkles, Square, Users } from "lucide-react";
+import { Clock, Play, RotateCcw, Sparkles, Square, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
-import { CompletionTimeline } from "@/components/author/LiveLeaderboard";
 import {
   LiveRoomActionDialog,
   type LiveRoomAction,
@@ -37,6 +35,7 @@ import { assessConnectDotsContentSolvability } from "@shared/game/connect-dots-s
 import {
   startGameFn,
   stopGameFn,
+  restartGameFn,
   setShowLeaderboardToStudentsFn,
   claimAuthorSessionFn,
 } from "@/lib/game/room.functions";
@@ -47,7 +46,7 @@ export default function AuthorRoomPage() {
   const { roomId } = useParams();
   const { user } = useAuth();
   const [claimedToken, setClaimedToken] = useState<string | undefined>(undefined);
-  const author = loadAuthorRoom();
+  const author = loadAuthorRoom(roomId);
   const authorToken = claimedToken ?? (author?.roomId === roomId ? author.authorToken : undefined);
   const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry, refresh } =
     useRoomSync({ roomId, authorToken });
@@ -186,21 +185,6 @@ export default function AuthorRoomPage() {
   }
 
   const leaderboard = snapshot.leaderboard;
-  const completions = snapshot.recentEvents
-    .filter((e) => e.type === "player_completed")
-    .slice(-8)
-    .reverse()
-    .map((e, i) =>
-      e.type === "player_completed"
-        ? {
-            key: `${e.participantId}-${i}`,
-            displayName: e.displayName,
-            durationMs: e.durationMs,
-          }
-        : null,
-    )
-    .filter(Boolean) as { key: string; displayName: string; durationMs?: number | null }[];
-
   const playing = room.participants.filter((p) => p.status === "PLAYING").length;
   const completed = room.participants.filter((p) => p.status === "COMPLETED").length;
   const inLobby = room.status === "LOBBY" || room.status === "READY" || room.status === "DRAFT";
@@ -212,7 +196,7 @@ export default function AuthorRoomPage() {
     setBusy(true);
     setActionError(null);
     try {
-      const res = await startGameFn({ data: { roomId, authorToken } });
+      const res = await startGameFn({ data: { roomId, authorToken, authorId: user?.id } });
       if (!res.ok) {
         const message = friendlyGameError(res.error, "Could not start the game. Try again.");
         setActionError(message);
@@ -234,7 +218,7 @@ export default function AuthorRoomPage() {
     setBusy(true);
     setActionError(null);
     try {
-      const res = await stopGameFn({ data: { roomId, authorToken } });
+      const res = await stopGameFn({ data: { roomId, authorToken, authorId: user?.id } });
       if (!res.ok) {
         const message = friendlyGameError(res.error, "Could not end the game. Try again.");
         setActionError(message);
@@ -252,12 +236,34 @@ export default function AuthorRoomPage() {
     }
   };
 
+  const handleRestart = async () => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const res = await restartGameFn({ data: { roomId, authorToken, authorId: user?.id } });
+      if (!res.ok) {
+        const message = friendlyGameError(res.error, "Could not restart the game. Try again.");
+        setActionError(message);
+        toast.error(message);
+      } else {
+        toast.success("Room reset - ready to play again!");
+        void refresh();
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not restart the game.";
+      setActionError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleLeaderboardVisibility = async (enabled: boolean) => {
     setLeaderboardBusy(true);
     setActionError(null);
     try {
       const res = await setShowLeaderboardToStudentsFn({
-        data: { roomId, authorToken, enabled },
+        data: { roomId, authorToken, authorId: user?.id, enabled },
       });
       if (!res.ok) {
         const message = friendlyGameError(res.error, "Could not update leaderboard visibility.");
@@ -284,6 +290,29 @@ export default function AuthorRoomPage() {
     room.endsAt && room.status === "LIVE"
       ? Math.max(0, Math.ceil((room.endsAt - Date.now()) / 1000))
       : null;
+
+  const timeLimitSeconds =
+    room.payload && typeof room.payload === "object" && "timeLimitSeconds" in room.payload
+      ? (room.payload.timeLimitSeconds as number)
+      : null;
+  const timerMode =
+    room.payload && typeof room.payload === "object" && "timerMode" in room.payload
+      ? (room.payload.timerMode as string)
+      : "overall";
+
+  let timerDisplayValue = "—";
+  if (room.status === "LIVE") {
+    if (timerMode === "per_question" && timeLimitSeconds && timeLimitSeconds > 0) {
+      timerDisplayValue = `${timeLimitSeconds}s / question`;
+    } else if (remaining != null) {
+      timerDisplayValue = `${remaining}s`;
+    } else if (timeLimitSeconds && timeLimitSeconds > 0) {
+      timerDisplayValue = `${timeLimitSeconds}s`;
+    } else {
+      timerDisplayValue = "No limit";
+    }
+  }
+
   const liveProgress = snapshot.liveProgress ?? [];
   const pollResults =
     room.mode === "polls" ? (snapshot.pollResults as PollResults | undefined) : undefined;
@@ -292,7 +321,101 @@ export default function AuthorRoomPage() {
     ? "Share the QR or code below. Start when at least one participant has joined."
     : isLive
       ? "Round is live. Watch rankings below and stop when you are ready for final results."
-      : "Session complete. Review the leaderboard and completions below.";
+      : "Session complete. Review the leaderboard below or play again.";
+
+  const sessionHeroCard = (
+    <section className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-5 shadow-[var(--shadow-soft)] sm:px-7 sm:py-6 lg:px-6 lg:py-5">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.18),transparent_50%)]"
+      />
+      <div className="relative space-y-4 sm:space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-6 lg:space-y-0">
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill status={room.status} />
+            <RoomMetaChips room={room} />
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="font-display text-[clamp(1.75rem,7vw,2.25rem)] font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-[2rem]">
+              {room.name}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)] lg:max-w-xl">
+              {statusHint}
+            </p>
+            {inLobby && connectDotsSolvability?.warning && (
+              <ConnectDotsLayoutWarning assessment={connectDotsSolvability} className="mt-4" />
+            )}
+            {!inLobby && (
+              <div className="mt-4">
+                <ParticipantStrip participants={room.participants} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end lg:min-w-[18rem] lg:justify-end">
+          {(room.status === "LOBBY" || room.status === "READY") && (
+            <Button
+              className={cn(
+                "h-11 w-full rounded-xl px-6 font-semibold sm:w-auto lg:h-10",
+                canStart
+                  ? "bg-[var(--gamibar-brand)] text-white hover:bg-[var(--gamibar-brand-hover)]"
+                  : "bg-[var(--surface)] text-[var(--gamibar-text-tertiary)] hover:bg-[var(--surface)]",
+              )}
+              disabled={busy || !canStart}
+              onClick={() => setPendingAction("start")}
+            >
+              <Play className="mr-2 size-4 shrink-0" />
+              <span className="truncate">
+                {busy
+                  ? "Starting game…"
+                  : canStart
+                    ? `Start game · ${room.participantCount} ready`
+                    : "Waiting for participants"}
+              </span>
+            </Button>
+          )}
+          {isLive && (
+            <Button
+              className="h-10 w-full rounded-xl bg-red-600 px-4 text-sm font-bold text-white shadow-sm shadow-red-900/10 hover:bg-red-700 focus-visible:ring-red-200 sm:w-auto"
+              disabled={busy}
+              onClick={() => setPendingAction("stop")}
+            >
+              <Square className="mr-2 size-3.5 shrink-0" />
+              {busy ? "Ending game…" : "Stop game"}
+            </Button>
+          )}
+          {room.status === "FINISHED" && (
+            <Button
+              className="h-10 w-full rounded-xl bg-[var(--gamibar-brand)] px-4 text-sm font-bold text-white shadow-sm hover:bg-[var(--gamibar-brand-hover)] sm:w-auto"
+              disabled={busy}
+              onClick={() => void handleRestart()}
+            >
+              <RotateCcw className="mr-2 size-3.5 shrink-0" />
+              {busy ? "Resetting room…" : "Play again"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!inLobby && (
+        <div className="relative mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4 sm:gap-3">
+          <HeroMetric label="Joined" value={room.participantCount} icon={Users} />
+          <HeroMetric label="Playing" value={playing} accent="quiz" />
+          <HeroMetric label="Completed" value={completed} accent="connect_dots" />
+          <HeroMetric
+            label="Time left"
+            value={timerDisplayValue}
+            icon={Clock}
+            {...(timerDisplayValue !== "No limit" && timerDisplayValue !== "—"
+              ? { accent: "brand" as const }
+              : {})}
+          />
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <AuthorShell>
@@ -301,113 +424,59 @@ export default function AuthorRoomPage() {
         {actionError ? (
           <InlineErrorBanner message={actionError} onDismiss={() => setActionError(null)} />
         ) : null}
-        <section className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-5 shadow-[var(--shadow-soft)] sm:px-7 sm:py-6 lg:px-6 lg:py-5">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.18),transparent_50%)]"
-          />
-          <div className="relative space-y-4 sm:space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-6 lg:space-y-0">
-            <div className="min-w-0 space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusPill status={room.status} />
-                <RoomMetaChips room={room} />
-              </div>
 
-              <div className="min-w-0">
-                <h1 className="font-display text-[clamp(1.75rem,7vw,2.25rem)] font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-[2rem]">
-                  {room.name}
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)] lg:max-w-xl">
-                  {statusHint}
-                </p>
-                {inLobby && connectDotsSolvability?.warning && (
-                  <ConnectDotsLayoutWarning assessment={connectDotsSolvability} className="mt-4" />
-                )}
-                {!inLobby && (
-                  <div className="mt-4">
-                    <ParticipantStrip participants={room.participants} />
+        {inLobby ? (
+          <>
+            {sessionHeroCard}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(460px,520px)_minmax(0,1fr)] lg:items-start">
+              <div className="space-y-5 lg:sticky lg:top-20">
+                <RoomJoinShare code={room.code} prominent />
+                {room.participantCount < 1 && (
+                  <div className="hidden items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)] lg:flex">
+                    <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
+                    Share the QR or 6-digit code. Start unlocks as soon as one participant joins.
                   </div>
                 )}
               </div>
+              <LobbyWall participants={room.participants} mode={room.mode} roomName={room.name} />
             </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end lg:min-w-[18rem] lg:justify-end">
-              {(room.status === "LOBBY" || room.status === "READY") && (
-                <Button
-                  className={cn(
-                    "h-11 w-full rounded-xl px-6 font-semibold sm:w-auto lg:h-10",
-                    canStart
-                      ? "bg-[var(--gamibar-brand)] text-white hover:bg-[var(--gamibar-brand-hover)]"
-                      : "bg-[var(--surface)] text-[var(--gamibar-text-tertiary)] hover:bg-[var(--surface)]",
-                  )}
-                  disabled={busy || !canStart}
-                  onClick={() => setPendingAction("start")}
-                >
-                  <Play className="mr-2 size-4 shrink-0" />
-                  <span className="truncate">
-                    {busy
-                      ? "Starting game…"
-                      : canStart
-                        ? `Start game · ${room.participantCount} ready`
-                        : "Waiting for participants"}
-                  </span>
-                </Button>
-              )}
-              {isLive && (
-                <Button
-                  className="h-10 w-full rounded-xl bg-red-600 px-4 text-sm font-bold text-white shadow-sm shadow-red-900/10 hover:bg-red-700 focus-visible:ring-red-200 sm:w-auto"
-                  disabled={busy}
-                  onClick={() => setPendingAction("stop")}
-                >
-                  <Square className="mr-2 size-3.5 shrink-0" />
-                  {busy ? "Ending game…" : "Stop game"}
-                </Button>
-              )}
-              <Button
-                asChild
-                variant="outline"
-                className="h-10 w-full rounded-xl border-transparent bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--muted-foreground)] shadow-none hover:border-[var(--gamibar-border)] hover:bg-[var(--gamibar-surface)] hover:text-[var(--foreground)] sm:w-auto"
-              >
-                <Link to="/author/create">
-                  <Plus className="mr-2 size-4 shrink-0" />
-                  New room
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {!inLobby && (
-            <div className="relative mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4 sm:gap-3">
-              <HeroMetric label="Joined" value={room.participantCount} icon={Users} />
-              <HeroMetric label="Playing" value={playing} accent="quiz" />
-              <HeroMetric label="Completed" value={completed} accent="connect_dots" />
-              <HeroMetric
-                label="Time left"
-                value={
-                  remaining != null ? `${remaining}s` : room.status === "LIVE" ? "No limit" : "—"
-                }
-                icon={Clock}
-                {...(remaining != null ? { accent: "brand" as const } : {})}
-              />
-            </div>
-          )}
-        </section>
-
-        {inLobby ? (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(460px,520px)_minmax(0,1fr)] lg:items-start">
-            <div className="space-y-5 lg:sticky lg:top-20">
-              <RoomJoinShare code={room.code} prominent />
-              {room.participantCount < 1 && (
-                <div className="hidden items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)] lg:flex">
-                  <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
-                  Share the QR or 6-digit code. Start unlocks as soon as one participant joins.
-                </div>
-              )}
-            </div>
-            <LobbyWall participants={room.participants} mode={room.mode} roomName={room.name} />
-          </div>
+          </>
         ) : (
           <>
+            {/* 1. TOP: Leaderboard (or Poll Results if polls) */}
+            {room.mode !== "polls" && (
+              <UnifiedLeaderboard
+                mode={room.mode}
+                rows={leaderboard}
+                finished={room.status === "FINISHED"}
+              />
+            )}
+            {room.mode === "polls" && pollResults && <PollResultsPanel results={pollResults} />}
+
+            {/* 2. AFTER THAT: Session Card (Computer Science Card with Play Again) */}
+            {sessionHeroCard}
+
+            {/* 3. BELOW THAT: Show Leaderboard to Participants Toggle */}
+            {room.mode === "quiz" && isLive && (
+              <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-4 shadow-[var(--shadow-soft)] sm:px-6">
+                <div className="min-w-0">
+                  <Label
+                    htmlFor="show-leaderboard"
+                    className="text-sm font-semibold text-[var(--foreground)]"
+                  >
+                    Show leaderboard to participants
+                  </Label>
+                </div>
+                <Switch
+                  id="show-leaderboard"
+                  checked={room.showLeaderboardToStudents}
+                  disabled={leaderboardBusy}
+                  onCheckedChange={(checked) => void handleLeaderboardVisibility(checked)}
+                />
+              </div>
+            )}
+
+            {/* 4. Live Progress Dashboard */}
             {isLive && (
               <LiveGameDashboard
                 mode={room.mode}
@@ -416,54 +485,6 @@ export default function AuthorRoomPage() {
                 playing={playing}
                 completed={completed}
               />
-            )}
-
-            {room.mode === "polls" && pollResults && <PollResultsPanel results={pollResults} />}
-
-            {!isLive && (
-              <div className="rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-5 shadow-[var(--shadow-soft)] sm:px-6">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--gamibar-text-tertiary)]">
-                  Room code
-                </p>
-                <div className="mt-3 flex justify-center sm:justify-start">
-                  <RoomCodeDisplay code={room.code} size="large" />
-                </div>
-              </div>
-            )}
-
-            <div className={cn("grid gap-6", room.mode !== "polls" && "lg:grid-cols-2")}>
-              {room.mode !== "polls" && (
-                <div className="space-y-4">
-                  {room.mode === "quiz" && isLive && (
-                    <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-5 py-4 shadow-[var(--shadow-soft)] sm:px-6">
-                      <div className="min-w-0">
-                        <Label
-                          htmlFor="show-leaderboard"
-                          className="text-sm font-semibold text-[var(--foreground)]"
-                        >
-                          Show leaderboard to participants
-                        </Label>
-                      </div>
-                      <Switch
-                        id="show-leaderboard"
-                        checked={room.showLeaderboardToStudents}
-                        disabled={leaderboardBusy}
-                        onCheckedChange={(checked) => void handleLeaderboardVisibility(checked)}
-                      />
-                    </div>
-                  )}
-                  <UnifiedLeaderboard
-                    mode={room.mode}
-                    rows={leaderboard}
-                    finished={room.status === "FINISHED"}
-                  />
-                </div>
-              )}
-              <CompletionTimeline items={completions} />
-            </div>
-
-            {!isLive && room.participants.length > 0 && (
-              <LobbyWall participants={room.participants} mode={room.mode} roomName={room.name} />
             )}
           </>
         )}
