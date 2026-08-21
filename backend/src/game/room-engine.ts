@@ -1009,13 +1009,23 @@ export async function startGame(input: {
   const initial = await loadById(input.roomId);
   if (!initial) return { ok: false as const, error: "Room not found." };
 
+  const isVerifiedAuthor =
+    (input.authorId && initial.room.authorId && initial.room.authorId === input.authorId) ||
+    (input.authorToken && (await verifyAuthorToken(initial, input.authorToken, input.authorId)));
+
+  if (!isVerifiedAuthor) {
+    return { ok: false as const, error: "Only the host can start the game." };
+  }
+
   const countdownSeconds = 3;
   const limit = resolvePayloadTimeLimit(initial.room.payload);
   const timerMode = resolvePayloadTimerMode(initial.room.payload);
   const tokenToUse = input.authorToken || initial.authorToken || createId("author");
-  if (!initial.authorToken) {
+  const tokenHash = await hashToken(tokenToUse);
+
+  if (initial.authorTokenHash !== tokenHash || !initial.authorToken) {
     initial.authorToken = tokenToUse;
-    initial.authorTokenHash = await hashToken(tokenToUse);
+    initial.authorTokenHash = tokenHash;
     await persist(initial);
   }
 

@@ -83,6 +83,7 @@ export type StoredRoom = {
 
 type PersistenceBaseline = {
   room: string;
+  authorTokenHash: string;
   payload: string;
   participants: Map<string, string>;
   attempts: Map<string, string>;
@@ -120,6 +121,7 @@ function nestedMapBaseline<T>(
 function rememberBaseline(stored: StoredRoom) {
   persistenceBaselines.set(stored, {
     room: roomBaseline(stored.room),
+    authorTokenHash: stored.authorTokenHash,
     payload: stableValue(stored.room.payload),
     participants: mapBaseline(stored.participants),
     attempts: mapBaseline(stored.attempts),
@@ -1112,15 +1114,18 @@ export async function persist(stored: StoredRoom) {
   const room = stored.room;
   const baseline = persistenceBaselines.get(stored);
   const isNewRoom = !baseline;
-  const roomChanged = isNewRoom || baseline.room !== roomBaseline(room);
+  const authorTokenHash =
+    stored.authorTokenHash || (await hashToken(stored.authorToken));
+  stored.authorTokenHash = authorTokenHash;
+  const roomChanged =
+    isNewRoom ||
+    baseline.room !== roomBaseline(room) ||
+    baseline.authorTokenHash !== authorTokenHash;
   const payloadChanged =
     isNewRoom || baseline.payload !== stableValue(room.payload);
   const newEvents = baseline
     ? stored.events.slice(baseline.eventCount)
     : stored.events;
-  const authorTokenHash =
-    stored.authorTokenHash || (await hashToken(stored.authorToken));
-  stored.authorTokenHash = authorTokenHash;
 
   let payload = room.payload;
   const initialPayload = stripVisualPointDataUrls(payload);
