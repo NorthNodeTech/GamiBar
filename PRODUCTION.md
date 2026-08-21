@@ -61,7 +61,7 @@ Test-mode keys and plan IDs cannot accept real payments. In Razorpay Live Mode, 
 - `GamiBAR Pro Yearly`: INR 499, every one year.
 - Lifetime: no subscription plan; the API creates a one-time INR 1,999 order.
 
-Prices are exclusive of 18% GST. Put the two live plan IDs and live key pair in Render. Create a
+Prices are the final GamiBAR charge. Put the two live plan IDs and live key pair in Render. Create a
 webhook targeting:
 
 ```text

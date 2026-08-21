@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthSafe } from "@/lib/auth-store";
 import { fetchBillingStatus } from "@/lib/billing";
+import { UpgradeToProDialog } from "@/components/billing/UpgradeToProDialog";
 import { createRoomFn } from "@/lib/game/room.functions";
 import {
   SESSION_FILE_ACCEPT,
@@ -58,6 +59,7 @@ export default function QRFilePage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fullscreenQr, setFullscreenQr] = useState(false);
   const [fileLimits, setFileLimits] = useState({ maxBytes: 15 * 1024 * 1024, retentionDays: 7 });
@@ -208,8 +210,16 @@ export default function QRFilePage() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to create QR File Drop.";
-      setError(msg);
-      toast.error(msg);
+      if (
+        msg.includes("1 active room") ||
+        msg.includes("Upgrade to GamiBar Pro") ||
+        msg.includes("Free accounts")
+      ) {
+        setShowUpgrade(true);
+      } else {
+        setError(msg);
+        toast.error(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -346,23 +356,38 @@ export default function QRFilePage() {
                   Choose how many days your shared files stay active for audience download.
                 </p>
                 <div className="mt-2.5 grid grid-cols-3 gap-2">
-                  {SESSION_FILE_RETENTION_OPTIONS.filter(
-                    (days) => days <= fileLimits.retentionDays,
-                  ).map((days) => (
-                    <button
-                      key={days}
-                      type="button"
-                      onClick={() => setRetentionDays(days)}
-                      className={cn(
-                        "h-9 rounded-lg text-xs font-bold transition-all border",
-                        retentionDays === days
-                          ? "border-[#111111] bg-[#111111] text-white shadow-sm"
-                          : "border-[#D1D5DB] bg-white text-[#4B5563] hover:bg-[#F3F4F6]",
-                      )}
-                    >
-                      {days} Days
-                    </button>
-                  ))}
+                  {SESSION_FILE_RETENTION_OPTIONS.map((days) => {
+                    const isLocked = days > fileLimits.retentionDays;
+                    const isSelected = retentionDays === days;
+                    return (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => {
+                          if (isLocked) {
+                            setShowUpgrade(true);
+                          } else {
+                            setRetentionDays(days);
+                          }
+                        }}
+                        className={cn(
+                          "relative flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all border",
+                          isSelected
+                            ? "border-[#111111] bg-[#111111] text-white shadow-sm"
+                            : isLocked
+                              ? "border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] hover:border-amber-300 hover:text-amber-700"
+                              : "border-[#D1D5DB] bg-white text-[#4B5563] hover:bg-[#F3F4F6]",
+                        )}
+                      >
+                        <span>{days} Days</span>
+                        {isLocked && (
+                          <span className="flex items-center text-[10px] text-amber-600 font-extrabold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            🔒 Pro
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -627,6 +652,13 @@ export default function QRFilePage() {
           </div>
         </div>
       )}
+
+      <UpgradeToProDialog
+        open={showUpgrade}
+        onOpenChange={setShowUpgrade}
+        featureTitle="Active Room Limit Reached"
+        featureDescription="Free accounts can run 1 active room at a time. Upgrade to GamiBar Pro for ₹49/month to run unlimited simultaneous active rooms!"
+      />
     </AuthorShell>
   );
 }

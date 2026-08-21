@@ -589,7 +589,7 @@ function RecentSessionRow({ session, last }: { session: AuthorSessionSummary; la
         </p>
       </div>
       <Link
-        to="/author/sessions/$roomId"
+        to={isResourceDrop ? "/author/room/$roomId" : "/author/sessions/$roomId"}
         params={{ roomId: session.id }}
         className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold text-[#111111] transition-colors hover:text-[#FF3B30]"
       >

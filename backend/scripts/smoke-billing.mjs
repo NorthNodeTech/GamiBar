@@ -61,21 +61,21 @@ const result = {
     : { planCode: null, paymentCount: 0 },
 };
 
+console.log(JSON.stringify(result));
+
 if (
   !result.checkoutSignature ||
   !result.subscriptionSignature ||
   !result.tamperedSignatureRejected ||
   !result.webhookSignature ||
   !result.tamperedWebhookRejected ||
-  result.monthlyPlan.amountPaise !== 5_782 ||
+  result.monthlyPlan.amountPaise !== 4_900 ||
   result.monthlyPlan.period !== "monthly" ||
-  result.yearlyPlan.amountPaise !== 58_882 ||
+  result.yearlyPlan.amountPaise !== 49_900 ||
   result.yearlyPlan.period !== "yearly"
 ) {
   throw new Error("Billing smoke test failed.");
 }
-
-console.log(JSON.stringify(result));
 
 function signature(value) {
   return createHmac("sha256", secret).update(value).digest("hex");

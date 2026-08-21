@@ -43,11 +43,11 @@ export default function TermsPage() {
           access.
         </p>
       </LegalSection>
-      <LegalSection title="Payments and GST">
+      <LegalSection title="Payments">
         <p>
-          Paid prices are displayed exclusive of applicable GST. Checkout shows the tax and final
-          amount before payment. Razorpay processes payment credentials; GamiBAR does not store full
-          card, bank, or UPI credentials.
+          Paid prices are displayed as the final GamiBAR charge. Checkout shows the payable amount
+          before payment. Razorpay processes payment credentials; GamiBAR does not store full card,
+          bank, or UPI credentials.
         </p>
         <p>
           Monthly and yearly subscriptions renew automatically until cancelled. Lifetime is a

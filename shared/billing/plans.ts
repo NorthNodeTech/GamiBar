@@ -1,4 +1,4 @@
-export const GST_RATE_BPS = 1_800;
+export const GST_RATE_BPS = 0;
 
 export type BillingPlanCode =
   "free" | "pro_monthly" | "pro_yearly" | "lifetime";
@@ -18,6 +18,7 @@ export type BillingPlan = {
   limits: {
     livePlayersPerRoom: number;
     roomLifespanDays: number | null;
+    activeRoomsLimit: number | null;
     aiGenerationsPerMonth: number | null;
     filesPerRoom: number;
     fileSizeMb: number;
@@ -28,6 +29,7 @@ export type BillingPlan = {
 const paidLimits = {
   livePlayersPerRoom: 200,
   roomLifespanDays: null,
+  activeRoomsLimit: null,
   aiGenerationsPerMonth: null,
   filesPerRoom: 1,
   fileSizeMb: 50,
@@ -49,6 +51,7 @@ export const BILLING_PLANS: Record<BillingPlanCode, BillingPlan> = {
     limits: {
       livePlayersPerRoom: 100,
       roomLifespanDays: 7,
+      activeRoomsLimit: 1,
       aiGenerationsPerMonth: 20,
       filesPerRoom: 1,
       fileSizeMb: 15,
@@ -62,8 +65,8 @@ export const BILLING_PLANS: Record<BillingPlanCode, BillingPlan> = {
     description: "Full GamiBAR Pro access with monthly billing.",
     billingLabel: "per month",
     baseAmountPaise: 4_900,
-    gstAmountPaise: 882,
-    totalAmountPaise: 5_782,
+    gstAmountPaise: 0,
+    totalAmountPaise: 4_900,
     recurring: true,
     featured: false,
     limits: paidLimits,
@@ -75,8 +78,8 @@ export const BILLING_PLANS: Record<BillingPlanCode, BillingPlan> = {
     description: "Full GamiBAR Pro access with annual billing.",
     billingLabel: "per year",
     baseAmountPaise: 49_900,
-    gstAmountPaise: 8_982,
-    totalAmountPaise: 58_882,
+    gstAmountPaise: 0,
+    totalAmountPaise: 49_900,
     recurring: true,
     featured: true,
     limits: paidLimits,
@@ -88,8 +91,8 @@ export const BILLING_PLANS: Record<BillingPlanCode, BillingPlan> = {
     description: "A single payment for permanent GamiBAR Pro access.",
     billingLabel: "one-time",
     baseAmountPaise: 199_900,
-    gstAmountPaise: 35_982,
-    totalAmountPaise: 235_882,
+    gstAmountPaise: 0,
+    totalAmountPaise: 199_900,
     recurring: false,
     featured: false,
     limits: paidLimits,

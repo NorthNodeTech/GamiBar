@@ -8,6 +8,7 @@ import {
   Loader2,
   Play,
   Plus,
+  QrCode,
   Search,
   Trash2,
   Users,
@@ -34,7 +35,7 @@ import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GAME_MODE_META } from "@shared/game/config";
-import { loadAuthorRoom, saveAuthorRoom } from "@/lib/game/client-session";
+import { saveAuthorRoom } from "@/lib/game/client-session";
 import { claimAuthorSessionFn, duplicateRoomFn } from "@/lib/game/room.functions";
 import { useAuth } from "@/lib/auth-store";
 import {
@@ -76,7 +77,6 @@ function isActiveSession(status: string) {
 export default function MySessionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const savedRoom = loadAuthorRoom();
   const { user, isAuthor } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<AuthorSessionSummary | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
@@ -191,30 +191,6 @@ export default function MySessionsPage() {
             </Button>
           }
         />
-
-        {savedRoom && (
-          <div className="author-card mt-5 overflow-hidden border-[var(--gamibar-brand)]/25 bg-[var(--gamibar-brand-soft)]/40 p-4 sm:mt-6 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--gamibar-brand)]">
-                  Active in this browser
-                </p>
-                <p className="mt-1 font-mono text-xl font-bold tracking-[0.18em] text-[var(--foreground)] sm:text-2xl">
-                  {savedRoom.code}
-                </p>
-              </div>
-              <Button
-                asChild
-                className="h-11 w-full rounded-xl bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 sm:w-auto sm:min-h-0"
-              >
-                <Link to="/author/room/$roomId" params={{ roomId: savedRoom.roomId }}>
-                  Open live control
-                  <ArrowRight className="ml-2 size-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        )}
 
         {sessions.length > 0 ? (
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -468,7 +444,7 @@ function MyGameCard({
       </div>
 
       <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/50 px-3 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-1.5 sm:px-4 sm:py-2">
-        {canOpenLive ? (
+        {session.subject === "Resource Drop" ? (
           <Button
             type="button"
             size="sm"
@@ -476,27 +452,47 @@ function MyGameCard({
             disabled={busy}
             onClick={onOpenLive}
           >
-            <Play className="mr-1 size-3 fill-current" />
-            Open live
+            <QrCode className="mr-1 size-3" />
+            Open QR Drop
           </Button>
-        ) : null}
-        <Button asChild variant="ghost" size="sm" className="h-10 rounded-lg px-2.5 text-xs sm:h-8">
-          <Link to="/author/sessions/$roomId" params={{ roomId: session.id }}>
-            <Eye className="mr-1 size-3" />
-            {isFinished ? "Results" : "Summary"}
-          </Link>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
-          disabled={busy}
-          onClick={onDuplicate}
-        >
-          <Copy className="mr-1 size-3" />
-          Duplicate
-        </Button>
+        ) : (
+          <>
+            {canOpenLive ? (
+              <Button
+                type="button"
+                size="sm"
+                className="col-span-2 h-10 rounded-lg bg-[var(--foreground)] px-3 text-xs text-[var(--background)] hover:opacity-90 sm:col-span-1 sm:h-8 sm:px-2.5"
+                disabled={busy}
+                onClick={onOpenLive}
+              >
+                <Play className="mr-1 size-3 fill-current" />
+                Open live
+              </Button>
+            ) : null}
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
+            >
+              <Link to="/author/sessions/$roomId" params={{ roomId: session.id }}>
+                <Eye className="mr-1 size-3" />
+                {isFinished ? "Results" : "Summary"}
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
+              disabled={busy}
+              onClick={onDuplicate}
+            >
+              <Copy className="mr-1 size-3" />
+              Duplicate
+            </Button>
+          </>
+        )}
         <Button
           type="button"
           variant="ghost"

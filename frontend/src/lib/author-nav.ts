@@ -42,13 +42,6 @@ export const authorNavItems: AuthorNavItem[] = [
     showInBottomNav: true,
   },
   {
-    to: "/author/billing",
-    label: "Billing",
-    icon: CreditCard,
-    match: (pathname) => pathname.startsWith("/author/billing"),
-    showInBottomNav: false,
-  },
-  {
     to: "/author/participated",
     label: "Participated games",
     mobileLabel: "Participated",

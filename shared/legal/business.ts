@@ -2,7 +2,6 @@ export const BUSINESS_DETAILS = {
   legalName: "NorthNode Technologies",
   brandName: "NorthNode/GamiBAR",
   businessType: "Individual",
-  gstin: "29DHYPN1328C1Z0",
   address:
     "Garden City University, Battarahalli, Bengaluru, Karnataka, India - 560049",
   country: "India",

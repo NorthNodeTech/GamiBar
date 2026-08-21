@@ -1,7 +1,7 @@
 import { useParams } from "@/lib/navigation";
 import { Link } from "@/lib/navigation";
 import { Clock, Play, Plus, Sparkles, Square, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConnectDotsLayoutWarning } from "@/components/author/ConnectDotsLayoutWarning";
@@ -30,23 +30,53 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { GAME_MODE_META } from "@shared/game/config";
 import type { PollResults, Room } from "@shared/game/types";
-import { loadAuthorRoom } from "@/lib/game/client-session";
+import { useAuth } from "@/lib/auth-store";
+import { loadAuthorRoom, saveAuthorRoom } from "@/lib/game/client-session";
 import { friendlyGameError } from "@/lib/accessibility";
 import { assessConnectDotsContentSolvability } from "@shared/game/connect-dots-solvability";
-import { startGameFn, stopGameFn, setShowLeaderboardToStudentsFn } from "@/lib/game/room.functions";
+import {
+  startGameFn,
+  stopGameFn,
+  setShowLeaderboardToStudentsFn,
+  claimAuthorSessionFn,
+} from "@/lib/game/room.functions";
 import { useRoomSync } from "@/lib/game/useRoomSync";
 import { cn } from "@/lib/utils";
 
 export default function AuthorRoomPage() {
   const { roomId } = useParams();
+  const { user } = useAuth();
+  const [claimedToken, setClaimedToken] = useState<string | undefined>(undefined);
   const author = loadAuthorRoom();
-  const authorToken = author?.roomId === roomId ? author.authorToken : undefined;
+  const authorToken = claimedToken ?? (author?.roomId === roomId ? author.authorToken : undefined);
   const { snapshot, error, isInitialLoading, isReconnecting, retrying, retry, refresh } =
     useRoomSync({ roomId, authorToken });
   const [busy, setBusy] = useState(false);
   const [leaderboardBusy, setLeaderboardBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<LiveRoomAction | null>(null);
+
+  useEffect(() => {
+    if (!authorToken && user?.id && roomId) {
+      void (async () => {
+        try {
+          const res = await claimAuthorSessionFn({
+            data: { roomId, authorId: user.id },
+          });
+          if (res.ok) {
+            saveAuthorRoom({
+              roomId,
+              code: res.room.code,
+              authorToken: res.authorToken,
+            });
+            setClaimedToken(res.authorToken);
+          }
+        } catch {
+          // ignore
+        }
+      })();
+    }
+  }, [authorToken, user?.id, roomId]);
 
   const connectDotsSolvability = useMemo(() => {
     if (!snapshot?.ok) return null;

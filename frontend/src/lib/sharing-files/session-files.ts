@@ -327,7 +327,7 @@ async function sessionFileFetch<T>(action: string, options: FetchOptions): Promi
     searchParams: options.searchParams,
     json,
     body,
-    auth: false,
+    auth: true,
     timeoutMs: body instanceof FormData ? 180_000 : undefined,
   });
 }

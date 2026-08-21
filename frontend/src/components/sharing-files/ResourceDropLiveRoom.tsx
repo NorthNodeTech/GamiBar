@@ -85,16 +85,19 @@ export function ResourceDropLiveRoom({
   const refreshFiles = useCallback(
     async (background = false) => {
       if (!background) {
-        setError(null);
         setLoading(true);
       }
       try {
-        const data = await fetchTeacherSessionFiles(room.id, authorToken);
+        const data = await fetchTeacherSessionFiles(room.id, authorToken || "");
         setSummary(data);
         setError(null);
       } catch (err) {
+        const msg = err instanceof Error ? err.message : "Could not load shared files.";
+        if (!authorToken && msg.includes("author token")) {
+          // Token is being claimed via Supabase Bearer token in background
+          return;
+        }
         if (!background) {
-          const msg = err instanceof Error ? err.message : "Could not load shared files.";
           setError(msg);
         }
       } finally {

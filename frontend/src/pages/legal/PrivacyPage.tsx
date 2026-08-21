@@ -21,8 +21,8 @@ export default function PrivacyPage() {
       <LegalSection title="Why we use information">
         <p>
           We use data to authenticate users, run realtime activities, save session results, process
-          payments, provide plan limits, prevent abuse, respond to support requests, comply with tax
-          and accounting duties, and improve reliability.
+          payments, provide plan limits, prevent abuse, respond to support requests, comply with
+          accounting duties, and improve reliability.
         </p>
       </LegalSection>
       <LegalSection title="Service providers">
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
           Free-plan room data may expire after seven days. Paid room history remains available until
           the author deletes it or the account ends, subject to operational cleanup. QRFiles expire
           after the plan’s seven-day or 28-day window. Payment, invoice, refund, fraud-prevention,
-          and tax records are retained for the period required by applicable Indian law.
+          and accounting records are retained for the period required by applicable Indian law.
         </p>
       </LegalSection>
       <LegalSection title="Security">
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       <LegalSection title="Your choices">
         <p>
           You may request access, correction, export, or deletion of eligible personal data by
-          emailing support. Some payment and tax records cannot be deleted immediately where
+          emailing support. Some payment and accounting records cannot be deleted immediately where
           retention is legally required. You may cancel marketing communication without affecting
           transactional notices.
         </p>

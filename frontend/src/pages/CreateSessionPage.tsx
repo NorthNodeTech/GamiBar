@@ -91,6 +91,7 @@ import {
 import { assessConnectDotsContentSolvability } from "@shared/game/connect-dots-solvability";
 import { getModeCatalog, type GameModeCatalogItem } from "@/lib/game/mode-catalog";
 import { modeUsesQuestions } from "@shared/game/mode-registry";
+import { UpgradeToProDialog } from "@/components/billing/UpgradeToProDialog";
 import { createRoomFn } from "@/lib/game/room.functions";
 import {
   clampTimer,
@@ -214,6 +215,7 @@ export default function CreateRoomWizard() {
     [mode, name, subject],
   );
   const [createError, setCreateError] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [sessionFiles, setSessionFiles] = useState<File[]>([]);
   const [sessionFileRetentionDays, setSessionFileRetentionDays] =
     useState<SessionFileRetentionDays>(SESSION_FILE_DEFAULT_RETENTION_DAYS);
@@ -641,8 +643,16 @@ export default function CreateRoomWizard() {
         },
       });
       if (!result.ok) {
-        setCreateError(result.error);
-        toast.error(result.error);
+        if (
+          result.error.includes("1 active room") ||
+          result.error.includes("Upgrade to GamiBar Pro") ||
+          result.error.includes("Free accounts")
+        ) {
+          setShowUpgrade(true);
+        } else {
+          setCreateError(result.error);
+          toast.error(result.error);
+        }
         return;
       }
       saveAuthorRoom({
@@ -670,8 +680,16 @@ export default function CreateRoomWizard() {
       navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not create room.";
-      setCreateError(message);
-      toast.error(message);
+      if (
+        message.includes("1 active room") ||
+        message.includes("Upgrade to GamiBar Pro") ||
+        message.includes("Free accounts")
+      ) {
+        setShowUpgrade(true);
+      } else {
+        setCreateError(message);
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1316,6 +1334,13 @@ export default function CreateRoomWizard() {
           </div>
         </div>
       </div>
+
+      <UpgradeToProDialog
+        open={showUpgrade}
+        onOpenChange={setShowUpgrade}
+        featureTitle="Active Room Limit Reached"
+        featureDescription="Free accounts can run 1 active room at a time. Upgrade to GamiBar Pro for ₹49/month to run unlimited simultaneous active rooms!"
+      />
     </AuthorShell>
   );
 }
@@ -2903,20 +2928,11 @@ function ReviewLaunchCard({
 
 function FittedPreviewImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <>
-      <img
-        src={src}
-        alt=""
-        aria-hidden
-        className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-xl"
-        loading="lazy"
-      />
-      <img
-        src={src}
-        alt={alt}
-        className="relative z-10 size-full object-contain p-2"
-        loading="lazy"
-      />
-    </>
+    <img
+      src={src}
+      alt={alt}
+      className="size-full object-cover object-center"
+      loading="lazy"
+    />
   );
 }

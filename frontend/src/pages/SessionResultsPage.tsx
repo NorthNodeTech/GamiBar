@@ -2,6 +2,7 @@ import { useParams } from "@/lib/navigation";
 import { Link, useNavigate } from "@/lib/navigation";
 import { useMutation, useQuery } from "@/lib/query";
 import { ArrowLeft, Play, Trophy } from "lucide-react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { CompletionTimeline } from "@/components/author/LiveLeaderboard";
@@ -74,6 +75,34 @@ export default function SessionResultsPage() {
   });
 
   const data = resultsQuery.data;
+
+  useEffect(() => {
+    const payload = data?.room?.payload as { isResourceDrop?: unknown } | undefined;
+    if (data?.room && (data.room.subject === "Resource Drop" || payload?.isResourceDrop === true)) {
+      if (user?.id && roomId) {
+        void (async () => {
+          try {
+            const res = await claimAuthorSessionFn({
+              data: { roomId, authorId: user.id },
+            });
+            if (res.ok) {
+              saveAuthorRoom({
+                roomId: res.room.id,
+                code: res.room.code,
+                authorToken: res.authorToken,
+              });
+            }
+          } catch {
+            // ignore
+          } finally {
+            navigate({ to: "/author/room/$roomId", params: { roomId } });
+          }
+        })();
+      } else if (roomId) {
+        navigate({ to: "/author/room/$roomId", params: { roomId } });
+      }
+    }
+  }, [data?.room, roomId, user?.id, navigate]);
 
   return (
     <AuthorShell>

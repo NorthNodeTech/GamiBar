@@ -2,17 +2,29 @@ import {
   BILLING_PLANS,
   formatInrFromPaise,
   isPaidBillingPlanCode,
+  type BillingPlanCode,
   type PaidBillingPlanCode,
 } from "@shared/billing/plans";
-import { Check, CreditCard, Loader2, ReceiptText, RotateCcw, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  CreditCard,
+  Crown,
+  Download,
+  ExternalLink,
+  HelpCircle,
+  Loader2,
+  ReceiptText,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AuthorShell } from "@/components/layout/AuthorShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { InlineErrorBanner } from "@/components/ui/async-state";
+import { InlineErrorBanner, PageLoader } from "@/components/ui/async-state";
 import {
   cancelBillingSubscription,
   createBillingCheckout,
@@ -28,66 +40,11 @@ import { useQuery } from "@/lib/query";
 import { cn } from "@/lib/utils";
 
 const PAID_PLANS: PaidBillingPlanCode[] = ["pro_monthly", "pro_yearly", "lifetime"];
-const INDIA_STATES = [
-  ["AN", "Andaman and Nicobar Islands"],
-  ["AP", "Andhra Pradesh"],
-  ["AR", "Arunachal Pradesh"],
-  ["AS", "Assam"],
-  ["BR", "Bihar"],
-  ["CG", "Chhattisgarh"],
-  ["CH", "Chandigarh"],
-  ["DL", "Delhi"],
-  ["DN", "Dadra and Nagar Haveli and Daman and Diu"],
-  ["GA", "Goa"],
-  ["GJ", "Gujarat"],
-  ["HR", "Haryana"],
-  ["HP", "Himachal Pradesh"],
-  ["JH", "Jharkhand"],
-  ["JK", "Jammu and Kashmir"],
-  ["KA", "Karnataka"],
-  ["KL", "Kerala"],
-  ["LA", "Ladakh"],
-  ["LD", "Lakshadweep"],
-  ["MP", "Madhya Pradesh"],
-  ["MH", "Maharashtra"],
-  ["MN", "Manipur"],
-  ["ML", "Meghalaya"],
-  ["MZ", "Mizoram"],
-  ["NL", "Nagaland"],
-  ["OD", "Odisha"],
-  ["PY", "Puducherry"],
-  ["PB", "Punjab"],
-  ["RJ", "Rajasthan"],
-  ["SK", "Sikkim"],
-  ["TN", "Tamil Nadu"],
-  ["TS", "Telangana"],
-  ["TR", "Tripura"],
-  ["UP", "Uttar Pradesh"],
-  ["UK", "Uttarakhand"],
-  ["WB", "West Bengal"],
-] as const;
-
-const emptyProfile: BillingProfileInput = {
-  legalName: "",
-  email: "",
-  phone: "",
-  gstin: "",
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  stateCode: "KA",
-  postalCode: "",
-};
 
 export default function BillingPage() {
   const { user } = useAuth();
   const search = useSearch<{ plan?: string }>();
-  const requestedPlan = isPaidBillingPlanCode(search.plan) ? search.plan : "pro_yearly";
-  const [selectedPlan, setSelectedPlan] = useState<PaidBillingPlanCode>(requestedPlan);
-  const [profile, setProfile] = useState<BillingProfileInput>(emptyProfile);
-  const [profileHydrated, setProfileHydrated] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyPlan, setBusyPlan] = useState<PaidBillingPlanCode | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [refundPaymentId, setRefundPaymentId] = useState<number | null>(null);
   const [refundReason, setRefundReason] = useState("");
@@ -99,478 +56,460 @@ export default function BillingPage() {
     queryFn: fetchBillingStatus,
     retry: false,
   });
+
   const status = statusQuery.data;
+  const currentPlanCode: BillingPlanCode = status?.entitlement.planCode ?? "free";
+  const isPro = status?.entitlement.status === "active" && currentPlanCode !== "free";
 
-  useEffect(() => {
-    if (profileHydrated || !user) return;
-    if (status?.profile) {
-      setProfile({
-        legalName: status.profile.legalName,
-        email: status.profile.email,
-        phone: status.profile.phone ?? "",
-        gstin: status.profile.gstin ?? "",
-        addressLine1: status.profile.addressLine1 ?? "",
-        addressLine2: status.profile.addressLine2 ?? "",
-        city: status.profile.city ?? "",
-        stateCode: status.profile.stateCode,
-        postalCode: status.profile.postalCode ?? "",
-      });
-      setProfileHydrated(true);
+  const aiUsed = status?.usage.aiGenerationsThisMonth ?? 0;
+  const aiLimit = status?.usage.aiGenerationsLimit ?? 20;
+
+  const startCheckout = async (planCode: PaidBillingPlanCode) => {
+    if (!user) {
+      toast.error("Please sign in to upgrade.");
       return;
     }
-    if (!statusQuery.isLoading) {
-      setProfile((current) => ({
-        ...current,
-        legalName: current.legalName || user.name,
-        email: current.email || user.email,
-      }));
-      setProfileHydrated(true);
-    }
-  }, [profileHydrated, status, statusQuery.isLoading, user]);
-
-  const plan = BILLING_PLANS[selectedPlan];
-  const canRefundIds = useMemo(
-    () => new Set(status?.refunds.map((refund) => refund.paymentOrderId) ?? []),
-    [status?.refunds],
-  );
-
-  const startCheckout = async () => {
-    if (!accepted) {
-      toast.error("Accept the Terms, Privacy Policy, and Refund Policy to continue.");
-      return;
-    }
-    setBusy(true);
+    setBusyPlan(planCode);
     try {
-      const response = await createBillingCheckout(selectedPlan, profile);
+      const profile: BillingProfileInput = {
+        legalName: user.name || "GamiBar Host",
+        email: user.email || "",
+        stateCode: "KA",
+      };
+      const response = await createBillingCheckout(planCode, profile);
       const result = await openRazorpayCheckout(response.checkout);
-      await verifyBillingCheckout(selectedPlan, result);
-      toast.success(`${response.plan.name} is now active.`);
+      await verifyBillingCheckout(planCode, result);
+      toast.success(`${response.plan.name} is now active!`);
       await statusQuery.refetch();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Checkout could not be completed.");
     } finally {
-      setBusy(false);
+      setBusyPlan(null);
     }
   };
 
-  const cancelSubscription = async () => {
+  const handleCancelSubscription = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to cancel automatic renewals? You will keep Pro access until the end of your billing period.",
+      )
+    ) {
+      return;
+    }
     setCancelling(true);
     try {
-      const result = await cancelBillingSubscription();
-      toast.success(result.message);
+      const res = await cancelBillingSubscription();
+      toast.success(res.message);
       await statusQuery.refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Subscription could not be cancelled.");
+      toast.error(error instanceof Error ? error.message : "Could not cancel subscription.");
     } finally {
       setCancelling(false);
     }
   };
 
-  const requestRefund = async () => {
-    if (!refundPaymentId || refundReason.trim().length < 5) {
-      toast.error("Add a short reason for the refund request.");
+  const handleRefundSubmit = async (paymentId: number) => {
+    if (!refundReason.trim()) {
+      toast.error("Please provide a reason for the refund request.");
       return;
     }
     setRefundBusy(true);
     try {
-      const result = await submitRefundRequest(refundPaymentId, refundReason.trim());
-      toast.success(result.message);
+      const res = await submitRefundRequest(paymentId, refundReason.trim());
+      toast.success(res.message);
       setRefundPaymentId(null);
       setRefundReason("");
       await statusQuery.refetch();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Refund request could not be submitted.",
-      );
+      toast.error(error instanceof Error ? error.message : "Refund submission failed.");
     } finally {
       setRefundBusy(false);
     }
   };
 
+  const planCards: Array<{
+    code: BillingPlanCode;
+    title: string;
+    description: string;
+    price: string;
+    period: string;
+    buttonText: string;
+    featured?: boolean;
+    badge?: string;
+    features: string[];
+  }> = [
+    {
+      code: "free",
+      title: "Free",
+      description: "Essentials for engaging classroom activities",
+      price: "₹0",
+      period: "/ month",
+      buttonText: "Free",
+      features: [
+        "1 Active room at a time",
+        "20 AI Option generations / month",
+        "Up to 100 Live Players per room",
+        "All 6 interactive game modes",
+        "1 File QRFile drop (15 MB limit)",
+        "7-day QRFile & room retention",
+        "Standard classroom support",
+      ],
+    },
+    {
+      code: "pro_monthly",
+      title: "Pro Monthly",
+      description: "Expanded limits with monthly flexibility",
+      price: "₹49",
+      period: "/ month",
+      buttonText: "Get Pro Monthly",
+      features: [
+        "⚡ Unlimited Concurrent Active Rooms",
+        "⚡ Unlimited AI Generations",
+        "Up to 200 Live Players per room",
+        "All 6 interactive game modes",
+        "1 File QRFile drop (50 MB limit)",
+        "28-day QRFile retention",
+        "Unlimited room lifespan",
+        "Cancel anytime",
+      ],
+    },
+    {
+      code: "pro_yearly",
+      title: "Pro Yearly",
+      description: "Best value with 2 months free",
+      price: "₹499",
+      period: "/ year",
+      buttonText: "Get Pro Yearly",
+      featured: true,
+      badge: "Save 15% · Best Value",
+      features: [
+        "Everything in Pro Monthly",
+        "2 Months Free (₹41.5 / mo)",
+        "⚡ Unlimited Concurrent Active Rooms",
+        "⚡ Unlimited AI Generations",
+        "Up to 200 Live Players per room",
+        "Priority AI processing speed",
+        "Priority educator support",
+      ],
+    },
+    {
+      code: "lifetime",
+      title: "Lifetime",
+      description: "Pay once, keep Pro permanent forever",
+      price: "₹1,999",
+      period: "one-time",
+      buttonText: "Get Lifetime",
+      badge: "One-Time Payment",
+      features: [
+        "Permanent Pro access forever",
+        "⚡ Unlimited Concurrent Active Rooms",
+        "⚡ Unlimited AI Generations",
+        "Up to 200 Live Players per room",
+        "All future Pro features included",
+        "Zero renewal fees ever",
+        "VIP priority support",
+      ],
+    },
+  ];
+
   return (
     <AuthorShell>
-      <div className="mx-auto w-full max-w-6xl py-3 text-[#111111] sm:py-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[#5F6368]">Account</p>
-            <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">Billing & plans</h1>
-            <p className="mt-2 text-sm leading-6 text-[#5F6368]">
-              Secure Razorpay checkout, GST breakdown, subscription controls, and receipts.
-            </p>
+      <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8 text-[#111111]">
+        {/* Page Title Header (ChatGPT Pricing Style) */}
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-900 mb-3">
+            <Sparkles className="size-3.5 text-amber-600" />
+            Simple, Transparent Educator Pricing
           </div>
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link to="/pricing">Compare plans</Link>
-          </Button>
+          <h1 className="font-display text-3xl sm:text-4xl font-black text-[#111111] tracking-tight">
+            Upgrade your classroom intelligence
+          </h1>
+          <p className="mt-2 text-sm text-[#5F6368] leading-relaxed">
+            Choose the plan that fits your classroom or institution. Cancel anytime.
+          </p>
         </div>
 
-        {statusQuery.isError ? (
-          <div className="mt-6">
-            <InlineErrorBanner
-              message={
-                statusQuery.error instanceof Error
-                  ? statusQuery.error.message
-                  : "Billing could not be loaded."
-              }
-              onRetry={() => void statusQuery.refetch()}
-              retrying={statusQuery.isFetching}
-            />
-          </div>
-        ) : null}
+        {/* 4-Card Pricing Grid (ChatGPT style) */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
+          {planCards.map((card) => {
+            const isCurrent = currentPlanCode === card.code;
+            const isPaid = card.code !== "free";
+            const isBusy = busyPlan === card.code;
 
-        <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]">
-          <section className="rounded-3xl border border-[#E1E4E8] bg-white p-5 shadow-[0_12px_40px_rgba(16,24,40,0.06)] sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#FF3B30]">
-                  Choose access
-                </p>
-                <h2 className="mt-2 font-display text-2xl font-bold">Upgrade GamiBAR</h2>
-              </div>
-              <ShieldCheck className="size-7 text-[#16A34A]" />
-            </div>
-
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              {PAID_PLANS.map((code) => {
-                const item = BILLING_PLANS[code];
-                const selected = selectedPlan === code;
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setSelectedPlan(code)}
+            return (
+              <div
+                key={card.code}
+                className={cn(
+                  "relative flex flex-col justify-between rounded-3xl border bg-white p-6 transition-all duration-200",
+                  card.featured
+                    ? "border-[#111111] shadow-[0_12px_36px_rgba(0,0,0,0.08)] ring-2 ring-[#111111]"
+                    : "border-[#E7E9ED] shadow-xs hover:border-[#CBD5E1] hover:shadow-md",
+                )}
+              >
+                {/* Top Badge */}
+                {card.badge && (
+                  <span
                     className={cn(
-                      "rounded-2xl border p-4 text-left transition",
-                      selected
-                        ? "border-[#111111] bg-[#111111] text-white"
-                        : "border-[#D9DDE3] bg-white hover:border-[#9CA3AF]",
+                      "absolute -top-3 left-6 rounded-full px-3 py-0.5 text-[10px] font-black uppercase tracking-wider",
+                      card.featured
+                        ? "bg-[#111111] text-white shadow-sm"
+                        : "bg-amber-100 text-amber-900 border border-amber-200",
                     )}
                   >
-                    <span className="text-sm font-bold">{item.shortName}</span>
-                    <span
-                      className={cn(
-                        "mt-1 block text-xs",
-                        selected ? "text-white/65" : "text-[#5F6368]",
-                      )}
-                    >
-                      {formatInrFromPaise(item.baseAmountPaise)} {item.billingLabel}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 rounded-2xl bg-[#F6F7F9] p-4">
-              <div className="flex items-baseline justify-between gap-4">
-                <span className="font-semibold">{plan.name}</span>
-                <span className="font-display text-2xl font-bold">
-                  {formatInrFromPaise(plan.baseAmountPaise)}
-                </span>
-              </div>
-              <div className="mt-2 flex justify-between text-sm text-[#5F6368]">
-                <span>GST (18%)</span>
-                <span>{formatInrFromPaise(plan.gstAmountPaise)}</span>
-              </div>
-              <div className="mt-3 flex justify-between border-t border-[#D9DDE3] pt-3 font-bold">
-                <span>Total charged</span>
-                <span>{formatInrFromPaise(plan.totalAmountPaise)}</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Billing name"
-                value={profile.legalName}
-                onChange={(value) => setProfileField("legalName", value)}
-                required
-              />
-              <Field
-                label="Billing email"
-                value={profile.email}
-                onChange={(value) => setProfileField("email", value)}
-                type="email"
-                required
-              />
-              <Field
-                label="Phone"
-                value={profile.phone ?? ""}
-                onChange={(value) => setProfileField("phone", value)}
-                placeholder="+91 63033 92391"
-              />
-              <div>
-                <Label htmlFor="billing-state">State / Union Territory</Label>
-                <select
-                  id="billing-state"
-                  value={profile.stateCode}
-                  onChange={(event) => setProfileField("stateCode", event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border border-[#D9DDE3] bg-white px-3 text-sm outline-none focus:border-[#111111]"
-                >
-                  {INDIA_STATES.map(([code, name]) => (
-                    <option key={code} value={code}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Field
-                label="GSTIN (optional)"
-                value={profile.gstin ?? ""}
-                onChange={(value) => setProfileField("gstin", value.toUpperCase())}
-                placeholder="15-character GSTIN"
-                maxLength={15}
-              />
-              <Field
-                label="PIN code (optional)"
-                value={profile.postalCode ?? ""}
-                onChange={(value) =>
-                  setProfileField("postalCode", value.replace(/\D/g, "").slice(0, 6))
-                }
-                inputMode="numeric"
-              />
-              <Field
-                label="Address (optional)"
-                value={profile.addressLine1 ?? ""}
-                onChange={(value) => setProfileField("addressLine1", value)}
-              />
-              <Field
-                label="City (optional)"
-                value={profile.city ?? ""}
-                onChange={(value) => setProfileField("city", value)}
-              />
-            </div>
-
-            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-[#E1E4E8] p-4 text-sm leading-6 text-[#4B5563]">
-              <input
-                type="checkbox"
-                checked={accepted}
-                onChange={(event) => setAccepted(event.target.checked)}
-                className="mt-1 size-4 accent-[#111111]"
-              />
-              <span>
-                I agree to the{" "}
-                <Link to="/terms" className="font-semibold text-[#111111] underline">
-                  Terms
-                </Link>
-                ,{" "}
-                <Link to="/privacy" className="font-semibold text-[#111111] underline">
-                  Privacy Policy
-                </Link>
-                , and{" "}
-                <Link to="/refund-policy" className="font-semibold text-[#111111] underline">
-                  7-day Refund Policy
-                </Link>
-                .
-              </span>
-            </label>
-
-            <Button
-              type="button"
-              disabled={busy || statusQuery.isLoading}
-              onClick={() => void startCheckout()}
-              className="mt-5 h-12 w-full rounded-xl bg-[#111111] text-white hover:bg-[#2A2A2A]"
-            >
-              {busy ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Opening secure checkout...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="size-4" />
-                  Continue with Razorpay
-                </>
-              )}
-            </Button>
-            <p className="mt-3 text-center text-xs text-[#737780]">
-              Card, UPI, netbanking and other enabled methods are handled by Razorpay. GamiBAR never
-              receives your full card or UPI credentials.
-            </p>
-          </section>
-
-          <aside className="space-y-5">
-            <section className="rounded-3xl border border-[#E1E4E8] bg-white p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5F6368]">
-                Current plan
-              </p>
-              {statusQuery.isLoading ? (
-                <Loader2 className="mt-5 size-5 animate-spin" />
-              ) : (
-                <>
-                  <h2 className="mt-3 font-display text-2xl font-bold">
-                    {status?.currentPlan.name ?? "GamiBAR Free"}
-                  </h2>
-                  <p className="mt-2 text-sm text-[#5F6368]">
-                    {status?.currentPlan.description ?? BILLING_PLANS.free.description}
-                  </p>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    {[
-                      "All 6 game modes",
-                      `${status?.currentPlan.limits.livePlayersPerRoom ?? 100} live players per room`,
-                      status?.currentPlan.limits.aiGenerationsPerMonth == null
-                        ? "Fair-use unlimited AI"
-                        : `${status.currentPlan.limits.aiGenerationsPerMonth} AI generations monthly`,
-                    ].map((feature) => (
-                      <li key={feature} className="flex gap-2">
-                        <Check className="mt-0.5 size-4 text-[#16A34A]" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  {status?.subscription && !status.subscription.cancellationRequestedAt ? (
-                    <Button
-                      variant="outline"
-                      disabled={cancelling}
-                      onClick={() => void cancelSubscription()}
-                      className="mt-5 w-full rounded-xl"
-                    >
-                      {cancelling ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <RotateCcw className="size-4" />
-                      )}
-                      Cancel renewal
-                    </Button>
-                  ) : null}
-                  {status?.subscription?.cancellationRequestedAt ? (
-                    <p className="mt-5 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-                      Renewal is cancelled. Access continues through{" "}
-                      {formatDate(status.subscription.currentEnd)}.
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </section>
-
-            <section className="rounded-3xl border border-[#E1E4E8] bg-white p-5">
-              <div className="flex items-center gap-2">
-                <ReceiptText className="size-5" />
-                <h2 className="font-display text-lg font-bold">Payments</h2>
-              </div>
-              <div className="mt-4 space-y-3">
-                {status?.payments.length ? (
-                  status.payments.map((payment) => {
-                    const eligible =
-                      payment.status === "paid" &&
-                      payment.refundEligibleUntil &&
-                      new Date(payment.refundEligibleUntil).getTime() > Date.now() &&
-                      !canRefundIds.has(payment.id);
-                    return (
-                      <div
-                        key={payment.id}
-                        className="rounded-2xl border border-[#E7E9ED] p-3 text-sm"
-                      >
-                        <div className="flex justify-between gap-3">
-                          <span className="font-semibold">
-                            {BILLING_PLANS[payment.planCode].shortName}
-                          </span>
-                          <span className="font-bold">
-                            {formatInrFromPaise(payment.totalAmountPaise)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-[#737780]">
-                          {payment.invoiceNumber ?? "Receipt pending"} ·{" "}
-                          {formatDate(payment.paidAt)}
-                        </p>
-                        {eligible ? (
-                          <button
-                            type="button"
-                            onClick={() => setRefundPaymentId(payment.id)}
-                            className="mt-2 text-xs font-semibold text-[#B42318] underline"
-                          >
-                            Request refund
-                          </button>
-                        ) : null}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-[#737780]">No completed payments yet.</p>
+                    {card.badge}
+                  </span>
                 )}
+
+                <div>
+                  <h3 className="font-display text-lg font-extrabold text-[#111111]">
+                    {card.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-[#5F6368] min-h-[32px]">{card.description}</p>
+
+                  {/* Price */}
+                  <div className="my-5 flex items-baseline gap-1 border-b border-[#F0F2F5] pb-5">
+                    <span className="font-display text-3xl sm:text-4xl font-black text-[#111111]">
+                      {card.price}
+                    </span>
+                    <span className="text-xs font-semibold text-[#5F6368]">{card.period}</span>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="mb-6">
+                    {isCurrent ? (
+                      <Button
+                        disabled
+                        className="w-full h-11 rounded-xl bg-[#F3F4F6] text-[#4B5563] font-bold text-xs cursor-default border border-[#E5E7EB]"
+                      >
+                        ✓ Current Plan
+                      </Button>
+                    ) : isPaid ? (
+                      <Button
+                        type="button"
+                        disabled={Boolean(busyPlan)}
+                        onClick={() => startCheckout(card.code as PaidBillingPlanCode)}
+                        className={cn(
+                          "w-full h-11 rounded-xl text-xs font-extrabold transition-all duration-150 active:scale-[0.98]",
+                          card.featured
+                            ? "bg-[#FF3B30] text-white hover:bg-[#E6332B] shadow-md shadow-red-500/20"
+                            : "bg-[#111111] text-white hover:bg-[#2A2A2A] shadow-xs",
+                        )}
+                      >
+                        {isBusy ? (
+                          <>
+                            <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          card.buttonText
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        disabled
+                        variant="outline"
+                        className="w-full h-11 rounded-xl text-xs font-bold"
+                      >
+                        Free Forever
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Features List */}
+                  <div className="space-y-2.5 text-xs text-[#374151]">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF] mb-3">
+                      Features Included:
+                    </p>
+                    {card.features.map((feat) => (
+                      <div key={feat} className="flex items-start gap-2.5">
+                        <Check className="size-4 shrink-0 text-emerald-600 font-bold mt-0.5" />
+                        <span className="leading-tight">{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#F0F2F5] text-center">
+                  <span className="text-[10px] text-[#9CA3AF] font-medium">
+                    {card.code === "free"
+                      ? "No credit card needed"
+                      : "Instant activation with Razorpay UPI & Cards"}
+                  </span>
+                </div>
               </div>
-            </section>
-          </aside>
+            );
+          })}
         </div>
 
-        {refundPaymentId ? (
-          <div
-            className="fixed inset-0 z-[100] grid place-items-center bg-black/55 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Request refund"
-          >
-            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-              <h2 className="font-display text-xl font-bold">Request a refund</h2>
-              <p className="mt-2 text-sm leading-6 text-[#5F6368]">
-                Requests must be submitted within seven days. Support reviews eligibility before any
-                money is moved.
+        {/* Current Plan & AI Usage Status Card */}
+        <div className="grid gap-6 md:grid-cols-2 mt-8">
+          {/* Active Plan Summary */}
+          <div className="rounded-3xl border border-[#E7E9ED] bg-white p-6 shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#F0F2F5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <CreditCard className="size-5 text-[#111111]" />
+                <h2 className="font-display text-base font-extrabold text-[#111111]">
+                  Active Membership
+                </h2>
+              </div>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wider",
+                  isPro
+                    ? "bg-amber-100 text-amber-900 border border-amber-200"
+                    : "bg-[#F3F4F6] text-[#4B5563]",
+                )}
+              >
+                {status?.currentPlan.name ?? "GamiBar Free"}
+              </span>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#5F6368]">
+              <p>
+                <strong className="text-[#111111]">Plan:</strong>{" "}
+                {status?.currentPlan.name ?? "GamiBar Free"} ({status?.currentPlan.billingLabel})
               </p>
-              <textarea
-                value={refundReason}
-                onChange={(event) => setRefundReason(event.target.value)}
-                maxLength={1000}
-                placeholder="Tell us why you are requesting a refund"
-                className="mt-4 min-h-28 w-full rounded-xl border border-[#D9DDE3] p-3 text-sm outline-none focus:border-[#111111]"
-              />
-              <div className="mt-4 flex justify-end gap-2">
+              {status?.subscription?.currentEnd && (
+                <p>
+                  <strong className="text-[#111111]">Next Renewal:</strong>{" "}
+                  {new Date(status.subscription.currentEnd).toLocaleDateString(undefined, {
+                    dateStyle: "medium",
+                  })}
+                </p>
+              )}
+              {status?.subscription?.cancelAtCycleEnd && (
+                <p className="text-amber-700 font-semibold">
+                  Renewal cancelled. Pro access remains active until current cycle ends.
+                </p>
+              )}
+            </div>
+
+            {status?.subscription && !status.subscription.cancelAtCycleEnd && (
+              <div className="mt-5 pt-4 border-t border-[#F0F2F5]">
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => {
-                    setRefundPaymentId(null);
-                    setRefundReason("");
-                  }}
+                  size="sm"
+                  disabled={cancelling}
+                  onClick={handleCancelSubscription}
+                  className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={refundBusy}
-                  onClick={() => void requestRefund()}
-                  className="bg-[#111111] text-white"
-                >
-                  {refundBusy ? <Loader2 className="size-4 animate-spin" /> : null}Submit request
+                  {cancelling ? "Cancelling..." : "Cancel Auto-Renewal"}
                 </Button>
               </div>
+            )}
+          </div>
+
+          {/* AI Usage Tracker */}
+          <div className="rounded-3xl border border-[#E7E9ED] bg-white p-6 shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#F0F2F5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <Zap className="size-5 text-amber-500 fill-amber-500" />
+                <h2 className="font-display text-base font-extrabold text-[#111111]">
+                  AI Generation Quota
+                </h2>
+              </div>
+              <span className="text-xs font-black text-[#111111]">
+                {isPro ? "Unlimited ⚡" : `${aiUsed} / ${aiLimit} Used`}
+              </span>
+            </div>
+
+            <p className="text-xs text-[#5F6368] leading-relaxed">
+              Every time you generate options or questions using AI, 1 generation credit is used.
+            </p>
+
+            {!isPro && (
+              <div className="mt-4 space-y-2">
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-300",
+                      aiUsed >= aiLimit
+                        ? "bg-red-500"
+                        : aiUsed >= 15
+                          ? "bg-amber-500"
+                          : "bg-emerald-500",
+                    )}
+                    style={{ width: `${Math.min(100, (aiUsed / aiLimit) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] text-[#5F6368]">
+                  <span>{Math.max(0, aiLimit - aiUsed)} generations left this cycle</span>
+                  <span>Resets monthly</span>
+                </div>
+              </div>
+            )}
+
+            {!isPro && aiUsed >= aiLimit && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-900 font-medium">
+                You have reached your 20 monthly free AI credits. Upgrade to Pro for ₹49/month for
+                unlimited generations.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Invoices & Payment History */}
+        {status?.payments && status.payments.length > 0 && (
+          <div className="rounded-3xl border border-[#E7E9ED] bg-white p-6 shadow-xs mt-8">
+            <div className="flex items-center gap-2.5 border-b border-[#F0F2F5] pb-4 mb-4">
+              <ReceiptText className="size-5 text-[#111111]" />
+              <h2 className="font-display text-base font-extrabold text-[#111111]">
+                Payment Invoices & Receipts
+              </h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-[#374151]">
+                <thead>
+                  <tr className="border-b border-[#E7E9ED] text-[#9CA3AF] uppercase font-bold">
+                    <th className="py-2.5 pr-4">Invoice #</th>
+                    <th className="py-2.5 pr-4">Plan</th>
+                    <th className="py-2.5 pr-4">Amount</th>
+                    <th className="py-2.5 pr-4">Date</th>
+                    <th className="py-2.5 pr-4">Status</th>
+                    <th className="py-2.5 text-right">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F0F2F5]">
+                  {status.payments.map((p) => (
+                    <tr key={p.id} className="hover:bg-[#F8F9FB]">
+                      <td className="py-3 pr-4 font-mono font-medium">
+                        {p.invoiceNumber ?? `INV-${p.id}`}
+                      </td>
+                      <td className="py-3 pr-4 font-bold text-[#111111]">
+                        {BILLING_PLANS[p.planCode]?.shortName ?? p.planCode}
+                      </td>
+                      <td className="py-3 pr-4 font-bold">
+                        {formatInrFromPaise(p.totalAmountPaise)}
+                      </td>
+                      <td className="py-3 pr-4 text-[#5F6368]">
+                        {p.paidAt ? new Date(p.paidAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-700">
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <a
+                          href={`/api/billing/invoice/${p.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[#FF3B30] font-bold hover:underline"
+                        >
+                          <Download className="size-3.5" />
+                          PDF
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        ) : null}
+        )}
       </div>
     </AuthorShell>
   );
-
-  function setProfileField<K extends keyof BillingProfileInput>(
-    key: K,
-    value: BillingProfileInput[K],
-  ) {
-    setProfile((current) => ({ ...current, [key]: value }));
-  }
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  ...props
-}: { label: string; value: string; onChange: (value: string) => void } & Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  "value" | "onChange"
->) {
-  const id = `billing-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 rounded-xl border-[#D9DDE3]"
-        {...props}
-      />
-    </div>
-  );
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "Pending";
-  const date = new Date(value);
-  return Number.isFinite(date.getTime())
-    ? date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-    : "Pending";
 }

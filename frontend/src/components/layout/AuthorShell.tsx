@@ -3,6 +3,8 @@ import { LogOut, QrCode, Radio } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/layout/Logo";
+import logoBlack from "@/assets/GamiBar_Logo_Black.png";
+import { UserProfileMenu } from "@/components/layout/UserProfileMenu";
 import { authorBottomNavItems, authorNavItems, type AuthorNavItem } from "@/lib/author-nav";
 import { useAuthSafe } from "@/lib/auth-store";
 import { clearAuthorRoom } from "@/lib/game/client-session";
@@ -58,11 +60,18 @@ export function AuthorShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-[#E7E9ED] bg-white/95 backdrop-blur-md">
         <div className="mx-auto max-w-[80rem] px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between gap-2 sm:h-16">
-            <Link to="/author" className="flex min-w-0 shrink-0 items-center gap-2 tap-target">
-              <Logo size={28} className="sm:hidden" />
-              <Logo size={34} className="hidden sm:block" />
+            <Link
+              to="/author"
+              className="flex min-w-0 shrink-0 items-center gap-2 tap-target"
+              aria-label="GamiBar Portal Home"
+            >
+              <img
+                src={logoBlack}
+                alt="GamiBar"
+                className="h-7 w-auto object-contain sm:h-8"
+              />
               <span className="truncate font-display text-sm font-bold text-[#111111] sm:text-base">
-                Gami<span className="text-[#FF3B30]">BAR</span>
+                Gami<span className="font-black text-[#FF3B30]">BAR</span>
               </span>
             </Link>
 
@@ -104,29 +113,8 @@ export function AuthorShell({ children }: { children: ReactNode }) {
                 <span>QRFile</span>
               </Link>
 
-              {/* User Avatar Badge */}
-              <Link
-                to="/author/billing"
-                aria-label="Open billing and account plans"
-                className="flex items-center gap-1.5 rounded-xl border border-[#E7E9ED] bg-[#F8F9FB] p-0.5 transition-colors hover:bg-[#EEF0F4] md:p-1 md:pr-2.5"
-              >
-                <div className="grid size-7 place-items-center rounded-lg bg-white text-xs font-bold text-[#FF3B30] shadow-[0_1px_3px_rgba(16,24,40,0.04)] md:size-8">
-                  {(user?.name ?? "A").slice(0, 1).toUpperCase()}
-                </div>
-                <span className="hidden max-w-[7rem] truncate text-xs font-semibold text-[#111111] md:inline-block">
-                  {user?.name ?? "Host"}
-                </span>
-              </Link>
-
-              {/* Logout Button */}
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                className="tap-target grid size-9 place-items-center rounded-xl text-[#5F6368] transition-colors hover:bg-[#F8F9FB] hover:text-[#111111]"
-                aria-label="Log out"
-              >
-                <LogOut className="size-[18px]" />
-              </button>
+              {/* User Profile Popover (ChatGPT-style) */}
+              <UserProfileMenu />
             </div>
           </div>
         </div>

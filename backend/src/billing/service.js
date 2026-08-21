@@ -34,7 +34,6 @@ const ABANDONED_CHECKOUT_MS = 15 * 60 * 1000;
 const PAID_ENTITLEMENT_STATUSES = new Set(["active", "past_due"]);
 const REFUND_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const PLAN_CACHE_MS = 5 * 60 * 1000;
-const SELLER_STATE_CODE = "KA";
 const INDIA_STATE_CODES = new Set([
   "AN",
   "AP",
@@ -315,6 +314,28 @@ export async function getAuthorPlanLimits(authorId) {
   };
 }
 
+export async function assertCanCreateRoom(authorId) {
+  const admin = createAdminClient();
+  const limits = await getAuthorPlanLimits(authorId);
+  if (limits.activeRoomsLimit == null) return; // Unlimited for Pro / Lifetime!
+
+  const { data, error } = await admin
+    .from("gamibar_rooms")
+    .select("id, code, name, status")
+    .eq("author_id", authorId)
+    .in("status", ["DRAFT", "LOBBY", "READY", "COUNTDOWN", "LIVE"]);
+
+  if (error) throw error;
+
+  const activeCount = data?.length || 0;
+  if (activeCount >= limits.activeRoomsLimit) {
+    throw new HttpError(
+      "Free accounts can only have 1 active room at a time. Finish your existing active room or upgrade to GamiBar Pro for unlimited concurrent rooms.",
+      403,
+    );
+  }
+}
+
 export async function consumeAiGeneration(authorId) {
   const admin = createAdminClient();
   const entitlement = await fetchEffectiveEntitlement(admin, authorId);
@@ -494,7 +515,7 @@ async function createLifetimeCheckout(admin, user, billingProfile) {
     .maybeSingle();
   if (existingError) throw existingError;
 
-  const tax = taxBreakdown(plan, billingProfile.state_code);
+  const tax = taxBreakdown();
   if (existing?.provider_order_id) {
     const remote = await fetchRazorpayOrder(existing.provider_order_id);
     if (
@@ -516,7 +537,7 @@ async function createLifetimeCheckout(admin, user, billingProfile) {
       author_id: user.id,
       plan_code: "lifetime",
       base_amount_paise: String(plan.baseAmountPaise),
-      gst_rate: "18",
+      tax_rate_bps: String(GST_RATE_BPS),
     },
   });
 
@@ -867,13 +888,7 @@ async function applyPaidOrderEvent(admin, orderId, payment) {
 async function recordSubscriptionPayment(admin, subscription, payment) {
   if (!payment.order_id || !payment.id) return;
   const plan = BILLING_PLANS[subscription.plan_code];
-  const { data: profile, error: profileError } = await admin
-    .from("gamibar_billing_profiles")
-    .select("state_code")
-    .eq("author_id", subscription.author_id)
-    .maybeSingle();
-  if (profileError) throw profileError;
-  const tax = taxBreakdown(plan, profile?.state_code ?? SELLER_STATE_CODE);
+  const tax = taxBreakdown();
   const paidAt = epochToIso(payment.created_at) ?? new Date().toISOString();
   const receipt = createReceipt(
     subscription.author_id,
@@ -1035,7 +1050,7 @@ function checkoutResponse(user, plan, billingProfile, reference) {
       amount: plan.totalAmountPaise,
       currency: "INR",
       name: "GamiBAR",
-      description: `${plan.name} - price includes 18% GST`,
+      description: plan.description,
       prefill: {
         name: billingProfile.legal_name,
         email: billingProfile.email || user.email || "",
@@ -1069,10 +1084,6 @@ function validateBillingProfile(user, input) {
 
   const phone = optionalString(input?.phone, 20);
   const normalizedPhone = phone ? normalizePhone(phone) : null;
-  const gstin = optionalString(input?.gstin, 15)?.toUpperCase() ?? null;
-  if (gstin && !/^[0-9]{2}[A-Z0-9]{13}$/.test(gstin)) {
-    throw new HttpError("Enter a valid 15-character GSTIN.", 400);
-  }
   const postalCode = optionalString(input?.postalCode, 6);
   if (postalCode && !/^[0-9]{6}$/.test(postalCode)) {
     throw new HttpError("Enter a valid six-digit PIN code.", 400);
@@ -1082,7 +1093,7 @@ function validateBillingProfile(user, input) {
     legal_name: legalName,
     email,
     phone: normalizedPhone,
-    gstin,
+    gstin: null,
     address_line_1: optionalString(input?.addressLine1, 200),
     address_line_2: optionalString(input?.addressLine2, 200),
     city: optionalString(input?.city, 100),
@@ -1092,19 +1103,11 @@ function validateBillingProfile(user, input) {
   };
 }
 
-function taxBreakdown(plan, customerStateCode) {
-  if (customerStateCode === SELLER_STATE_CODE) {
-    const cgst = Math.floor(plan.gstAmountPaise / 2);
-    return {
-      cgst_amount_paise: cgst,
-      sgst_amount_paise: plan.gstAmountPaise - cgst,
-      igst_amount_paise: 0,
-    };
-  }
+function taxBreakdown() {
   return {
     cgst_amount_paise: 0,
     sgst_amount_paise: 0,
-    igst_amount_paise: plan.gstAmountPaise,
+    igst_amount_paise: 0,
   };
 }
 
@@ -1211,12 +1214,12 @@ async function getMonthlyAiUsage(admin, authorId) {
 
 function assertBillingConfiguration() {
   const configuredGst = Number.parseInt(
-    process.env.RAZORPAY_GST_RATE_BPS ?? "1800",
+    process.env.RAZORPAY_GST_RATE_BPS ?? "0",
     10,
   );
   if (configuredGst !== GST_RATE_BPS) {
     throw new HttpError(
-      "The configured GST rate does not match GamiBAR pricing.",
+      "The configured tax rate does not match GamiBAR pricing.",
       503,
     );
   }

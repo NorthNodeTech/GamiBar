@@ -38,7 +38,7 @@ import {
 import { fetchParticipatedGames } from "./game/participated-games.ts";
 
 import { optionalUser, requireAuthor, requireUser } from "./auth.js";
-import { getAuthorPlanLimits } from "./billing/service.js";
+import { assertCanCreateRoom, getAuthorPlanLimits } from "./billing/service.js";
 import { HttpError } from "./http-error.js";
 import {
   queueRealtimeSignal,
@@ -147,6 +147,7 @@ export function registerGameRoutes(app) {
           req.params.action === "create-room" ||
           req.params.action === "duplicate-room"
         ) {
+          await assertCanCreateRoom(user.id);
           const limits = await getAuthorPlanLimits(user.id);
           data = {
             ...data,

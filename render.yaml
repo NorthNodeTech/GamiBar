@@ -76,7 +76,7 @@ services:
       - key: RAZORPAY_CURRENCY
         value: INR
       - key: RAZORPAY_GST_RATE_BPS
-        value: "1800"
+        value: "0"
 
   - type: web
     name: gamibar

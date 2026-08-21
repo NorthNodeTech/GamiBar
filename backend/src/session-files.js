@@ -38,7 +38,8 @@ export function registerSessionFileRoutes(app) {
       const room = await verifyAuthor(
         admin,
         stringBody(req.body, "roomId"),
-        stringBody(req.body, "authorToken"),
+        optionalStringBody(req.body, "authorToken"),
+        req,
       );
       const summary = await teacherSummary(admin, room);
       res.json(summary);
@@ -51,8 +52,8 @@ export function registerSessionFileRoutes(app) {
     asyncRoute(async (req, res) => {
       const admin = createAdminClient();
       const roomId = stringBody(req.body, "roomId");
-      const authorToken = stringBody(req.body, "authorToken");
-      const room = await verifyAuthor(admin, roomId, authorToken);
+      const authorToken = optionalStringBody(req.body, "authorToken");
+      const room = await verifyAuthor(admin, roomId, authorToken, req);
       const planLimits = room.author_id
         ? await getAuthorPlanLimits(room.author_id)
         : { filesPerRoom: 1, fileSizeMb: 15, fileRetentionDays: 7 };
@@ -138,9 +139,9 @@ export function registerSessionFileRoutes(app) {
     asyncRoute(async (req, res) => {
       const admin = createAdminClient();
       const roomId = stringBody(req.body, "roomId");
-      const authorToken = stringBody(req.body, "authorToken");
+      const authorToken = optionalStringBody(req.body, "authorToken");
       const fileId = stringBody(req.body, "fileId");
-      const room = await verifyAuthor(admin, roomId, authorToken);
+      const room = await verifyAuthor(admin, roomId, authorToken, req);
 
       const { data: file, error } = await admin
         .from("gamibar_session_files")
@@ -353,8 +354,8 @@ async function notifyResourceDropChanged({ roomId, shareSlug }) {
   ]);
 }
 
-async function verifyAuthor(admin, roomId, authorToken) {
-  if (!isUuid(roomId) || !authorToken.trim()) {
+async function verifyAuthor(admin, roomId, authorToken, req) {
+  if (!isUuid(roomId)) {
     throw new HttpError("Invalid room credentials.", 401);
   }
   const { data: room, error } = await admin
@@ -364,10 +365,28 @@ async function verifyAuthor(admin, roomId, authorToken) {
     .maybeSingle();
   if (error) throw error;
   if (!room) throw new HttpError("Room not found.", 404);
-  if (sha256Hex(authorToken) !== room.author_token_hash) {
-    throw new HttpError("Invalid author token.", 401);
+
+  // 1. Check author token hash if provided
+  if (typeof authorToken === "string" && authorToken.trim()) {
+    if (sha256Hex(authorToken.trim()) === room.author_token_hash) {
+      return room;
+    }
   }
-  return room;
+
+  // 2. Check authenticated user if request has Authorization header
+  if (req && room.author_id) {
+    const authHeader = req.get("authorization") ?? "";
+    const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+    const token = match?.[1]?.trim();
+    if (token) {
+      const { data: authData } = await admin.auth.getUser(token);
+      if (authData?.user?.id && authData.user.id === room.author_id) {
+        return room;
+      }
+    }
+  }
+
+  throw new HttpError("Invalid author token.", 401);
 }
 
 async function ensureShare(admin, roomId) {
@@ -544,6 +563,12 @@ function stringBody(body, key) {
     throw new HttpError(`${key} is required.`, 400);
   }
   return value;
+}
+
+function optionalStringBody(body, key) {
+  const value = body?.[key];
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  return value.trim();
 }
 
 function stringQuery(query, key) {

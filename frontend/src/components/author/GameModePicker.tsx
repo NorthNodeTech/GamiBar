@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Zap, Radio, Blocks, CircleDot, Crosshair } from "lucide-react";
 
 import { GAME_MODE_CATALOG, getCoreModeCatalog } from "@/lib/game/mode-catalog";
 import type { GameMode } from "@shared/game/config";
@@ -7,39 +7,39 @@ import { cn } from "@/lib/utils";
 
 const MODE_PRESENTATION = {
   quiz: {
-    moment: "Fast recall",
-    useCase: "Knowledge checks and revision",
-    accent: "bg-[var(--game-quiz)]",
-    soft: "bg-[var(--game-quiz-soft)] text-[var(--game-quiz-deep)]",
-    selected: "border-[var(--game-quiz)] ring-2 ring-[var(--game-quiz)]/15",
-  },
-  jigsaw: {
-    moment: "Visual teamwork",
-    useCase: "Concept review through reconstruction",
-    accent: "bg-[var(--game-jigsaw)]",
-    soft: "bg-[var(--game-jigsaw-soft)] text-[var(--game-jigsaw-deep)]",
-    selected: "border-[var(--game-jigsaw)] ring-2 ring-[var(--game-jigsaw)]/15",
-  },
-  connect_dots: {
-    moment: "Logic and matching",
-    useCase: "Terms, answers, and relationships",
-    accent: "bg-[var(--game-connect-dots)]",
-    soft: "bg-[var(--game-connect-dots-soft)] text-[var(--game-connect-dots-deep)]",
-    selected: "border-[var(--game-connect-dots)] ring-2 ring-[var(--game-connect-dots)]/15",
-  },
-  visual_point: {
-    moment: "Image identification",
-    useCase: "Maps, diagrams, anatomy, and circuits",
-    accent: "bg-[var(--game-visual-point)]",
-    soft: "bg-[var(--game-visual-point-soft)] text-[var(--game-visual-point-deep)]",
-    selected: "border-[var(--game-visual-point)] ring-2 ring-[var(--game-visual-point)]/15",
+    moment: "Speed & Trivia",
+    badgeColor: "bg-red-50 text-red-700 border-red-200",
+    accentColor: "bg-[#FF3B30]",
+    useCase: "High-energy revision battle with live speed & accuracy leaderboards.",
+    highlights: ["Unlimited MCQs with instant scoring", "Podium rankings & streak bonus"],
   },
   polls: {
-    moment: "Live feedback",
-    useCase: "Polls, ratings, and quick surveys",
-    accent: "bg-orange-500",
-    soft: "bg-orange-100 text-orange-800",
-    selected: "border-orange-400 ring-2 ring-orange-400/15",
+    moment: "Live Feedback",
+    badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
+    accentColor: "bg-orange-500",
+    useCase: "Gather audience opinions, rating scales, and quick pulse checks.",
+    highlights: ["Rating scales, MCQ & text responses", "Real-time animated live charts"],
+  },
+  jigsaw: {
+    moment: "Puzzle & Teamwork",
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+    accentColor: "bg-blue-500",
+    useCase: "Answer questions to unlock puzzle pieces and reconstruct the image.",
+    highlights: ["2×2, 3×3, or 4×4 custom grids", "Upload any diagram, slide, or photo"],
+  },
+  connect_dots: {
+    moment: "Logic & Matching",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    accentColor: "bg-emerald-500",
+    useCase: "Interactive line-drawing game connecting concept pairs and terms.",
+    highlights: ["2 to 10 matching concept pairs", "Live interactive connection grid"],
+  },
+  visual_point: {
+    moment: "Image Spotting",
+    badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+    accentColor: "bg-purple-500",
+    useCase: "Pinpoint exact anatomical organs, map locations, or circuit targets.",
+    highlights: ["Spot-the-target visual questions", "Pixel-precise coordinate checking"],
   },
 } as const;
 
@@ -54,9 +54,9 @@ export function GameModePicker({
 
   return (
     <div
-      className="grid gap-3 md:grid-cols-3 xl:grid-cols-5"
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 items-stretch"
       role="radiogroup"
-      aria-label="Game modes"
+      aria-label="Select Game Mode"
     >
       {catalog.map((item) => (
         <PickerCard
@@ -80,7 +80,8 @@ function PickerCard({
   onSelect: () => void;
 }) {
   const Icon = item.icon;
-  const presentation = MODE_PRESENTATION[item.mode as keyof typeof MODE_PRESENTATION];
+  const presentation =
+    MODE_PRESENTATION[item.mode as keyof typeof MODE_PRESENTATION] ?? MODE_PRESENTATION.quiz;
 
   return (
     <button
@@ -89,84 +90,81 @@ function PickerCard({
       role="radio"
       aria-checked={selected}
       className={cn(
-        "tap-target group relative grid min-h-[8.5rem] w-full grid-cols-[5.75rem_minmax(0,1fr)] overflow-hidden rounded-2xl border bg-[var(--gamibar-surface)] text-left transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--gamibar-text-tertiary)] hover:shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gamibar-brand)] focus-visible:ring-offset-2 md:min-h-[22rem] md:grid-cols-1 md:grid-rows-[9.5rem_minmax(0,1fr)_2.75rem]",
-        selected ? presentation.selected : "border-[var(--gamibar-border)]",
+        "group relative flex flex-col justify-between rounded-3xl border bg-white text-left transition-all duration-200 overflow-hidden outline-none",
+        selected
+          ? "border-[#FF3B30] ring-2 ring-[#FF3B30] shadow-[0_12px_32px_rgba(255,59,48,0.14)]"
+          : "border-[#E7E9ED] shadow-xs hover:border-[#CBD5E1] hover:shadow-md hover:-translate-y-0.5",
       )}
     >
-      <span className="relative min-h-full overflow-hidden bg-[var(--gamibar-page)] md:min-h-0">
-        <img
-          src={item.preview}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 size-full scale-110 object-cover opacity-25 blur-xl"
-          loading="lazy"
-        />
-        <img
-          src={item.preview}
-          alt=""
-          className="relative z-10 size-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]"
-          loading="lazy"
-        />
-        <span
-          aria-hidden
-          className={cn(
-            "absolute left-2 top-2 grid size-8 place-items-center rounded-lg border border-white/70 shadow-sm backdrop-blur-sm md:left-3 md:top-3 md:size-9",
-            presentation.soft,
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-        <span aria-hidden className={cn("absolute inset-x-0 bottom-0 h-1", presentation.accent)} />
-      </span>
+      <div className="flex flex-col w-full">
+        {/* Edge-to-Edge Fitted Banner Image (No Gaps/Padding) */}
+        <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 border-b border-[#F0F2F5]">
+          <img
+            src={item.preview}
+            alt={GAME_MODE_META[item.mode].title}
+            className="size-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
-      <span className="flex min-w-0 flex-col justify-center p-3.5 md:block md:p-4">
-        <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--gamibar-text-tertiary)]">
-          {presentation.moment}
-        </span>
-        <span className="flex items-start justify-between gap-2">
-          <span className="font-display text-base font-bold text-[var(--foreground)] sm:text-lg">
-            {GAME_MODE_META[item.mode].title}
+          {/* Floating Pill on Image */}
+          <span
+            className={cn(
+              "absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-xs border",
+              presentation.badgeColor,
+            )}
+          >
+            <Icon className="size-3 shrink-0" />
+            <span>{presentation.moment}</span>
           </span>
-          {selected ? (
-            <span
-              className={cn(
-                "grid size-7 shrink-0 place-items-center rounded-full text-white",
-                presentation.accent,
-              )}
-            >
-              <Check className="size-3.5" />
-            </span>
-          ) : null}
-        </span>
-        <span className="mt-1 block text-xs leading-relaxed text-[var(--muted-foreground)]">
-          {presentation.useCase}
-        </span>
-        <span className="mt-3 hidden space-y-1.5 md:block">
-          {item.specs.slice(0, 2).map((spec) => (
-            <span
-              key={spec}
-              className="flex items-start gap-2 text-[11px] leading-snug text-[var(--muted-foreground)]"
-            >
-              <span
-                aria-hidden
-                className={cn("mt-1 size-1.5 shrink-0 rounded-full", presentation.accent)}
-              />
-              {spec}
-            </span>
-          ))}
-        </span>
-      </span>
 
-      <span className="hidden items-center justify-between border-t border-[var(--gamibar-border)] px-4 text-xs font-semibold md:flex">
-        <span className={selected ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}>
-          {selected ? "Selected" : "Choose mode"}
-        </span>
-        {selected ? (
-          <Check className="size-4" />
-        ) : (
-          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          {/* Top-Right Checkmark Badge */}
+          {selected && (
+            <span className="absolute right-3 top-3 grid size-7 place-items-center rounded-full bg-[#FF3B30] text-white shadow-md ring-2 ring-white animate-in zoom-in-75 duration-150">
+              <Check className="size-4 stroke-[3]" />
+            </span>
+          )}
+        </div>
+
+        {/* Card Body & Information */}
+        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <h3 className="font-display text-base sm:text-lg font-extrabold text-[#111111] leading-tight">
+              {GAME_MODE_META[item.mode].title}
+            </h3>
+            <p className="mt-1.5 text-xs text-[#5F6368] leading-relaxed line-clamp-2">
+              {presentation.useCase}
+            </p>
+          </div>
+
+          {/* Highlights Bullets */}
+          <div className="mt-4 space-y-1.5 border-t border-[#F0F2F5] pt-3 text-[11px] text-[#374151]">
+            {presentation.highlights.map((feat) => (
+              <div key={feat} className="flex items-start gap-1.5 leading-tight">
+                <span className="text-emerald-600 font-bold mt-0.5">✓</span>
+                <span className="font-medium text-[#4B5563]">{feat}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Card Footer Button */}
+      <div
+        className={cn(
+          "flex items-center justify-between border-t px-4 py-2.5 text-xs font-bold transition-colors",
+          selected
+            ? "border-red-200 bg-red-50 text-[#FF3B30]"
+            : "border-[#F0F2F5] bg-[#FAFAFA] text-[#5F6368] group-hover:bg-[#F3F4F6] group-hover:text-[#111111]",
         )}
-      </span>
+      >
+        <span>{selected ? "Selected" : "Select tool"}</span>
+        {selected ? (
+          <Check className="size-3.5 stroke-[2.5]" />
+        ) : (
+          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+        )}
+      </div>
     </button>
   );
 }

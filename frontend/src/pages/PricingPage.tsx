@@ -30,7 +30,7 @@ export default function PricingPage() {
             with no participant account or purchase required.
           </p>
           <p className="mt-3 text-sm font-medium text-[#737780]">
-            Prices shown below are exclusive of 18% GST.
+            Prices shown below are the final GamiBAR charge.
           </p>
         </div>
 
@@ -151,7 +151,6 @@ function PlanCard({
       </div>
       {code !== "free" ? (
         <p className="mt-2 text-xs text-[#737780]">
-          + {formatInrFromPaise(plan.gstAmountPaise)} GST ·{" "}
           {formatInrFromPaise(plan.totalAmountPaise)} charged
         </p>
       ) : (

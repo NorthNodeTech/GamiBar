@@ -23,6 +23,8 @@ type SessionFilesPickerProps = {
   compact?: boolean;
   retentionDays?: SessionFileRetentionDays;
   onRetentionDaysChange?: (days: SessionFileRetentionDays) => void;
+  maxRetentionDays?: number;
+  onUpgradeRequest?: () => void;
 };
 
 export function SessionFilesPicker({
@@ -33,6 +35,8 @@ export function SessionFilesPicker({
   compact = false,
   retentionDays = SESSION_FILE_DEFAULT_RETENTION_DAYS,
   onRetentionDaysChange,
+  maxRetentionDays = 7,
+  onUpgradeRequest,
 }: SessionFilesPickerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,23 +111,37 @@ export function SessionFilesPicker({
           </p>
           <div className="grid grid-cols-3 gap-1.5">
             {SESSION_FILE_RETENTION_OPTIONS.map((days) => {
+              const isLocked = days > maxRetentionDays;
               const selected = retentionDays === days;
               return (
                 <button
                   key={days}
                   type="button"
-                  disabled={disabled || !onRetentionDaysChange}
-                  onClick={() => onRetentionDaysChange?.(days)}
+                  disabled={disabled}
+                  onClick={() => {
+                    if (isLocked) {
+                      onUpgradeRequest?.();
+                    } else {
+                      onRetentionDaysChange?.(days);
+                    }
+                  }}
                   className={cn(
-                    "min-h-9 rounded-lg px-2 text-xs font-bold transition-colors",
+                    "flex items-center justify-center gap-1 min-h-9 rounded-lg px-2 text-xs font-bold transition-colors",
                     selected
                       ? "bg-[#111111] text-white"
-                      : "bg-[var(--gamibar-page)] text-[#525252] hover:bg-[var(--gamibar-brand-soft)] hover:text-[var(--gamibar-brand)]",
-                    (disabled || !onRetentionDaysChange) && "cursor-default opacity-75",
+                      : isLocked
+                        ? "bg-[#F1F5F9] text-[#64748B] hover:border-amber-300 hover:text-amber-700"
+                        : "bg-[var(--gamibar-page)] text-[#525252] hover:bg-[var(--gamibar-brand-soft)] hover:text-[var(--gamibar-brand)]",
+                    disabled && "cursor-default opacity-75",
                   )}
                   aria-pressed={selected}
                 >
-                  {days} days
+                  <span>{days} days</span>
+                  {isLocked && (
+                    <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
+                      🔒
+                    </span>
+                  )}
                 </button>
               );
             })}

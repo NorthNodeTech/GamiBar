@@ -58,7 +58,6 @@ export function BusinessIdentity() {
         business registered in India.
       </p>
       <p>Registered address: {BUSINESS_DETAILS.address}</p>
-      <p>GSTIN: {BUSINESS_DETAILS.gstin}</p>
       <p>
         Email:{" "}
         <a className="font-semibold underline" href={`mailto:${BUSINESS_DETAILS.supportEmail}`}>

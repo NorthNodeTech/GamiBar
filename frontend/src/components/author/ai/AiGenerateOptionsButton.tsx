@@ -18,6 +18,8 @@ import {
 } from "@/lib/ai/option-generation";
 import { cn } from "@/lib/utils";
 
+import { UpgradeToProDialog } from "@/components/billing/UpgradeToProDialog";
+
 type AiGenerateOptionsButtonProps = {
   request: AiGenerationRequest;
   disabled?: boolean;
@@ -37,6 +39,7 @@ export function AiGenerateOptionsButton({
 }: AiGenerateOptionsButtonProps) {
   const [pending, setPending] = useState(false);
   const [preview, setPreview] = useState<AiGenerationResponse | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const handleGenerate = async () => {
     if (!request.question.trim()) {
@@ -48,7 +51,12 @@ export function AiGenerateOptionsButton({
     try {
       setPreview(await generateAiOptions(request));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not generate AI options.");
+      const msg = err instanceof Error ? err.message : "Could not generate AI options.";
+      if (msg.includes("20 free") || msg.includes("Upgrade to Pro") || msg.includes("limit")) {
+        setShowUpgrade(true);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setPending(false);
     }
@@ -105,6 +113,13 @@ export function AiGenerateOptionsButton({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UpgradeToProDialog
+        open={showUpgrade}
+        onOpenChange={setShowUpgrade}
+        featureTitle="AI Monthly Limit Reached"
+        featureDescription="You have used your 20 free AI generations this month. Upgrade to GamiBar Pro for ₹49/month to get unlimited AI generations!"
+      />
     </>
   );
 }
