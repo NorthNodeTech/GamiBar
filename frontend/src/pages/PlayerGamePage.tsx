@@ -233,17 +233,6 @@ export default function StudentPlayPage() {
     room.endsAt != null &&
     (Date.now() >= room.endsAt || overallTimedOut);
 
-  const studentFinished =
-    isOverallExpired ||
-    isStudentSessionFinished({
-      room,
-      answeredCount: snapshot.myAnswers.length,
-      attemptCompleted: Boolean(snapshot.myAttempt?.completed),
-    });
-  const isQuiz = room.mode === "quiz" && room.payload.mode === "quiz";
-  const showLeaderboard =
-    gameFinished || (isQuiz && studentFinished && room.showLeaderboardToStudents);
-
   const totalQuestions =
     room.payload.mode === "quiz" ||
     room.payload.mode === "quiz_jigsaw" ||
@@ -253,6 +242,22 @@ export default function StudentPlayPage() {
       ? room.payload.questions.length
       : 0;
   const totalPairs = room.payload.mode === "connect_dots" ? room.payload.connectDots.pairCount : 0;
+
+  const totalResolvedQuestions =
+    snapshot.myAnswers.length + (snapshot.myTimedOutQuestionIds?.length ?? 0);
+
+  const studentFinished =
+    isOverallExpired ||
+    (totalQuestions > 0 && totalResolvedQuestions >= totalQuestions) ||
+    Boolean(snapshot.myAttempt?.completed) ||
+    isStudentSessionFinished({
+      room,
+      answeredCount: totalResolvedQuestions,
+      attemptCompleted: Boolean(snapshot.myAttempt?.completed),
+    });
+  const isQuiz = room.mode === "quiz" && room.payload.mode === "quiz";
+  const showLeaderboard =
+    gameFinished || (isQuiz && studentFinished && room.showLeaderboardToStudents);
 
   if (studentFinished || gameFinished) {
     const model = buildGameCompletionViewModel({
@@ -760,11 +765,16 @@ function QuizPlay({
   const storedAnswer = current ? (localSelections.get(current.id) ?? null) : null;
 
   const [selected, setSelected] = useState<QuizOptionId | null>(null);
+  const selectedRef = useRef<QuizOptionId | null>(selected);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
   const [timerEndsAt, setTimerEndsAt] = useState(endsAt);
   const [activeTimerStepId, setActiveTimerStepId] = useState(timerStepId);
+
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   useEffect(() => {
     setTimerEndsAt(endsAt);
@@ -776,8 +786,9 @@ function QuizPlay({
     setSubmitError(null);
   }, [current?.id, storedAnswer]);
 
-  const submit = async () => {
-    if (!current || !selected || timedOut || !isActive || isAnswered) return;
+  const submit = async (optionOverride?: QuizOptionId) => {
+    const opt = optionOverride ?? selected;
+    if (!current || !opt || submitting || !isActive || isAnswered) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -786,7 +797,7 @@ function QuizPlay({
           roomId,
           reconnectToken,
           questionId: current.id,
-          selectedOption: selected,
+          selectedOption: opt,
         },
       });
       if (!res.ok) {
@@ -796,7 +807,7 @@ function QuizPlay({
         return;
       }
       setLocalAnsweredIds((prev) => new Set([...prev, current.id]));
-      setLocalSelections((prev) => new Map(prev).set(current.id, selected));
+      setLocalSelections((prev) => new Map(prev).set(current.id, opt));
       setSelected(null);
       if (timerMode === "per_question") {
         setTimerEndsAt(res.questionTimer?.endsAt ?? null);
@@ -809,6 +820,15 @@ function QuizPlay({
       toast.error(message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleExpiration = () => {
+    const chosen = selectedRef.current;
+    if (chosen && !isAnswered && isActive) {
+      void submit(chosen);
+    } else {
+      onTimerExpired?.(activeTimerStepId ?? undefined);
     }
   };
 
@@ -839,7 +859,7 @@ function QuizPlay({
             endsAt={timerEndsAt}
             totalSeconds={timeLimitSeconds}
             onTimedOut={setTimedOut}
-            onExpired={() => onTimerExpired?.(activeTimerStepId ?? undefined)}
+            onExpired={handleExpiration}
           />
         </div>
       </div>

@@ -385,7 +385,7 @@ function rejectExpiredQuestionTimer(
   if (synced.timer.stepId !== expectedStepId) {
     return { ok: false, error: "Continue with the current question first." };
   }
-  if (Date.now() >= synced.timer.endsAt) {
+  if (Date.now() >= synced.timer.endsAt + 2000) {
     return {
       ok: false,
       error: "Time is up for this question.",
@@ -1176,7 +1176,7 @@ export async function expireQuestionTimer(input: {
       completed: ensureAttemptRecord(stored, participant.id).completed,
     };
   }
-  if (Date.now() < synced.timer.endsAt) {
+  if (Date.now() < synced.timer.endsAt - 1000) {
     return {
       ok: false as const,
       error: "This question still has time remaining.",
