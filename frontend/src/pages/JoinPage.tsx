@@ -13,6 +13,7 @@ import { normalizeRoomCode } from "@shared/game/room-code";
 import { friendlyGameError } from "@/lib/accessibility";
 import { releaseAllCameraStreams } from "@/lib/media/release-camera";
 import { cn } from "@/lib/utils";
+import { fetchSharedSessionFiles } from "@/lib/sharing-files/session-files";
 import { createSeoHead, createWebPageJsonLd } from "@/lib/seo";
 
 const JoinQrScanner = lazy(() =>
@@ -82,7 +83,7 @@ export default function JoinCodePage() {
           setJoinError("This room is closed.");
           return;
         }
-        const isResourceDrop = Boolean(
+        let isResourceDrop = Boolean(
           ("isResourceDrop" in snap.room.payload && snap.room.payload.isResourceDrop === true) ||
           snap.room.subject === "Resource Drop" ||
           snap.room.name === "Presentation Resources" ||
@@ -92,6 +93,18 @@ export default function JoinCodePage() {
           snap.room.name.toLowerCase().includes("qrfile") ||
           snap.room.name.toLowerCase().includes("resource drop"),
         );
+
+        if (!isResourceDrop && snap.room.mode === "polls") {
+          try {
+            const filesSummary = await fetchSharedSessionFiles(clean);
+            if (filesSummary?.files?.length > 0) {
+              isResourceDrop = true;
+            }
+          } catch {
+            // Not a file drop
+          }
+        }
+
         if (isResourceDrop) {
           navigate({ to: "/share/$shareSlug", params: { shareSlug: clean } });
           return;

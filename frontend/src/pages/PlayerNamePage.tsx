@@ -13,6 +13,7 @@ import { getRoomSnapshotFn, joinRoomFn, reconnectParticipantFn } from "@/lib/gam
 import { GAME_MODE_META } from "@shared/game/config";
 import { friendlyGameError } from "@/lib/accessibility";
 import { isValidRoomCodeFormat, normalizeRoomCode } from "@shared/game/room-code";
+import { fetchSharedSessionFiles } from "@/lib/sharing-files/session-files";
 
 export default function NicknamePage() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function NicknamePage() {
           setPageState("missing");
           return;
         }
-        const isResourceDrop = Boolean(
+        let isResourceDrop = Boolean(
           ("isResourceDrop" in snap.room.payload && snap.room.payload.isResourceDrop === true) ||
           snap.room.subject === "Resource Drop" ||
           snap.room.name === "Presentation Resources" ||
@@ -53,6 +54,18 @@ export default function NicknamePage() {
           snap.room.name.toLowerCase().includes("qrfile") ||
           snap.room.name.toLowerCase().includes("resource drop"),
         );
+
+        if (!isResourceDrop && snap.room.mode === "polls") {
+          try {
+            const filesSummary = await fetchSharedSessionFiles(clean);
+            if (filesSummary?.files?.length > 0) {
+              isResourceDrop = true;
+            }
+          } catch {
+            // Not a file drop
+          }
+        }
+
         if (isResourceDrop) {
           navigate({ to: "/share/$shareSlug", params: { shareSlug: clean } });
           return;
