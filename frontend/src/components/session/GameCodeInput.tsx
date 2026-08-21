@@ -42,7 +42,7 @@ export function GameCodeInput({
     >
       {digits.map((digit, index) => (
         <input
-          key={index}
+          key={`code-box-${index}`}
           ref={(el) => {
             refs.current[index] = el;
           }}
@@ -65,11 +65,13 @@ export function GameCodeInput({
             if (e.key === "ArrowRight" && index < length - 1) refs.current[index + 1]?.focus();
           }}
           onPaste={(e) => {
-            e.preventDefault();
-            const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
-            if (!pasted) return;
-            onChange(pasted);
-            refs.current[Math.min(pasted.length, length) - 1]?.focus();
+            const text = e.clipboardData?.getData("text") ?? "";
+            const pasted = text.replace(/\D/g, "").slice(0, length);
+            if (pasted) {
+              e.preventDefault();
+              onChange(pasted);
+              refs.current[Math.min(pasted.length, length) - 1]?.focus();
+            }
           }}
           className={cn(
             "h-11 min-w-0 flex-1 basis-0 rounded-xl border bg-white text-center font-mono text-lg font-bold text-[#111111] outline-none transition-all duration-150 sm:h-12 sm:text-xl",

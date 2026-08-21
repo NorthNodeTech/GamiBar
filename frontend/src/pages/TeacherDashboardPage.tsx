@@ -672,6 +672,18 @@ function formatQuestionCount(session: AuthorSessionSummary): string {
   return `${session.questionCount} ${session.questionCount === 1 ? "question" : "questions"}`;
 }
 
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const monthDayFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+});
+
+const numberFormatter = new Intl.NumberFormat();
+
 function formatRecentDate(value: string): string {
   const date = new Date(Number.isFinite(Number(value)) ? Number(value) : value);
   if (Number.isNaN(date.getTime())) return "Recently";
@@ -682,16 +694,10 @@ function formatRecentDate(value: string): string {
   const dayDiff = Math.round((startOfToday - startOfDate) / 86_400_000);
 
   if (dayDiff === 0) {
-    return new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(date);
+    return timeFormatter.format(date);
   }
   if (dayDiff === 1) return "Yesterday";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-  }).format(date);
+  return monthDayFormatter.format(date);
 }
 
 function getActivitySummary(sessions: AuthorSessionSummary[], activeCount: number) {
@@ -700,7 +706,7 @@ function getActivitySummary(sessions: AuthorSessionSummary[], activeCount: numbe
 
   return [
     { label: "Sessions hosted", value: String(sessions.length) },
-    { label: "Participants", value: new Intl.NumberFormat().format(participants) },
+    { label: "Participants", value: numberFormatter.format(participants) },
     { label: "Active rooms", value: String(activeCount) },
     { label: "Tool types used", value: String(toolTypes) },
   ];

@@ -575,48 +575,60 @@ async function createSubscriptionCheckout(
     .maybeSingle();
   if (currentError) throw currentError;
   if (current) {
-    const remote = await fetchRazorpaySubscription(
-      current.provider_subscription_id,
-    );
-    const remoteStatus = normalizeSubscriptionStatus(remote.status);
-    const { error: syncError } = await admin
-      .from("gamibar_subscriptions")
-      .update(subscriptionPatch(remote, remoteStatus))
-      .eq("id", current.id);
-    if (syncError) throw syncError;
+    let remote;
+    try {
+      remote = await fetchRazorpaySubscription(
+        current.provider_subscription_id,
+      );
+    } catch (error) {
+      if (!canDiscardUnavailableCheckoutSubscription(error, current)) {
+        throw error;
+      }
 
-    const createdAt = new Date(current.created_at).getTime();
-    const isRecent =
-      Number.isFinite(createdAt) &&
-      Date.now() - createdAt < ABANDONED_CHECKOUT_MS;
-    if (
-      remoteStatus === "created" &&
-      current.plan_code === planCode &&
-      isRecent
-    ) {
-      return checkoutResponse(user, plan, billingProfile, {
-        subscriptionId: current.provider_subscription_id,
-      });
+      await discardUnavailableCheckoutSubscription(admin, current, error);
     }
 
-    if (remoteStatus === "created") {
-      const cancelled = await cancelRazorpaySubscription(
-        current.provider_subscription_id,
-        false,
-      );
-      const { error: cancelSyncError } = await admin
+    if (remote) {
+      const remoteStatus = normalizeSubscriptionStatus(remote.status);
+      const { error: syncError } = await admin
         .from("gamibar_subscriptions")
-        .update(subscriptionPatch(cancelled, "cancelled"))
+        .update(subscriptionPatch(remote, remoteStatus))
         .eq("id", current.id);
-      if (cancelSyncError) throw cancelSyncError;
-    } else if (ACTIVE_SUBSCRIPTION_STATUSES.includes(remoteStatus)) {
-      const label = BILLING_PLANS[current.plan_code]?.name ?? "GamiBAR Pro";
-      throw new HttpError(
-        current.cancellation_requested_at
-          ? `${label} remains active until the end of its billing period.`
-          : `This account already has ${label}. Cancel it before choosing another recurring plan.`,
-        409,
-      );
+      if (syncError) throw syncError;
+
+      const createdAt = new Date(current.created_at).getTime();
+      const isRecent =
+        Number.isFinite(createdAt) &&
+        Date.now() - createdAt < ABANDONED_CHECKOUT_MS;
+      if (
+        remoteStatus === "created" &&
+        current.plan_code === planCode &&
+        isRecent
+      ) {
+        return checkoutResponse(user, plan, billingProfile, {
+          subscriptionId: current.provider_subscription_id,
+        });
+      }
+
+      if (remoteStatus === "created") {
+        const cancelled = await cancelRazorpaySubscription(
+          current.provider_subscription_id,
+          false,
+        );
+        const { error: cancelSyncError } = await admin
+          .from("gamibar_subscriptions")
+          .update(subscriptionPatch(cancelled, "cancelled"))
+          .eq("id", current.id);
+        if (cancelSyncError) throw cancelSyncError;
+      } else if (ACTIVE_SUBSCRIPTION_STATUSES.includes(remoteStatus)) {
+        const label = BILLING_PLANS[current.plan_code]?.name ?? "GamiBAR Pro";
+        throw new HttpError(
+          current.cancellation_requested_at
+            ? `${label} remains active until the end of its billing period.`
+            : `This account already has ${label}. Cancel it before choosing another recurring plan.`,
+          409,
+        );
+      }
     }
   }
 
@@ -663,6 +675,38 @@ async function createSubscriptionCheckout(
   return checkoutResponse(user, plan, billingProfile, {
     subscriptionId: subscription.id,
   });
+}
+
+async function discardUnavailableCheckoutSubscription(admin, subscription, error) {
+  const now = new Date().toISOString();
+  const { error: updateError } = await admin
+    .from("gamibar_subscriptions")
+    .update({
+      status: "cancelled",
+      ended_at: now,
+      cancellation_requested_at: now,
+      cancel_at_cycle_end: false,
+    })
+    .eq("id", subscription.id)
+    .eq("status", "created");
+  if (updateError) throw updateError;
+
+  console.warn("Discarded stale checkout subscription after provider lookup failed", {
+    subscriptionId: subscription.id,
+    authorId: subscription.author_id,
+    planCode: subscription.plan_code,
+    providerStatus: error.status,
+  });
+}
+
+function canDiscardUnavailableCheckoutSubscription(error, subscription) {
+  if (!(error instanceof HttpError) || error.status !== 400) return false;
+  if (subscription.status !== "created") return false;
+
+  const plan = BILLING_PLANS[subscription.plan_code];
+  if (!plan?.recurring) return false;
+
+  return subscription.provider_plan_id !== razorpayPlanId(subscription.plan_code);
 }
 
 async function verifyLifetimeCheckout(user, { paymentId, signature, orderId }) {

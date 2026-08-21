@@ -219,6 +219,12 @@ export function JigsawMissionAssembly({
     activeListenersRef.current = null;
   }, []);
 
+  useEffect(() => {
+    return () => {
+      clearActiveListeners();
+    };
+  }, [clearActiveListeners]);
+
   const finishDrag = useCallback(
     (pieceId: number, clientX: number, clientY: number, fromSlot: number | null) => {
       clearActiveListeners();

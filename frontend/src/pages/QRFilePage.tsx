@@ -364,7 +364,7 @@ export default function QRFilePage() {
                   </p>
                   {stagedFiles.map((file, idx) => (
                     <div
-                      key={`${file.name}-${idx}`}
+                      key={`${file.name}-${file.size}-${file.lastModified}`}
                       className="flex items-center justify-between gap-3 rounded-xl border border-[#CBD5E1] bg-[#FAFAFA] p-3"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -382,9 +382,10 @@ export default function QRFilePage() {
                       <button
                         type="button"
                         onClick={() => handleRemoveStaged(idx)}
+                        aria-label={`Remove ${file.name}`}
                         className="grid size-7 place-items-center rounded-lg text-[#9CA3AF] hover:text-red-500 transition-colors"
                       >
-                        <Trash2 className="size-3.5" />
+                        <Trash2 className="size-4" />
                       </button>
                     </div>
                   ))}

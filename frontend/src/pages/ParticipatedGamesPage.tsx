@@ -13,14 +13,16 @@ import { useAuth } from "@/lib/auth-store";
 import { fetchParticipatedGames } from "@/lib/supabase/participated-games";
 import { cn } from "@/lib/utils";
 
+const playedDateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
 function formatPlayedDate(value: string): string {
   const ms = Number(value);
   const date = Number.isFinite(ms) ? new Date(ms) : new Date(value);
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  return playedDateFormatter.format(date);
 }
 
 export default function ParticipatedGamesPage() {

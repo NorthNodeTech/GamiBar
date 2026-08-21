@@ -69,7 +69,7 @@ export function JigsawMissionSuccess({
         >
           <img
             src={imageUrl}
-            alt="Completed puzzle image"
+            alt="Completed puzzle"
             className="aspect-square w-full object-cover"
             draggable={false}
           />

@@ -124,22 +124,12 @@ export function useRoomSync(args: RoomSyncArgs) {
   useEffect(() => {
     if (!resolvedRoomId) return;
     const intervalMs = args.authorToken ? HOST_RECONCILIATION_MS : STUDENT_RECONCILIATION_MS;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let cancelled = false;
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible" && navigator.onLine) void fetchSnapshot();
+    }, intervalMs);
 
-    const schedule = () => {
-      const jitteredInterval = intervalMs * (0.8 + Math.random() * 0.4);
-      timer = setTimeout(() => {
-        if (cancelled) return;
-        if (document.visibilityState === "visible" && navigator.onLine) void fetchSnapshot();
-        schedule();
-      }, jitteredInterval);
-    };
-
-    schedule();
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
+      clearInterval(intervalId);
     };
   }, [resolvedRoomId, args.authorToken, fetchSnapshot]);
 

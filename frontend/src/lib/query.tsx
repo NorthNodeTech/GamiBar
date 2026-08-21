@@ -46,7 +46,9 @@ export function useQuery<T>({
   const cache = useQueryCache();
   const key = serializeKey(queryKey);
   const queryFnRef = useRef(queryFn);
-  queryFnRef.current = queryFn;
+  useEffect(() => {
+    queryFnRef.current = queryFn;
+  }, [queryFn]);
 
   const [data, setData] = useState<T | undefined>(() => cache.values.get(key) as T | undefined);
   const [error, setError] = useState<unknown>(null);
