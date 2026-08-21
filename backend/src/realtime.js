@@ -11,8 +11,7 @@ export async function sendRealtimeSignal(topic, event, payload = {}) {
   let lastError;
   try {
     admin = createAdminClient();
-    await admin.realtime.setAuth();
-    channel = admin.channel(topic, { config: { private: true } });
+    channel = admin.channel(topic);
     const signalPayload = {
       ...payload,
       changedAt: new Date().toISOString(),

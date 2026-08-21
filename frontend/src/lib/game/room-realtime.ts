@@ -32,29 +32,24 @@ export function subscribeRoomSyncSignals(
   let disposed = false;
 
   callbacks.onStatus?.("connecting");
-  void supabase.realtime
-    .setAuth()
-    .then(() => {
+  for (const topic of topics) {
+    const channel = supabase
+      .channel(topic)
+      .on("broadcast", { event: "room_changed" }, () => callbacks.onSignal());
+    channels.add(channel);
+    channel.subscribe((status) => {
       if (disposed) return;
-      for (const topic of topics) {
-        const channel = supabase
-          .channel(topic, { config: { private: true } })
-          .on("broadcast", { event: "room_changed" }, () => callbacks.onSignal());
-        channels.add(channel);
-        channel.subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            connected.add(topic);
-            callbacks.onStatus?.(connected.size === topics.length ? "connected" : "connecting");
-            return;
-          }
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-            connected.delete(topic);
-            callbacks.onStatus?.("disconnected");
-          }
-        });
+      if (status === "SUBSCRIBED") {
+        connected.add(topic);
+        callbacks.onStatus?.(connected.size === topics.length ? "connected" : "connecting");
+        return;
       }
-    })
-    .catch(() => callbacks.onStatus?.("disconnected"));
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        connected.delete(topic);
+        callbacks.onStatus?.("disconnected");
+      }
+    });
+  }
 
   return () => {
     disposed = true;
