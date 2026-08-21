@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@/lib/navigation";
-import { LogOut, QrCode, Radio } from "lucide-react";
+import { Home, LogOut, QrCode, Radio, ScanLine, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/layout/Logo";

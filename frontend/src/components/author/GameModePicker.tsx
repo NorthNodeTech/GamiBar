@@ -105,18 +105,6 @@ function PickerCard({
             className="size-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-
-          {/* Floating Pill on Image */}
-          <span
-            className={cn(
-              "absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-xs border",
-              presentation.badgeColor,
-            )}
-          >
-            <Icon className="size-3 shrink-0" />
-            <span>{presentation.moment}</span>
-          </span>
 
           {/* Top-Right Checkmark Badge */}
           {selected && (
@@ -129,10 +117,20 @@ function PickerCard({
         {/* Card Body & Information */}
         <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
           <div>
-            <h3 className="font-display text-base sm:text-lg font-extrabold text-[#111111] leading-tight">
-              {GAME_MODE_META[item.mode].title}
-            </h3>
-            <p className="mt-1.5 text-xs text-[#5F6368] leading-relaxed line-clamp-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "grid size-6 place-items-center rounded-lg text-white shadow-xs shrink-0",
+                  presentation.accentColor,
+                )}
+              >
+                <Icon className="size-3.5" />
+              </span>
+              <h3 className="font-display text-base sm:text-lg font-extrabold text-[#111111] leading-tight">
+                {GAME_MODE_META[item.mode].title}
+              </h3>
+            </div>
+            <p className="mt-2 text-xs text-[#5F6368] leading-relaxed line-clamp-2">
               {presentation.useCase}
             </p>
           </div>
