@@ -507,57 +507,81 @@ export async function createRoom(input: {
 
   const payload = normalizeCreatePayload(input.mode, input.payload);
 
-  const existing = await listCodes();
-  const code = generateRoomCode(existing);
-  const id = createEntityId();
-  const authorToken = createId("author");
-  const authorTokenHash = await hashToken(authorToken);
-
   const createdAt = Date.now();
   const roomLifespanDays =
     Number.isInteger(input.roomLifespanDays) &&
     Number(input.roomLifespanDays) > 0
       ? Math.min(3650, Number(input.roomLifespanDays))
       : null;
-  const room: Room = {
-    id,
-    code,
-    name,
-    subject,
-    authorId: input.authorId,
-    authorName: input.authorName,
-    status: "LOBBY",
-    mode: input.mode,
-    payload,
-    maxParticipants:
-      Number.isInteger(input.maxParticipants) &&
-      Number(input.maxParticipants) > 0
-        ? Math.min(200, Number(input.maxParticipants))
-        : 100,
-    createdAt,
-    expiresAt:
-      roomLifespanDays == null
-        ? null
-        : createdAt + roomLifespanDays * 24 * 60 * 60 * 1000,
-    startedAt: null,
-    endsAt: null,
-    finishedAt: null,
-    showLeaderboardToStudents: false,
-    duplicatedFromName: input.duplicatedFromName ?? null,
-  };
 
-  const stored: StoredRoom = {
-    room,
-    participants: new Map(),
-    quizAnswers: new Map(),
-    visualPointAnswers: new Map(),
-    attempts: new Map(),
-    events: [],
-    authorToken,
-    authorTokenHash,
-  };
-  pushEvent(stored, { type: "room_updated", status: "LOBBY" });
-  await persist(stored);
+  let stored: StoredRoom | null = null;
+  let authorToken = "";
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const existing = await listCodes();
+    const code = generateRoomCode(existing);
+    const id = createEntityId();
+    authorToken = createId("author");
+    const authorTokenHash = await hashToken(authorToken);
+
+    const room: Room = {
+      id,
+      code,
+      name,
+      subject,
+      authorId: input.authorId,
+      authorName: input.authorName,
+      status: "LOBBY",
+      mode: input.mode,
+      payload,
+      maxParticipants:
+        Number.isInteger(input.maxParticipants) &&
+        Number(input.maxParticipants) > 0
+          ? Math.min(200, Number(input.maxParticipants))
+          : 100,
+      createdAt,
+      expiresAt:
+        roomLifespanDays == null
+          ? null
+          : createdAt + roomLifespanDays * 24 * 60 * 60 * 1000,
+      startedAt: null,
+      endsAt: null,
+      finishedAt: null,
+      showLeaderboardToStudents: false,
+      duplicatedFromName: input.duplicatedFromName ?? null,
+    };
+
+    const candidate: StoredRoom = {
+      room,
+      participants: new Map(),
+      quizAnswers: new Map(),
+      visualPointAnswers: new Map(),
+      attempts: new Map(),
+      events: [],
+      authorToken,
+      authorTokenHash,
+    };
+    pushEvent(candidate, { type: "room_updated", status: "LOBBY" });
+
+    try {
+      await persist(candidate);
+      stored = candidate;
+      break;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("gamibar_rooms_code_unique") || msg.includes("23505")) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!stored) {
+    return {
+      ok: false as const,
+      error: "Could not allocate a unique room code. Please try again.",
+    };
+  }
 
   const libraryImageId =
     payload.mode === "jigsaw" || payload.mode === "quiz_jigsaw"
