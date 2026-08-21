@@ -74,8 +74,8 @@ async function optimizeAssets() {
       width: 1200,
       height: 630,
       channels: 4,
-      background: { r: 10, g: 10, b: 10, alpha: 1 }
-    }
+      background: { r: 10, g: 10, b: 10, alpha: 1 },
+    },
   })
     .composite([{ input: logoResized, gravity: "center" }])
     .jpeg({ quality: 90 })
@@ -86,8 +86,8 @@ async function optimizeAssets() {
       width: 1200,
       height: 630,
       channels: 4,
-      background: { r: 10, g: 10, b: 10, alpha: 1 }
-    }
+      background: { r: 10, g: 10, b: 10, alpha: 1 },
+    },
   })
     .composite([{ input: logoResized, gravity: "center" }])
     .webp({ quality: 90, effort: 6 })
@@ -132,7 +132,7 @@ async function optimizeAssets() {
       .webp({
         quality: 86,
         effort: 6,
-        smartSubsample: true
+        smartSubsample: true,
       })
       .toBuffer();
 
@@ -142,13 +142,17 @@ async function optimizeAssets() {
       const afterStat = await stat(fullPath);
       totalAfter += afterStat.size;
       const pct = (((beforeStat.size - afterStat.size) / beforeStat.size) * 100).toFixed(1);
-      console.log(`Optimized ${file}: ${(beforeStat.size / 1024).toFixed(0)}KB -> ${(afterStat.size / 1024).toFixed(0)}KB (-${pct}%)`);
+      console.log(
+        `Optimized ${file}: ${(beforeStat.size / 1024).toFixed(0)}KB -> ${(afterStat.size / 1024).toFixed(0)}KB (-${pct}%)`,
+      );
     } else {
       totalAfter += beforeStat.size;
     }
   }
 
-  console.log(`--- Total Assets Size: ${(totalBefore / 1024 / 1024).toFixed(2)}MB -> ${(totalAfter / 1024 / 1024).toFixed(2)}MB ---`);
+  console.log(
+    `--- Total Assets Size: ${(totalBefore / 1024 / 1024).toFixed(2)}MB -> ${(totalAfter / 1024 / 1024).toFixed(2)}MB ---`,
+  );
 }
 
 optimizeAssets().catch(console.error);

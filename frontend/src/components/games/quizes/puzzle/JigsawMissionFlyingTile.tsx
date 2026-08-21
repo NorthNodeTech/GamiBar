@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 import { JigsawTileFace } from "@/components/games/quizes/puzzle/JigsawTileFace";
 import { JigsawTileCardVisual } from "@/components/games/quizes/puzzle/JigsawTileCardVisual";
-import type { JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
+import type { JigsawTileCardRotation } from "@shared/game/jigsaw-tiles";
 
 type JigsawMissionFlyingTileProps = {
   tileId: string;

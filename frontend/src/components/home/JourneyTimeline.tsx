@@ -63,9 +63,7 @@ export function JourneyTimeline() {
                     <h3 className="mt-2.5 font-display text-sm font-bold leading-snug text-[#111111]">
                       {m.title}
                     </h3>
-                    <p className="mt-1.5 text-[11px] leading-relaxed text-[#5F6368]">
-                      {m.desc}
-                    </p>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-[#5F6368]">{m.desc}</p>
                   </div>
                 </div>
               </article>
@@ -101,12 +99,8 @@ export function JourneyTimeline() {
                 <span className="rounded-full border border-[#FFD0CC] bg-[#FFF1F0] px-2 py-0.5 text-[9px] font-bold text-[#FF3B30]">
                   {m.badge}
                 </span>
-                <h3 className="mt-1.5 font-display text-sm font-bold text-[#111111]">
-                  {m.title}
-                </h3>
-                <p className="mt-1 text-[11px] leading-relaxed text-[#5F6368]">
-                  {m.desc}
-                </p>
+                <h3 className="mt-1.5 font-display text-sm font-bold text-[#111111]">{m.title}</h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-[#5F6368]">{m.desc}</p>
               </div>
             </div>
           ))}

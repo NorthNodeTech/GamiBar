@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 
 import { Confetti } from "@/components/games/ui/Confetti";
-import { jigsawSkeletonBoardWidthClass } from "@/lib/game/jigsaw-grid";
-import { formatAccuracy, formatDuration } from "@/lib/game/ranking";
+import { jigsawSkeletonBoardWidthClass } from "@shared/game/jigsaw-grid";
+import { formatAccuracy, formatDuration } from "@shared/game/ranking";
 import { cn } from "@/lib/utils";
 
 type JigsawMissionSuccessProps = {
@@ -88,7 +88,9 @@ export function JigsawMissionSuccess({
             </p>
           </div>
           <div className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">Accuracy</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
+              Accuracy
+            </p>
             <p className="mt-1 font-display text-lg font-extrabold tabular-nums text-[#111111]">
               {formatAccuracy(accuracy)}
             </p>

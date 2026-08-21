@@ -1,6 +1,6 @@
 import { BarChart3, Download, MessageSquareText, Star } from "lucide-react";
 
-import type { PollQuestionResults, PollResults } from "@/lib/game/types";
+import type { PollQuestionResults, PollResults } from "@shared/game/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

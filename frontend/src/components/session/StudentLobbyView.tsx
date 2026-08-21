@@ -2,8 +2,8 @@ import { Loader2, Radio, Sparkles, Users } from "lucide-react";
 
 import { Logo } from "@/components/layout/Logo";
 import { LobbyRing } from "@/components/session/LobbyRing";
-import type { GameMode } from "@/lib/game/config";
-import { GAME_MODE_META } from "@/lib/game/config";
+import type { GameMode } from "@shared/game/config";
+import { GAME_MODE_META } from "@shared/game/config";
 import { cn } from "@/lib/utils";
 
 type Participant = {

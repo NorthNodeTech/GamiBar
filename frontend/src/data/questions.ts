@@ -21,7 +21,8 @@ export const quizQuestions: Question[] = [
       "The tax on a transaction",
     ],
     answer: 1,
-    explanation: "Opportunity cost is the benefit you give up by not choosing the next best option.",
+    explanation:
+      "Opportunity cost is the benefit you give up by not choosing the next best option.",
   },
   {
     prompt: "Which planet has the shortest day in the Solar System?",
@@ -73,7 +74,8 @@ export const quizQuestions: Question[] = [
       "There is no effect",
     ],
     answer: 1,
-    explanation: "It means results this extreme would occur under the null less than 5% of the time.",
+    explanation:
+      "It means results this extreme would occur under the null less than 5% of the time.",
   },
   {
     prompt: "Which term describes learning content delivered in short focused units?",

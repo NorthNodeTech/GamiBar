@@ -12,7 +12,7 @@ export const openRouterProvider = {
   isConfigured() {
     return Boolean(process.env.OPENROUTER_API_KEY?.trim());
   },
-  async generateJson({ prompt, schema, schemaName }) {
+  async generateJson({ prompt, schema, schemaName, timeoutMs }) {
     const headers = {};
     const referer = process.env.OPENROUTER_SITE_URL?.trim();
     const title = process.env.OPENROUTER_APP_NAME?.trim();
@@ -26,6 +26,7 @@ export const openRouterProvider = {
       prompt,
       schema,
       schemaName,
+      timeoutMs,
       headers,
       bodyExtras: {
         response_format: jsonSchemaResponseFormat(schemaName, schema),

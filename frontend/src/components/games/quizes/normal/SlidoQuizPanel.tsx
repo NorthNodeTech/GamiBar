@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 
-import type { QuizOptionId } from "@/lib/game/types";
+import type { QuizOptionId } from "@shared/game/types";
 import { cn } from "@/lib/utils";
 
 const OPTION_COLORS: Record<QuizOptionId, string> = {
@@ -36,6 +36,8 @@ type SlidoQuizPanelProps = {
   onSubmit: () => void;
   /** Anchor for reward fly-out animations (correct feedback banner). */
   feedbackRef?: RefObject<HTMLDivElement | null>;
+  correctFeedback?: string;
+  wrongFeedback?: string;
 };
 
 export function SlidoQuizPanel({
@@ -49,6 +51,8 @@ export function SlidoQuizPanel({
   onSelect,
   onSubmit,
   feedbackRef,
+  correctFeedback = "Correct! Puzzle piece unlocked.",
+  wrongFeedback = "Not quite — try again to unlock this piece.",
 }: SlidoQuizPanelProps) {
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
 
@@ -122,7 +126,11 @@ export function SlidoQuizPanel({
                 )}
                 aria-hidden="true"
               >
-                {selected === opt ? <Check className="size-4" strokeWidth={3} /> : OPTION_LABELS[opt]}
+                {selected === opt ? (
+                  <Check className="size-4" strokeWidth={3} />
+                ) : (
+                  OPTION_LABELS[opt]
+                )}
               </span>
               <span className="min-w-0 flex-1">{question.options[opt]}</span>
               {selected === opt && feedback === null && (
@@ -155,12 +163,12 @@ export function SlidoQuizPanel({
             {feedback === "correct" ? (
               <>
                 <Check className="size-4 shrink-0" aria-hidden="true" />
-                Correct! Puzzle piece unlocked.
+                {correctFeedback}
               </>
             ) : (
               <>
                 <X className="size-4 shrink-0" aria-hidden="true" />
-                Not quite — try again to unlock this piece.
+                {wrongFeedback}
               </>
             )}
           </motion.div>
@@ -187,16 +195,23 @@ export function SlidoProgressHeader({
   totalPieces,
   endsAt,
   onTimedOut,
+  onExpired,
+  timerLabel = "Game",
 }: {
   piecesUnlocked: number;
   totalPieces: number;
   endsAt: number | null;
   onTimedOut?: (timedOut: boolean) => void;
+  onExpired?: () => void;
+  timerLabel?: string;
 }) {
   const [left, setLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!endsAt) return;
+    if (!endsAt) {
+      setLeft(null);
+      return;
+    }
     const tick = () => setLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
     tick();
     const id = window.setInterval(tick, 250);
@@ -205,12 +220,16 @@ export function SlidoProgressHeader({
 
   const timedOutRef = useRef<boolean | null>(null);
   useEffect(() => {
+    timedOutRef.current = null;
+  }, [endsAt]);
+  useEffect(() => {
     if (left == null) return;
     const next = left === 0;
     if (timedOutRef.current === next) return;
     timedOutRef.current = next;
     onTimedOut?.(next);
-  }, [left, onTimedOut]);
+    if (next) onExpired?.();
+  }, [left, onExpired, onTimedOut]);
 
   return (
     <div className="flex min-w-0 items-center justify-between gap-2 border-b border-[#E5E7EB] bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6 sm:py-3">
@@ -229,7 +248,7 @@ export function SlidoProgressHeader({
             left === 0 ? "bg-red-100 text-red-800" : "bg-[#EDE9FE] text-[#5B21B6]",
           )}
         >
-          {left === 0 ? "Time's up" : `${left}s`}
+          {left === 0 ? `${timerLabel} time's up` : `${timerLabel} · ${left}s`}
         </span>
       )}
     </div>

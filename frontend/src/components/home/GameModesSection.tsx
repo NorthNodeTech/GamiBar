@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -91,7 +91,9 @@ function ToolGroup({
     <div className={className}>
       <div className={cn("mb-3.5 border-l-4 pl-3 md:mb-5 md:pl-3.5", accentClassName)}>
         <h3 className="font-display text-sm font-bold text-[#111111] md:text-lg">{title}</h3>
-        <p className="mt-0.5 max-w-2xl text-[11px] sm:text-[13px] leading-relaxed text-[#5F6368]">{description}</p>
+        <p className="mt-0.5 max-w-2xl text-[11px] sm:text-[13px] leading-relaxed text-[#5F6368]">
+          {description}
+        </p>
       </div>
 
       {/* Mobile Touch Carousel with Autoplay & Buttons (< md) */}
@@ -120,9 +122,7 @@ function ToolGroup({
                   <h4 className="mt-1.5 font-display text-sm font-bold text-[#111111]">
                     {game.title}
                   </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-[#5F6368]">
-                    {game.copy}
-                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#5F6368]">{game.copy}</p>
                 </div>
               </div>
 
@@ -169,9 +169,7 @@ function ToolGroup({
                   <h4 className="mt-2 font-display text-sm font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30] sm:text-base">
                     {game.title}
                   </h4>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#5F6368]">
-                    {game.copy}
-                  </p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-[#5F6368]">{game.copy}</p>
                 </div>
               </div>
 

@@ -26,9 +26,7 @@ export function RoomCodeDisplay({
           className={cn(
             "flex h-11 min-w-0 items-center justify-center rounded-xl border font-mono font-bold tabular-nums shadow-[var(--shadow-soft)] transition-colors sm:h-12",
             "border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)]",
-            size === "large"
-              ? "text-lg sm:text-xl md:text-2xl"
-              : "text-base sm:text-lg md:text-xl",
+            size === "large" ? "text-lg sm:text-xl md:text-2xl" : "text-base sm:text-lg md:text-xl",
             digit.trim() &&
               "border-[var(--gamibar-brand)]/40 bg-[var(--gamibar-brand-soft)] text-[var(--foreground)]",
           )}

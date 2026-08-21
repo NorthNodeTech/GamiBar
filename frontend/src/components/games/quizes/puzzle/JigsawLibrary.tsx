@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/query";
 import { Check, ChevronLeft, Images, Search, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { JIGSAW_TEMPLATES, type JigsawTemplateId } from "@/lib/game/jigsaw-grid";
+import { JIGSAW_TEMPLATES, type JigsawTemplateId } from "@shared/game/jigsaw-grid";
 import {
   JIGSAW_LIBRARY_PAGE_SIZE,
   getJigsawCategories,
@@ -51,7 +51,10 @@ export function JigsawLibrary({
   const [previewTemplateId, setPreviewTemplateId] = useState<JigsawTemplateId>(selectedTemplateId);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(searchInput.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
@@ -72,7 +75,11 @@ export function JigsawLibrary({
   });
 
   const imagesQuery = useQuery({
-    queryKey: ["jigsaw-library", "images", { debouncedSearch, categoryId, subtopicId, sort, offset }],
+    queryKey: [
+      "jigsaw-library",
+      "images",
+      { debouncedSearch, categoryId, subtopicId, sort, offset },
+    ],
     queryFn: () =>
       getJigsawLibraryImages({
         search: debouncedSearch,
@@ -84,11 +91,10 @@ export function JigsawLibrary({
   });
 
   useEffect(() => {
-    if (!imagesQuery.data) return;
-    setLoadedImages((prev) =>
-      offset === 0 ? imagesQuery.data.images : [...prev, ...imagesQuery.data.images],
-    );
-    setHasMore(imagesQuery.data.hasMore);
+    const page = imagesQuery.data;
+    if (!page) return;
+    setLoadedImages((prev) => (offset === 0 ? page.images : [...prev, ...page.images]));
+    setHasMore(page.hasMore);
   }, [imagesQuery.data, offset]);
 
   const selectedCategory = useMemo(
@@ -354,8 +360,12 @@ function JigsawImagePreview({
                     : "border-[var(--gamibar-border)] bg-white text-[#525252]",
                 )}
               >
-                <span className="block text-xs font-semibold">{DIFFICULTY_LABELS[template.id]}</span>
-                <span className="mt-0.5 block font-display text-lg font-bold">{template.label}</span>
+                <span className="block text-xs font-semibold">
+                  {DIFFICULTY_LABELS[template.id]}
+                </span>
+                <span className="mt-0.5 block font-display text-lg font-bold">
+                  {template.label}
+                </span>
                 <span className="block text-[11px]">{template.tileCount} pieces</span>
               </button>
             );

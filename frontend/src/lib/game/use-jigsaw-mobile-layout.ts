@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   ASSEMBLY_DRAG_THRESHOLD_COARSE_PX,
   ASSEMBLY_DRAG_THRESHOLD_PX,
-} from "@/lib/game/jigsaw-assembly-drag";
+} from "@shared/game/jigsaw-assembly-drag";
 
 /** Card sizes tuned for touch on narrow viewports (below md). */
 export const JIGSAW_MOBILE_COLLECTION_CARD_SIZE = 64;

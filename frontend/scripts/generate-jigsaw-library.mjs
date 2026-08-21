@@ -139,9 +139,7 @@ async function main() {
     }
 
     const category = categoryBySlug.get(subject.category);
-    const subtopic = category
-      ? subtopicByKey.get(`${category.id}:${subject.subtopic}`)
-      : null;
+    const subtopic = category ? subtopicByKey.get(`${category.id}:${subject.subtopic}`) : null;
     if (!category || !subtopic) {
       failed += 1;
       failures.push(`${subject.slug}: missing category/subtopic rows`);
@@ -197,7 +195,11 @@ async function main() {
         : await supabase.from("jigsaw_library_images").insert(record);
       if (insertError) throw insertError;
 
-      existingBySlug.set(subject.slug, { id: existingRow?.id ?? subject.slug, slug: subject.slug, usage_count: record.usage_count });
+      existingBySlug.set(subject.slug, {
+        id: existingRow?.id ?? subject.slug,
+        slug: subject.slug,
+        usage_count: record.usage_count,
+      });
       generated += 1;
       sizes.push({ slug: subject.slug, bytes: compressed.bytes });
       console.log("Complete.");
@@ -212,9 +214,7 @@ async function main() {
 
   rmSync(workDir, { recursive: true, force: true });
 
-  const { data: allRows } = await supabase
-    .from("jigsaw_library_images")
-    .select("file_size_bytes");
+  const { data: allRows } = await supabase.from("jigsaw_library_images").select("file_size_bytes");
   const allSizes = (allRows ?? [])
     .map((row) => row.file_size_bytes)
     .filter((value) => Number.isFinite(value));

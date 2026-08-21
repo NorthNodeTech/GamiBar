@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface MobileCarouselProps {
@@ -26,7 +26,7 @@ export function MobileCarousel({
   const [isPaused, setIsPaused] = useState(false);
   const totalItems = React.Children.count(children);
 
-  const updateScrollState = () => {
+  const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
 
@@ -39,7 +39,7 @@ export function MobileCarousel({
 
     const index = Math.round(scrollLeft / (itemWidth || 1));
     setActiveIndex(Math.min(Math.max(index, 0), totalItems - 1));
-  };
+  }, [totalItems]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -47,7 +47,7 @@ export function MobileCarousel({
     el.addEventListener("scroll", updateScrollState, { passive: true });
     updateScrollState();
     return () => el.removeEventListener("scroll", updateScrollState);
-  }, [totalItems]);
+  }, [updateScrollState]);
 
   // Autoplay functionality
   useEffect(() => {
@@ -107,10 +107,7 @@ export function MobileCarousel({
         {React.Children.map(children, (child, idx) => (
           <div
             key={idx}
-            className={cn(
-              "w-full min-w-full shrink-0 snap-center px-0.5",
-              itemClassName,
-            )}
+            className={cn("w-full min-w-full shrink-0 snap-center px-0.5", itemClassName)}
           >
             {child}
           </div>

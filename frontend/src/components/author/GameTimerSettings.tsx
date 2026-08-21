@@ -1,14 +1,16 @@
 import { Clock, Infinity as InfinityIcon } from "lucide-react";
 import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
 
-import { GAME_CONFIG, type GameMode } from "@/lib/game/config";
+import { GAME_CONFIG, type GameMode } from "@shared/game/config";
+import type { TimerMode } from "@shared/game/types";
 import {
   clampTimer,
+  defaultTimerSeconds,
   formatTimerLong,
   formatTimerSeconds,
-  TIMER_BOUNDS,
-  TIMER_PRESETS,
-} from "@/lib/game/timer";
+  timerBounds,
+  timerPresets,
+} from "@shared/game/timer";
 import { cn } from "@/lib/utils";
 
 const MODE_STYLE: Record<
@@ -61,7 +63,9 @@ const MODE_STYLE: Record<
 
 type GameTimerSettingsProps = {
   mode: GameMode;
+  timerMode: TimerMode;
   value: number | null;
+  onTimerModeChange: (mode: TimerMode) => void;
   onChange: (seconds: number | null) => void;
   className?: string;
 };
@@ -210,22 +214,33 @@ function CircularTimerDial({
   );
 }
 
-export function GameTimerSettings({ mode, value, onChange, className }: GameTimerSettingsProps) {
+export function GameTimerSettings({
+  mode,
+  timerMode,
+  value,
+  onTimerModeChange,
+  onChange,
+  className,
+}: GameTimerSettingsProps) {
   const style = MODE_STYLE[mode];
-  const presets = TIMER_PRESETS[mode];
-  const bounds = TIMER_BOUNDS[mode];
+  const presets = timerPresets(mode, timerMode);
+  const bounds = timerBounds(mode, timerMode);
   const openEnded = value == null;
-  const displayValue = openEnded ? bounds.min : clampTimer(mode, value)!;
+  const displayValue = openEnded ? bounds.min : clampTimer(mode, value, timerMode)!;
   const suggestedSeconds =
-    mode === "quiz"
-      ? GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.defaultQuestionCount
-      : mode === "quiz_jigsaw"
-        ? (GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600)
-        : mode === "jigsaw"
-          ? GAME_CONFIG.jigsaw.timeLimitSeconds
-          : mode === "polls"
-            ? GAME_CONFIG.polls.timeLimitSeconds
-            : GAME_CONFIG.connect_dots.timeLimitSeconds;
+    timerMode === "per_question"
+      ? defaultTimerSeconds(mode, timerMode)
+      : mode === "quiz"
+        ? GAME_CONFIG.quiz.recommendedSecondsPerQuestion * GAME_CONFIG.quiz.defaultQuestionCount
+        : mode === "quiz_jigsaw"
+          ? (GAME_CONFIG.quiz_jigsaw.timeLimitSeconds ?? 600)
+          : mode === "jigsaw"
+            ? GAME_CONFIG.jigsaw.timeLimitSeconds
+            : mode === "visual_point"
+              ? GAME_CONFIG.visual_point.timeLimitSeconds
+              : mode === "polls"
+                ? GAME_CONFIG.polls.timeLimitSeconds
+                : GAME_CONFIG.connect_dots.timeLimitSeconds;
 
   return (
     <section
@@ -238,12 +253,37 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
     >
       <div className="px-4 pt-5 text-center sm:px-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#737373]">
-          Session timer
+          Timer style
         </p>
+        <div className="mx-auto mt-3 grid max-w-sm grid-cols-2 rounded-xl bg-[var(--gamibar-page)] p-1">
+          {(
+            [
+              ["overall", "Whole game"],
+              ["per_question", mode === "connect_dots" ? "Each pair" : "Each question"],
+            ] as const
+          ).map(([nextMode, label]) => (
+            <button
+              key={nextMode}
+              type="button"
+              aria-pressed={timerMode === nextMode}
+              onClick={() => onTimerModeChange(nextMode)}
+              className={cn(
+                "rounded-lg px-3 py-2 text-xs font-bold transition-all",
+                timerMode === nextMode
+                  ? "bg-white text-[#111111] shadow-sm"
+                  : "text-[#737373] hover:text-[#111111]",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <p className="mt-1 text-sm text-[#525252]">
           {openEnded
             ? "Participants play until they finish - no countdown on screen."
-            : `Participants must finish before ${formatTimerLong(displayValue)}.`}
+            : timerMode === "per_question"
+              ? `${mode === "connect_dots" ? "Every pair" : "Every question"} gets a fresh ${formatTimerLong(displayValue)} countdown.`
+              : `Participants must finish before ${formatTimerLong(displayValue)}.`}
         </p>
       </div>
 
@@ -253,7 +293,7 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
           min={bounds.min}
           max={bounds.max}
           step={bounds.step}
-          onChange={(next) => onChange(clampTimer(mode, next))}
+          onChange={(next) => onChange(clampTimer(mode, next, timerMode))}
           style={style}
           openEnded={openEnded}
         />
@@ -272,7 +312,9 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
         <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
           {presets.map((preset) => {
             const active =
-              preset.seconds == null ? value == null : clampTimer(mode, value) === preset.seconds;
+              preset.seconds == null
+                ? value == null
+                : clampTimer(mode, value, timerMode) === preset.seconds;
             return (
               <button
                 key={preset.id}
@@ -294,7 +336,7 @@ export function GameTimerSettings({ mode, value, onChange, className }: GameTime
         {openEnded && suggestedSeconds != null && (
           <button
             type="button"
-            onClick={() => onChange(clampTimer(mode, suggestedSeconds))}
+            onClick={() => onChange(clampTimer(mode, suggestedSeconds, timerMode))}
             className="mt-4 w-full text-center text-xs font-semibold text-[#525252] underline-offset-2 hover:text-[#111111] hover:underline"
           >
             Prefer a countdown? Tap to set a {formatTimerSeconds(suggestedSeconds)} suggested limit.

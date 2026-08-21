@@ -6,8 +6,8 @@ import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
 import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import gameVisualPointPreview from "@/assets/tool-target-hunt.webp";
-import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@/lib/game/session-flow";
-import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@/lib/game/config";
+import { CORE_LIVE_GAME_MODES, type CoreLiveGameMode } from "@shared/game/session-flow";
+import { GAME_CONFIG, GAME_MODE_META, type GameMode } from "@shared/game/config";
 
 export type GameModeCatalogItem = {
   mode: GameMode;

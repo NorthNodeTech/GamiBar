@@ -14,7 +14,13 @@ const pieces = buildPieces(COLS, ROWS, SIZE);
 
 export const TOTAL_PIECES = pieces.length;
 
-export function JigsawBoard({ revealed, imageSrc = defaultJigsawImage }: { revealed: number; imageSrc?: string }) {
+export function JigsawBoard({
+  revealed,
+  imageSrc = defaultJigsawImage,
+}: {
+  revealed: number;
+  imageSrc?: string;
+}) {
   const complete = revealed >= TOTAL_PIECES;
 
   return (
@@ -22,11 +28,22 @@ export function JigsawBoard({ revealed, imageSrc = defaultJigsawImage }: { revea
       <motion.svg
         viewBox={`${-PAD} ${-PAD} ${W + PAD * 2} ${H + PAD * 2}`}
         className="w-full max-w-xl mx-auto"
-        animate={complete ? { filter: "drop-shadow(0 0 26px rgba(250,250,250,0.28))" } : { filter: "drop-shadow(0 0 0 rgba(0,0,0,0))" }}
+        animate={
+          complete
+            ? { filter: "drop-shadow(0 0 26px rgba(250,250,250,0.28))" }
+            : { filter: "drop-shadow(0 0 0 rgba(0,0,0,0))" }
+        }
       >
         <defs>
           <pattern id="jigsaw-img" patternUnits="userSpaceOnUse" width={W} height={H}>
-            <image href={imageSrc} x="0" y="0" width={W} height={H} preserveAspectRatio="xMidYMid slice" />
+            <image
+              href={imageSrc}
+              x="0"
+              y="0"
+              width={W}
+              height={H}
+              preserveAspectRatio="xMidYMid slice"
+            />
           </pattern>
         </defs>
 
@@ -35,7 +52,7 @@ export function JigsawBoard({ revealed, imageSrc = defaultJigsawImage }: { revea
           return (
             <motion.path
               key={i}
-              d={piece.path}
+              d={piece.d}
               fill={isRevealed ? "url(#jigsaw-img)" : "rgba(255,255,255,0.05)"}
               stroke={isRevealed ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)"}
               strokeWidth="1.5"

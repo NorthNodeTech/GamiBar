@@ -59,7 +59,10 @@ export function JigsawPuzzle({
   const gridRef = useRef<HTMLDivElement>(null);
   const lastReport = useRef(-1);
 
-  const locked = useMemo(() => new Set(slots.map((pieceId, i) => (pieceId === i ? i : -1)).filter((i) => i >= 0)), [slots]);
+  const locked = useMemo(
+    () => new Set(slots.map((pieceId, i) => (pieceId === i ? i : -1)).filter((i) => i >= 0)),
+    [slots],
+  );
   const done = locked.size >= total;
 
   useEffect(() => {

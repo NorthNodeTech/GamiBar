@@ -1,5 +1,5 @@
-import type { GameMode } from "@/lib/game/config";
-import type { GamePayload, PollResponseValue, QuizOptionId } from "@/lib/game/types";
+import type { GameMode } from "@shared/game/config";
+import type { GamePayload, PollResponseValue, QuizOptionId } from "@shared/game/types";
 import { apiPost } from "@/lib/api-client";
 
 /** Browser room API. The database work is owned by the Express backend. */
@@ -9,10 +9,6 @@ import { apiPost } from "@/lib/api-client";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function gameAction<T = any>(action: string, data: unknown, auth = true): Promise<T> {
   return apiPost<T>(`/api/game/${action}`, data, auth);
-}
-
-export async function ensureDemoRoomFn() {
-  return gameAction<{ ok: true }>("ensure-demo-room", {}, false);
 }
 
 export async function createRoomFn({
@@ -30,12 +26,8 @@ export async function createRoomFn({
   return gameAction("create-room", data);
 }
 
-export async function joinRoomFn({
-  data,
-}: {
-  data: { code: string; displayName: string; userId?: string | null };
-}) {
-  return gameAction("join-room", data, false);
+export async function joinRoomFn({ data }: { data: { code: string; displayName: string } }) {
+  return gameAction("join-room", data);
 }
 
 export async function reconnectParticipantFn({ data }: { data: { reconnectToken: string } }) {
@@ -131,6 +123,31 @@ export async function submitPollResponsesFn({
   };
 }) {
   return gameAction("submit-poll-responses", data, false);
+}
+
+export async function submitPollQuestionResponseFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    questionId: string;
+    value?: PollResponseValue;
+  };
+}) {
+  return gameAction("submit-poll-question-response", data, false);
+}
+
+export async function expireQuestionTimerFn({
+  data,
+}: {
+  data: {
+    roomId: string;
+    reconnectToken: string;
+    stepId: string;
+  };
+}) {
+  return gameAction("expire-question-timer", data, false);
 }
 
 export async function submitQuizJigsawAnswerFn({

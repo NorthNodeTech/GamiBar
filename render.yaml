@@ -1,0 +1,143 @@
+# GamiBAR production topology: static React frontend + stateless Express API.
+# Durable state and files live in Supabase; Render's filesystem is never used
+# for persistence. Existing services can be imported into one Blueprint from
+# the Render Dashboard before syncing this file.
+services:
+  - type: web
+    name: gamibar-api
+    runtime: node
+    plan: free
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: cd backend && npm ci --include=dev && npm run check
+    startCommand: cd backend && npm run start
+    healthCheckPath: /api/ready
+    maxShutdownDelaySeconds: 40
+    buildFilter:
+      paths:
+        - backend/**
+        - shared/**
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "https://gamibar.com,https://www.gamibar.com,https://gamibar.onrender.com"
+      - key: MAX_IN_FLIGHT_REQUESTS
+        value: "100"
+      - key: API_RATE_LIMIT_PER_15_MINUTES
+        value: "200000"
+      - key: MAX_CONCURRENT_ROOM_CREATIONS
+        value: "4"
+      - key: MAX_CONCURRENT_UPLOADS
+        value: "2"
+      - key: REQUEST_TIMEOUT_MS
+        value: "180000"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SESSION_FILES_CRON_SECRET
+        generateValue: true
+      - key: AI_PROVIDER_ORDER
+        value: "gemini,openrouter,nvidia"
+      - key: AI_PROVIDER_TIMEOUT_MS
+        value: "30000"
+      - key: AI_GENERATION_TIMEOUT_MS
+        value: "85000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "nvidia/nemotron-3-super-120b-a12b:free"
+      - key: OPENROUTER_SITE_URL
+        value: "https://gamibar.com"
+      - key: OPENROUTER_APP_NAME
+        value: GamiBAR
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_MODEL
+        value: "nvidia/nemotron-3-super-120b-a12b"
+      - key: NVIDIA_BASE_URL
+        value: "https://integrate.api.nvidia.com/v1"
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_PLAN_MONTHLY_ID
+        sync: false
+      - key: RAZORPAY_PLAN_YEARLY_ID
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        # Must exactly match the secret entered in Razorpay Dashboard.
+        sync: false
+      - key: RAZORPAY_CURRENCY
+        value: INR
+      - key: RAZORPAY_GST_RATE_BPS
+        value: "1800"
+
+  - type: web
+    name: gamibar
+    runtime: static
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: cd frontend && npm ci --include=dev && npm run lint && npm run typecheck && npm run build
+    staticPublishPath: ./frontend/dist
+    buildFilter:
+      paths:
+        - frontend/**
+        - shared/**
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(self), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com"), usb=()
+      - path: /*
+        name: Content-Security-Policy
+        value: >-
+          default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://gamibar-i2zr.onrender.com https://twluyjazkesmrnvlcvtd.supabase.co wss://twluyjazkesmrnvlcvtd.supabase.co https://*.razorpay.com https://www.google-analytics.com https://*.google-analytics.com https://www.clarity.ms https://*.clarity.ms; worker-src 'self' blob:; manifest-src 'self'; frame-src 'self' https://accounts.google.com https://*.razorpay.com
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /fonts/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: gamibar-api
+          type: web
+          property: host
+      - key: VITE_SUPABASE_URL
+        value: "https://twluyjazkesmrnvlcvtd.supabase.co"
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_PUBLIC_APP_URL
+        value: "https://gamibar.com"
+      # Optional analytics/search verification values can be added in the
+      # Render Dashboard without changing the application build.

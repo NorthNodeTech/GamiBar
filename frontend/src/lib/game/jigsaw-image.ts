@@ -1,5 +1,5 @@
-import { GAME_CONFIG } from "@/lib/game/config";
-import { validateJigsawFile } from "@/lib/game/validation";
+import { GAME_CONFIG } from "@shared/game/config";
+import { validateJigsawFile } from "@shared/game/validation";
 
 /** Allow tiny rounding differences from camera exports. */
 const SQUARE_ASPECT_TOLERANCE = 0.02;
@@ -41,18 +41,10 @@ function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   });
 }
 
-function outputMimeForFile(mime: string): string {
-  if (mime === "image/png") return "image/png";
-  if (mime === "image/webp") return "image/webp";
-  return "image/jpeg";
-}
+const DELIVERY_MIME = "image/webp";
 
 /** Center-crop to square and optionally scale to `outputSize`. */
-function renderSquareJigsawImage(
-  img: HTMLImageElement,
-  outputSize: number,
-  mime: string,
-): string {
+function renderSquareJigsawImage(img: HTMLImageElement, outputSize: number): string {
   const sourceSize = Math.min(img.naturalWidth, img.naturalHeight);
   const sx = Math.floor((img.naturalWidth - sourceSize) / 2);
   const sy = Math.floor((img.naturalHeight - sourceSize) / 2);
@@ -65,8 +57,7 @@ function renderSquareJigsawImage(
 
   ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, outputSize, outputSize);
 
-  const outputMime = outputMimeForFile(mime);
-  return canvas.toDataURL(outputMime, outputMime === "image/jpeg" ? 0.92 : undefined);
+  return canvas.toDataURL(DELIVERY_MIME, 0.86);
 }
 
 /**
@@ -87,7 +78,7 @@ export async function prepareJigsawImage(file: File): Promise<JigsawImagePrepare
     };
   }
 
-  const { minDimension, maxDimension } = GAME_CONFIG.jigsaw;
+  const { minDimension, deliveryMaxDimension } = GAME_CONFIG.jigsaw;
   const shortSide = Math.min(img.naturalWidth, img.naturalHeight);
   if (shortSide < minDimension) {
     return {
@@ -97,15 +88,14 @@ export async function prepareJigsawImage(file: File): Promise<JigsawImagePrepare
   }
 
   const cropped = !isSquareAspectRatio(img.naturalWidth, img.naturalHeight);
-  const outputSize = Math.min(shortSide, maxDimension);
+  const outputSize = Math.min(shortSide, deliveryMaxDimension);
 
   try {
-    const dataUrl = renderSquareJigsawImage(img, outputSize, file.type);
-    const mime = outputMimeForFile(file.type);
+    const dataUrl = renderSquareJigsawImage(img, outputSize);
     return {
       ok: true,
       dataUrl,
-      mime,
+      mime: DELIVERY_MIME,
       cropped,
       width: outputSize,
       height: outputSize,

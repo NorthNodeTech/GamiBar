@@ -1,9 +1,6 @@
 import type { MutableRefObject, ReactNode } from "react";
 
-import {
-  jigsawSkeletonBoardWidthClass,
-  jigsawSkeletonSlotGap,
-} from "@/lib/game/jigsaw-grid";
+import { jigsawSkeletonBoardWidthClass, jigsawSkeletonSlotGap } from "@shared/game/jigsaw-grid";
 import { cn } from "@/lib/utils";
 
 type JigsawMissionSkeletonBoardProps = {

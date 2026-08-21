@@ -25,17 +25,25 @@ export function SharedFilesDownloadPage({ shareSlug }: SharedFilesDownloadPagePr
   const [error, setError] = useState<string | null>(null);
   const [autoStarted, setAutoStarted] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setSummary(await fetchSharedSessionFiles(shareSlug));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "This file share link is not active.");
-    } finally {
-      setLoading(false);
-    }
-  }, [shareSlug]);
+  const load = useCallback(
+    async (background = false) => {
+      if (!background) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        setSummary(await fetchSharedSessionFiles(shareSlug));
+        setError(null);
+      } catch (err) {
+        if (!background) {
+          setError(err instanceof Error ? err.message : "This file share link is not active.");
+        }
+      } finally {
+        if (!background) setLoading(false);
+      }
+    },
+    [shareSlug],
+  );
 
   useEffect(() => {
     void load();
@@ -43,9 +51,7 @@ export function SharedFilesDownloadPage({ shareSlug }: SharedFilesDownloadPagePr
 
   useEffect(() => {
     if (!summary?.shareSlug) return undefined;
-    return subscribeResourceDropChanges({ shareSlug: summary.shareSlug }, () => {
-      void load();
-    });
+    return subscribeResourceDropChanges({ shareSlug: summary.shareSlug }, () => load(true));
   }, [load, summary?.shareSlug]);
 
   const download = useCallback(
@@ -82,7 +88,7 @@ export function SharedFilesDownloadPage({ shareSlug }: SharedFilesDownloadPagePr
       <PageErrorState
         title="Files unavailable"
         message={error ?? "This file share link is not active."}
-        onRetry={load}
+        onRetry={() => void load()}
         retryLabel="Check again"
       />
     );

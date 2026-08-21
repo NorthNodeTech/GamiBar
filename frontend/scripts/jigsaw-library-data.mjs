@@ -3,14 +3,7 @@ export const IMAGES_PER_SUBTOPIC = 2;
 
 export const JIGSAW_LIBRARY_SIZE = 768;
 
-function subject({
-  category,
-  subtopic,
-  title,
-  illustrationType,
-  keywords,
-  description,
-}) {
+function subject({ category, subtopic, title, illustrationType, keywords, description }) {
   const titleSlug = title
     .toLowerCase()
     .replace(/['’]/g, "")
@@ -58,7 +51,10 @@ const PHOTO_FILES = {
   "earth-globe": ["File:Globe.agr.jpg", "File:Political Globe.jpg"],
   "earth-from-space": ["File:The Blue Marble.jpg", "File:NASA-Apollo8-Dec24-Earthrise.jpg"],
   "taj-mahal": ["File:Taj Mahal in March 2004.jpg"],
-  "eiffel-tower": ["File:Tour Eiffel Wikimedia Commons.jpg", "File:Eiffel Tower from the Tour Montparnasse 3, Paris May 2008.jpg"],
+  "eiffel-tower": [
+    "File:Tour Eiffel Wikimedia Commons.jpg",
+    "File:Eiffel Tower from the Tour Montparnasse 3, Paris May 2008.jpg",
+  ],
   saturn: ["File:Saturn during Equinox.jpg"],
   "planet-earth": ["File:The Blue Marble.jpg"],
   "african-lion": ["File:Lion waiting in Namibia.jpg"],
@@ -138,32 +134,61 @@ const PHOTO_QUERIES = {
   "steam-engine": ["steam locomotive photograph", "steam engine train photograph"],
   "computer-components": ["computer motherboard photograph", "PC components photograph"],
   "computer-lab": ["computer laboratory classroom photograph", "school computer lab photograph"],
-  "robotic-arm": ["industrial robot arm factory photograph", "robotic arm manufacturing photograph"],
+  "robotic-arm": [
+    "industrial robot arm factory photograph",
+    "robotic arm manufacturing photograph",
+  ],
   "humanoid-robot": ["humanoid robot photograph", "educational robot photograph"],
   "neural-network": ["data center server room photograph", "fiber optic network lights photograph"],
-  "human-ai": ["person using computer laboratory photograph", "human robot collaboration photograph"],
+  "human-ai": [
+    "person using computer laboratory photograph",
+    "human robot collaboration photograph",
+  ],
   "circuit-board": ["circuit board closeup photograph", "printed circuit board photograph"],
   microcontroller: ["microcontroller Arduino photograph", "electronics sensors board photograph"],
   "global-internet": ["fiber optic cables photograph", "network cables data center photograph"],
   "connected-devices": ["smartphone laptop tablet photograph", "connected devices desk photograph"],
   "human-heart": ["anatomical heart model photograph", "human heart specimen photograph"],
-  "human-lungs": ["human lungs anatomy photograph", "respiratory system model photograph", "lungs chest xray photograph"],
+  "human-lungs": [
+    "human lungs anatomy photograph",
+    "respiratory system model photograph",
+    "lungs chest xray photograph",
+  ],
   "human-skeleton": ["human skeleton model photograph", "anatomical skeleton classroom photograph"],
   "hand-bones": ["hand skeleton bones photograph", "human hand bones model photograph"],
   "human-brain": ["human brain model photograph", "anatomical brain photograph"],
   "brain-neurons": ["neuron microscope photograph", "nerve cells photomicrograph"],
   "cell-structure": ["cell organelle microscope photograph", "eukaryotic cell micrograph"],
   "blood-cells": ["red blood cells microscope photograph", "blood cells photomicrograph"],
-  "digestive-system": ["digestive system anatomical model photograph", "human digestive model photograph"],
-  "circulatory-system": ["circulatory system model photograph", "blood vessels anatomy photograph", "human heart circulation model"],
-  "watercolor-landscape": ["mountain lake landscape photograph", "scenic valley landscape photograph"],
+  "digestive-system": [
+    "digestive system anatomical model photograph",
+    "human digestive model photograph",
+  ],
+  "circulatory-system": [
+    "circulatory system model photograph",
+    "blood vessels anatomy photograph",
+    "human heart circulation model",
+  ],
+  "watercolor-landscape": [
+    "mountain lake landscape photograph",
+    "scenic valley landscape photograph",
+  ],
   "abstract-color": ["colorful street mural photograph", "colorful architecture photograph"],
-  "musical-instruments": ["violin piano instruments photograph", "orchestra instruments photograph"],
+  "musical-instruments": [
+    "violin piano instruments photograph",
+    "orchestra instruments photograph",
+  ],
   "classical-music": ["orchestra concert photograph", "symphony orchestra photograph"],
   "indian-festival": ["Diwali lamps photograph", "Indian festival lights photograph"],
   "lantern-festival": ["lantern festival photograph", "sky lanterns night photograph"],
-  "indian-architecture": ["Indian temple architecture photograph", "Jaipur palace architecture photograph"],
-  "european-architecture": ["classical European architecture photograph", "European colonnade building photograph"],
+  "indian-architecture": [
+    "Indian temple architecture photograph",
+    "Jaipur palace architecture photograph",
+  ],
+  "european-architecture": [
+    "classical European architecture photograph",
+    "European colonnade building photograph",
+  ],
   "traditional-crafts": ["pottery workshop photograph", "traditional crafts pottery photograph"],
   "cultural-dance": ["traditional dance performance photograph", "folk dance costume photograph"],
   "football-match": ["soccer football match photograph", "football players stadium photograph"],

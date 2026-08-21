@@ -12,7 +12,12 @@ type RoomSyncArgs = {
   reconnectToken?: string;
 };
 
-const REFETCH_DEBOUNCE_MS = 500;
+const SIGNAL_REFETCH_THROTTLE_MS = 400;
+// Broadcast invalidations and reconnect/visibility listeners do the immediate
+// synchronization. This slower fallback limits full snapshot reads in large
+// classes while still recovering if a client misses an invalidation.
+const STUDENT_RECONCILIATION_MS = 300_000;
+const HOST_RECONCILIATION_MS = 5_000;
 
 export function useRoomSync(args: RoomSyncArgs) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -77,20 +82,22 @@ export function useRoomSync(args: RoomSyncArgs) {
   ]);
 
   const resolvedRoomId = snapshot?.ok ? snapshot.room.id : args.roomId;
-  const resolvedCode = snapshot?.ok ? snapshot.room.code : args.code;
-
   useEffect(() => {
-    if (!resolvedRoomId && !resolvedCode) return;
+    if (!resolvedRoomId) return;
 
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribeRoomSyncSignals(
-      { roomId: resolvedRoomId, code: resolvedCode },
+      { roomId: resolvedRoomId, includeHostSignals: Boolean(args.authorToken) },
       {
         onSignal: () => {
-          clearTimeout(debounceTimer);
+          if (debounceTimer) return;
+          const delayMs = args.authorToken
+            ? 100
+            : SIGNAL_REFETCH_THROTTLE_MS + Math.floor(Math.random() * 1_000);
           debounceTimer = setTimeout(() => {
+            debounceTimer = undefined;
             void fetchSnapshot();
-          }, REFETCH_DEBOUNCE_MS);
+          }, delayMs);
         },
         onStatus: (status) => {
           const previous = realtimeStatusRef.current;
@@ -108,7 +115,31 @@ export function useRoomSync(args: RoomSyncArgs) {
       clearTimeout(debounceTimer);
       unsubscribe();
     };
-  }, [resolvedRoomId, resolvedCode, fetchSnapshot]);
+  }, [resolvedRoomId, args.authorToken, fetchSnapshot]);
+
+  // Broadcast is an invalidation hint, not the source of truth. A slow fallback
+  // reconciliation covers sleeping tabs and the rare signal missed during reconnect.
+  useEffect(() => {
+    if (!resolvedRoomId) return;
+    const intervalMs = args.authorToken ? HOST_RECONCILIATION_MS : STUDENT_RECONCILIATION_MS;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
+    const schedule = () => {
+      const jitteredInterval = intervalMs * (0.8 + Math.random() * 0.4);
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        if (document.visibilityState === "visible" && navigator.onLine) void fetchSnapshot();
+        schedule();
+      }, jitteredInterval);
+    };
+
+    schedule();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [resolvedRoomId, args.authorToken, fetchSnapshot]);
 
   // Re-sync after browser-level interruptions that can drop websocket events.
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 
-import type { ConnectDotsLayoutAssessment } from "@/lib/game/connect-dots-solvability";
+import type { ConnectDotsLayoutAssessment } from "@shared/game/connect-dots-solvability";
 import { cn } from "@/lib/utils";
 
 export function ConnectDotsLayoutWarning({

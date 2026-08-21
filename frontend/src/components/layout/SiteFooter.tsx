@@ -1,8 +1,8 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 
 import northNodeLogo from "@/assets/northnode-optimized.webp";
 import { Logo } from "@/components/layout/Logo";
-import type { CoreLiveGameMode } from "@/lib/game/session-flow";
+import type { CoreLiveGameMode } from "@shared/game/session-flow";
 
 type FooterItem = {
   label: string;
@@ -14,12 +14,20 @@ const productItems: FooterItem[] = [
   { label: "Tools", to: "/games" },
   { label: "Quiz Battle", to: "/games/quiz" },
   { label: "Join with code", to: "/join" },
-  { label: "Leaderboard", to: "/leaderboard" },
+  { label: "Pricing", to: "/pricing" },
 ];
 
 const accountItems: FooterItem[] = [
   { label: "Create room", to: "/author/create" },
   { label: "Join room", to: "/join" },
+  { label: "Billing", to: "/author/billing" },
+];
+
+const legalItems: FooterItem[] = [
+  { label: "Terms", to: "/terms" },
+  { label: "Privacy", to: "/privacy" },
+  { label: "Refunds & cancellation", to: "/refund-policy" },
+  { label: "Contact", to: "/contact" },
 ];
 
 const activityItems: FooterItem[] = [
@@ -32,7 +40,7 @@ const activityItems: FooterItem[] = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-[#E5E7EB] bg-[#111111] text-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 md:grid-cols-[1.35fr_1fr_1fr_1fr_1fr] lg:px-8">
         <div>
           <div className="flex items-center gap-3">
             <Logo size={52} />
@@ -69,6 +77,7 @@ export function SiteFooter() {
         <FooterCol title="Product" items={productItems} />
         <FooterCol title="Account" items={accountItems} />
         <FooterCol title="Activities" items={activityItems} />
+        <FooterCol title="Legal" items={legalItems} />
       </div>
 
       <div className="border-t border-white/10">

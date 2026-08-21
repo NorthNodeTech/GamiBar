@@ -34,7 +34,12 @@ export function GameCodeInput({
   };
 
   return (
-    <div className={cn("mx-auto flex w-full max-w-[min(100%,280px)] gap-1 sm:max-w-sm sm:gap-2", className)}>
+    <div
+      className={cn(
+        "mx-auto flex w-full max-w-[min(100%,280px)] gap-1 sm:max-w-sm sm:gap-2",
+        className,
+      )}
+    >
       {digits.map((digit, index) => (
         <input
           key={index}

@@ -1,5 +1,5 @@
-import { GAME_CONFIG } from "@/lib/game/config";
-import { normalizeRoomCode, isValidRoomCodeFormat } from "@/lib/game/room-code";
+import { GAME_CONFIG } from "@shared/game/config";
+import { normalizeRoomCode, isValidRoomCodeFormat } from "@shared/game/room-code";
 
 function joinOrigin(): string {
   const configured = import.meta.env.VITE_PUBLIC_APP_URL?.replace(/\/$/, "");

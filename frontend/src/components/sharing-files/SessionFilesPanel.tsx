@@ -1,5 +1,5 @@
 import { Check, Copy, Download, FileText, Link2, Loader2, QrCode, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
 
@@ -44,30 +44,33 @@ export function SessionFilesPanel({ roomId, authorToken, className }: SessionFil
     [summary?.shareSlug],
   );
 
-  const refresh = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      setSummary(await fetchTeacherSessionFiles(roomId, authorToken));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load shared files.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refresh = useCallback(
+    async (background = false) => {
+      if (!background) {
+        setError(null);
+        setLoading(true);
+      }
+      try {
+        setSummary(await fetchTeacherSessionFiles(roomId, authorToken));
+        setError(null);
+      } catch (err) {
+        if (!background) {
+          setError(err instanceof Error ? err.message : "Could not load shared files.");
+        }
+      } finally {
+        if (!background) setLoading(false);
+      }
+    },
+    [authorToken, roomId],
+  );
 
   useEffect(() => {
     void refresh();
-    // room/token changes mean this is a different teacher capability.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, authorToken]);
+  }, [refresh]);
 
   useEffect(() => {
-    return subscribeResourceDropChanges({ roomId }, () => {
-      void refresh();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, authorToken]);
+    return subscribeResourceDropChanges({ roomId }, () => refresh(true));
+  }, [refresh, roomId]);
 
   const upload = async () => {
     if (stagedFiles.length === 0) return;
@@ -148,7 +151,7 @@ export function SessionFilesPanel({ roomId, authorToken, className }: SessionFil
           <InlineErrorBanner
             className="mt-4"
             message={error}
-            onRetry={refresh}
+            onRetry={() => void refresh()}
             onDismiss={() => setError(null)}
           />
         ) : null}

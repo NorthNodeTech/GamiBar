@@ -25,10 +25,7 @@ export function PageLoader({
         className,
       )}
     >
-      <Loader2
-        className="size-8 animate-spin text-[var(--gamibar-brand)]"
-        aria-hidden="true"
-      />
+      <Loader2 className="size-8 animate-spin text-[var(--gamibar-brand)]" aria-hidden="true" />
       <p className="mt-4 text-sm font-medium text-[var(--foreground)]">{message}</p>
       {description ? (
         <p className="mt-1 max-w-sm text-xs text-[var(--gamibar-text-tertiary)]">{description}</p>

@@ -1,4 +1,4 @@
-import { useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@/lib/navigation";
 import { useLayoutEffect } from "react";
 
 /**

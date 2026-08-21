@@ -145,11 +145,21 @@ function categoryDressing(subject) {
   }
   if (subject.category === "space") {
     extras.push(stars(40, `${subject.slug}-more`, "#fff6c8"));
-    extras.push(circle(80 + rand() * 80, 90 + rand() * 60, 6 + rand() * 8, "#ffd166", 'opacity="0.7"'));
+    extras.push(
+      circle(80 + rand() * 80, 90 + rand() * 60, 6 + rand() * 8, "#ffd166", 'opacity="0.7"'),
+    );
   }
   if (subject.category === "science" || subject.category === "technology") {
     for (let i = 0; i < 8; i += 1) {
-      extras.push(circle(40 + rand() * 680, 40 + rand() * 160, 4 + rand() * 8, ["#4cc9f0", "#c77dff", "#ffd166"][i % 3], 'opacity="0.35"'));
+      extras.push(
+        circle(
+          40 + rand() * 680,
+          40 + rand() * 160,
+          4 + rand() * 8,
+          ["#4cc9f0", "#c77dff", "#ffd166"][i % 3],
+          'opacity="0.35"',
+        ),
+      );
     }
   }
   if (subject.category === "animals") {
@@ -383,15 +393,17 @@ const RENDERERS = {
         ["100%", "#3c096c"],
       ]),
       `${rect(0, 0, SIZE, SIZE, "url(#dnaBg)")}
-       ${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
-         const y = 80 + i * 70;
-         const swing = Math.sin(i * 0.8) * 90;
-         const x1 = 300 + swing;
-         const x2 = 468 - swing;
-         const colors = ["#ff6b6b", "#4cc9f0", "#80ed99", "#ffd166"];
-         return `${circle(x1, y, 18, "#c77dff")}${circle(x2, y, 18, "#7b2cbf")}
+       ${[0, 1, 2, 3, 4, 5, 6, 7, 8]
+         .map((i) => {
+           const y = 80 + i * 70;
+           const swing = Math.sin(i * 0.8) * 90;
+           const x1 = 300 + swing;
+           const x2 = 468 - swing;
+           const colors = ["#ff6b6b", "#4cc9f0", "#80ed99", "#ffd166"];
+           return `${circle(x1, y, 18, "#c77dff")}${circle(x2, y, 18, "#7b2cbf")}
            ${rect(Math.min(x1, x2), y - 6, Math.abs(x2 - x1), 12, colors[i % 4])}`;
-       }).join("")}`,
+         })
+         .join("")}`,
     ),
 
   "lab-glassware": () =>
@@ -433,12 +445,14 @@ const RENDERERS = {
        ${rect(140, 160, 488, 28, "#3d405b")}
        ${rect(140, 160, 28, 360, "#3d405b")}${rect(600, 160, 28, 360, "#3d405b")}
        ${rect(120, 520, 528, 36, "#3d405b")}
-       ${[0, 1, 2, 3, 4].map((i) => {
-         const x = 230 + i * 70;
-         const lift = i === 0 ? -50 : 0;
-         return `<line x1="${x}" y1="188" x2="${x + (i === 0 ? -40 : 0)}" y2="${380 + lift}" stroke="#222" stroke-width="3"/>
+       ${[0, 1, 2, 3, 4]
+         .map((i) => {
+           const x = 230 + i * 70;
+           const lift = i === 0 ? -50 : 0;
+           return `<line x1="${x}" y1="188" x2="${x + (i === 0 ? -40 : 0)}" y2="${380 + lift}" stroke="#222" stroke-width="3"/>
            ${circle(x + (i === 0 ? -40 : 0), 400 + lift, 26, "#adb5bd")}`;
-       }).join("")}`,
+         })
+         .join("")}`,
     ),
 
   magnetism: () =>
@@ -478,9 +492,15 @@ const RENDERERS = {
       `${rect(0, 0, SIZE, SIZE, "url(#pbg)")}
        ${rect(40, 360, 220, 16, "#f8f9fa")}
        ${poly("300,250 500,384 300,520", "#caf0f8", 'opacity="0.85"')}
-       ${["#e63946", "#f4a261", "#ffd166", "#80ed99", "#4cc9f0", "#7b2cbf"].map((color, i) =>
-         path(`M500 360 L720 ${250 + i * 28} L720 ${268 + i * 28} L500 390 Z`, color, 'opacity="0.9"'),
-       ).join("")}`,
+       ${["#e63946", "#f4a261", "#ffd166", "#80ed99", "#4cc9f0", "#7b2cbf"]
+         .map((color, i) =>
+           path(
+             `M500 360 L720 ${250 + i * 28} L720 ${268 + i * 28} L500 390 Z`,
+             color,
+             'opacity="0.9"',
+           ),
+         )
+         .join("")}`,
     ),
 
   "scientist-lab": () =>
@@ -553,14 +573,16 @@ const RENDERERS = {
         ["100%", "#80ed99"],
       ]),
       `${rect(0, 0, SIZE, SIZE, "url(#pg)")}
-       ${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
-         const a = -70 + i * 17;
-         const rad = (a * Math.PI) / 180;
-         const x = 384 + Math.sin(rad) * 230;
-         const y = 430 - Math.cos(rad) * 230;
-         return `${path(`M384 460 Q${x} ${y + 40} ${x} ${y}`, "none", 'stroke="#2d6a4f" stroke-width="8" fill="none"')}
+       ${[0, 1, 2, 3, 4, 5, 6, 7, 8]
+         .map((i) => {
+           const a = -70 + i * 17;
+           const rad = (a * Math.PI) / 180;
+           const x = 384 + Math.sin(rad) * 230;
+           const y = 430 - Math.cos(rad) * 230;
+           return `${path(`M384 460 Q${x} ${y + 40} ${x} ${y}`, "none", 'stroke="#2d6a4f" stroke-width="8" fill="none"')}
            ${ellipse(x, y, 22, 30, "#4cc9f0")}${circle(x, y, 8, "#ffd166")}`;
-       }).join("")}
+         })
+         .join("")}
        ${ellipse(384, 500, 40, 70, "#1b4332")}
        ${circle(384, 430, 28, "#1b4332")}${rect(370, 560, 10, 50, "#3d405b")}${rect(390, 560, 10, 50, "#3d405b")}`,
     ),
@@ -572,7 +594,10 @@ const RENDERERS = {
         ["100%", "#caf0f8"],
       ]),
       `${rect(0, 0, SIZE, SIZE, "url(#eg)")}
-       ${mountains([["0,520 200,280 400,520", "#8d99ae"], ["300,520 520,240 768,520", "#6c757d"]])}
+       ${mountains([
+         ["0,520 200,280 400,520", "#8d99ae"],
+         ["300,520 520,240 768,520", "#6c757d"],
+       ])}
        ${rect(0, 520, SIZE, 248, "#95d5b2")}
        ${path("M180 360 Q384 220 600 340 Q384 300 180 360 Z", "#3d405b")}
        ${circle(400, 300, 28, "#3d405b")}${path("M420 300 L460 290 L430 320 Z", "#f4a261")}`,
@@ -726,11 +751,13 @@ const RENDERERS = {
       `${rect(0, 0, SIZE, SIZE, "url(#sf)")}
        ${ellipse(600, 120, 46, 46, "#ffd166")}
        ${rect(0, 500, SIZE, 268, "#40916c")}
-       ${[160, 280, 400, 520, 640].map((x, i) => {
-         const y = 430 - (i % 2) * 30;
-         return `${rect(x - 6, y, 12, 120, "#2d6a4f")}
+       ${[160, 280, 400, 520, 640]
+         .map((x, i) => {
+           const y = 430 - (i % 2) * 30;
+           return `${rect(x - 6, y, 12, 120, "#2d6a4f")}
            ${circle(x, y, 40, "#ffd166")}${circle(x, y, 16, "#6b4226")}`;
-       }).join("")}`,
+         })
+         .join("")}`,
     ),
 
   "lotus-flowers": () =>
@@ -766,9 +793,15 @@ const RENDERERS = {
         ["100%", "#bde0fe"],
       ]),
       `${rect(0, 0, SIZE, SIZE, "url(#rb)")}
-       ${["#e63946", "#f4a261", "#ffd166", "#80ed99", "#4cc9f0", "#7b2cbf"].map((color, i) =>
-         path("M40 520 A360 360 0 0 1 728 520", "none", `stroke="${color}" stroke-width="16" fill="none" transform="translate(0 ${i * 16})"`),
-       ).join("")}
+       ${["#e63946", "#f4a261", "#ffd166", "#80ed99", "#4cc9f0", "#7b2cbf"]
+         .map((color, i) =>
+           path(
+             "M40 520 A360 360 0 0 1 728 520",
+             "none",
+             `stroke="${color}" stroke-width="16" fill="none" transform="translate(0 ${i * 16})"`,
+           ),
+         )
+         .join("")}
        ${rect(0, 540, SIZE, 228, "#52b788")}${tree(140, 500, 1)}${tree(620, 510, 0.9)}
        ${ellipse(600, 140, 36, 36, "#ffe66d")}`,
     ),
@@ -847,10 +880,13 @@ const RENDERERS = {
       "",
       `${rect(0, 0, SIZE, SIZE, "#0b132b")}${stars(50, "orbits")}
        ${circle(384, 384, 36, "#ffd166")}
-       ${[70, 110, 150, 200, 250].map((r, i) =>
-         `${ellipse(384, 384, r, r * 0.62, "none", 'stroke="#90e0ef" stroke-width="2" fill="none" opacity="0.45"')}
+       ${[70, 110, 150, 200, 250]
+         .map(
+           (r, i) =>
+             `${ellipse(384, 384, r, r * 0.62, "none", 'stroke="#90e0ef" stroke-width="2" fill="none" opacity="0.45"')}
           ${circle(384 + r, 384, 8 + i, ["#e76f51", "#f4a261", "#4cc9f0", "#e63946", "#d4a373"][i])}`,
-       ).join("")}`,
+         )
+         .join("")}`,
     ),
 
   "spiral-galaxy": () =>
@@ -1133,12 +1169,27 @@ const RENDERERS = {
         ["100%", "#10002b"],
       ]),
       `${rect(0, 0, SIZE, SIZE, "url(#nn)")}
-       ${[[180, 200], [180, 384], [180, 560], [384, 160], [384, 300], [384, 468], [384, 600], [580, 240], [580, 400], [580, 540]]
-         .map(([x, y], i, arr) =>
-           arr
-             .filter((_, j) => Math.abs(j - i) < 4)
-             .map(([x2, y2]) => `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#90e0ef" stroke-width="3" opacity="0.35"/>`)
-             .join("") + circle(x, y, 16, ["#4cc9f0", "#c77dff", "#ffd166", "#80ed99"][i % 4]),
+       ${[
+         [180, 200],
+         [180, 384],
+         [180, 560],
+         [384, 160],
+         [384, 300],
+         [384, 468],
+         [384, 600],
+         [580, 240],
+         [580, 400],
+         [580, 540],
+       ]
+         .map(
+           ([x, y], i, arr) =>
+             arr
+               .filter((_, j) => Math.abs(j - i) < 4)
+               .map(
+                 ([x2, y2]) =>
+                   `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#90e0ef" stroke-width="3" opacity="0.35"/>`,
+               )
+               .join("") + circle(x, y, 16, ["#4cc9f0", "#c77dff", "#ffd166", "#80ed99"][i % 4]),
          )
          .join("")}`,
     ),
@@ -1281,10 +1332,22 @@ const RENDERERS = {
       ]),
       `${rect(0, 0, SIZE, SIZE, "url(#bn)")}
        ${ellipse(384, 384, 210, 170, "#ffb3c6", 'opacity="0.25"')}
-       ${[[300, 300], [420, 280], [500, 380], [400, 480], [280, 430], [360, 360]]
-         .map(([x, y], i, arr) =>
-           arr.map(([x2, y2]) => `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#c77dff" stroke-width="3" opacity="0.45"/>`).join("") +
-           circle(x, y, 12, "#ffd166"),
+       ${[
+         [300, 300],
+         [420, 280],
+         [500, 380],
+         [400, 480],
+         [280, 430],
+         [360, 360],
+       ]
+         .map(
+           ([x, y], i, arr) =>
+             arr
+               .map(
+                 ([x2, y2]) =>
+                   `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#c77dff" stroke-width="3" opacity="0.45"/>`,
+               )
+               .join("") + circle(x, y, 12, "#ffd166"),
          )
          .join("")}`,
     ),

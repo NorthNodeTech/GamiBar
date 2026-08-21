@@ -1,12 +1,12 @@
 import { Medal, Trophy } from "lucide-react";
 
-import type { GameMode } from "@/lib/game/config";
+import type { GameMode } from "@shared/game/config";
 import {
   formatLeaderboardPerformance,
   formatLeaderboardTime,
   leaderboardRankingHint,
-} from "@/lib/game/leaderboard-display";
-import type { LeaderboardRow } from "@/lib/game/types";
+} from "@shared/game/leaderboard-display";
+import type { LeaderboardRow } from "@shared/game/types";
 import { cn } from "@/lib/utils";
 
 export function UnifiedLeaderboard({

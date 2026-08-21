@@ -32,8 +32,11 @@ export function AuthorWizardSteps({
                 className={cn(
                   "grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-bold sm:size-8",
                   done && "bg-[var(--gamibar-brand)] text-white",
-                  active && "bg-[var(--foreground)] text-[var(--background)] ring-2 ring-[var(--gamibar-brand)]/20 sm:ring-4",
-                  !done && !active && "border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--muted-foreground)]",
+                  active &&
+                    "bg-[var(--foreground)] text-[var(--background)] ring-2 ring-[var(--gamibar-brand)]/20 sm:ring-4",
+                  !done &&
+                    !active &&
+                    "border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--muted-foreground)]",
                 )}
               >
                 {done ? "✓" : index + 1}
@@ -41,7 +44,11 @@ export function AuthorWizardSteps({
               <span
                 className={cn(
                   "max-w-[4.5rem] truncate text-center text-[10px] font-semibold sm:max-w-none sm:text-xs",
-                  active ? "text-[var(--foreground)]" : done ? "text-[var(--gamibar-brand)]" : "text-[var(--muted-foreground)]",
+                  active
+                    ? "text-[var(--foreground)]"
+                    : done
+                      ? "text-[var(--gamibar-brand)]"
+                      : "text-[var(--muted-foreground)]",
                 )}
               >
                 {compact ? step.short : step.label}

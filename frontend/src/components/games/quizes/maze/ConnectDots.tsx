@@ -10,7 +10,7 @@ import {
   type ConnectDotsPublicBoard,
   type ConnectDotsSolution,
   type PathMap,
-} from "@/lib/connect-dots";
+} from "@shared/game/connect-dots";
 import { cn } from "@/lib/utils";
 
 type ConnectDotsProps = {
@@ -86,7 +86,11 @@ function cellCenter(cell: Cell, cellSize: number) {
   };
 }
 
-function pathOverlapsOccupied(path: Cell[], occupied: Map<string, string>, pairId: string): boolean {
+function pathOverlapsOccupied(
+  path: Cell[],
+  occupied: Map<string, string>,
+  pairId: string,
+): boolean {
   for (const cell of path) {
     const owner = occupied.get(keyOf(cell));
     if (owner && owner !== pairId) return true;
@@ -597,7 +601,8 @@ export function ConnectDots({
               const fontSize = labelFontSize(label, cellSize);
               const isLocked = lockedPairIds.has(pair.id);
               const isReject = rejectFlash === pair.id;
-              const isLinkSource = linkFrom?.pairId === pair.id && linkFrom.side === (idx === 0 ? "a" : "b");
+              const isLinkSource =
+                linkFrom?.pairId === pair.id && linkFrom.side === (idx === 0 ? "a" : "b");
 
               return (
                 <g

@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /author/
 Disallow: /author
+Disallow: /author/billing
 Disallow: /dashboard
 Disallow: /forgot-password
 Disallow: /join/lobby

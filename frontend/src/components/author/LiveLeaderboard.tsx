@@ -1,6 +1,6 @@
 import { Crown, Medal, Trophy } from "lucide-react";
 
-import { formatDuration } from "@/lib/game/ranking";
+import { formatDuration } from "@shared/game/ranking";
 import { cn } from "@/lib/utils";
 
 type LeaderboardRow = {

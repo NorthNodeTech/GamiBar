@@ -1,22 +1,15 @@
 import { supabaseGame as supabase } from "@/lib/supabase/client";
-import { normalizeRoomCode } from "@/lib/game/room-code";
 
 export type RealtimeConnectionStatus = "connecting" | "connected" | "disconnected";
 
 type RoomSyncFilters = {
   roomId?: string;
-  code?: string;
+  includeHostSignals?: boolean;
 };
 
-const ROOM_CHILD_TABLES = [
-  "gamibar_participants",
-  "gamibar_quiz_answers",
-  "gamibar_attempts",
-  "gamibar_jigsaw_assets",
-] as const;
-
 /**
- * Subscribe to Postgres changes that indicate room state moved forward.
+ * Subscribe to lightweight backend Broadcast invalidations.
+ * The actual room data is always fetched from Express after a signal.
  * Returns an unsubscribe function.
  */
 export function subscribeRoomSyncSignals(
@@ -27,46 +20,44 @@ export function subscribeRoomSyncSignals(
   },
 ): () => void {
   const roomId = filters.roomId?.trim();
-  const code = filters.code ? normalizeRoomCode(filters.code) : "";
-
-  if (!roomId && !code) {
+  if (!roomId) {
     callbacks.onStatus?.("disconnected");
     return () => {};
   }
 
-  const channelName = roomId ? `room-sync:${roomId}` : `room-sync:code:${code}`;
-  let channel = supabase.channel(channelName);
+  const topics = [`room:${roomId}:public`];
+  if (filters.includeHostSignals) topics.push(`room:${roomId}:host`);
+  const connected = new Set<string>();
+  const channels = new Set<ReturnType<typeof supabase.channel>>();
+  let disposed = false;
 
-  const listen = (table: string, filter: string) => {
-    channel = channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table, filter },
-      () => callbacks.onSignal(),
-    );
-  };
-
-  if (roomId) {
-    listen("gamibar_rooms", `id=eq.${roomId}`);
-    for (const table of ROOM_CHILD_TABLES) {
-      listen(table, `room_id=eq.${roomId}`);
-    }
-  } else {
-    listen("gamibar_rooms", `code=eq.${code}`);
-  }
-
-  channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      callbacks.onStatus?.("connected");
-      return;
-    }
-    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      callbacks.onStatus?.("disconnected");
-      return;
-    }
-    callbacks.onStatus?.("connecting");
-  });
+  callbacks.onStatus?.("connecting");
+  void supabase.realtime
+    .setAuth()
+    .then(() => {
+      if (disposed) return;
+      for (const topic of topics) {
+        const channel = supabase
+          .channel(topic, { config: { private: true } })
+          .on("broadcast", { event: "room_changed" }, () => callbacks.onSignal());
+        channels.add(channel);
+        channel.subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            connected.add(topic);
+            callbacks.onStatus?.(connected.size === topics.length ? "connected" : "connecting");
+            return;
+          }
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            connected.delete(topic);
+            callbacks.onStatus?.("disconnected");
+          }
+        });
+      }
+    })
+    .catch(() => callbacks.onStatus?.("disconnected"));
 
   return () => {
-    void supabase.removeChannel(channel);
+    disposed = true;
+    for (const channel of channels) void supabase.removeChannel(channel);
   };
 }

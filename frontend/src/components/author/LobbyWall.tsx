@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Radio, Users, WifiOff } from "lucide-react";
 
 import { avatarTone } from "@/components/session/LobbyRing";
-import { GAME_MODE_META, type GameMode } from "@/lib/game/config";
+import { GAME_MODE_META, type GameMode } from "@shared/game/config";
 import { getModeCatalog } from "@/lib/game/mode-catalog";
 import { cn } from "@/lib/utils";
 

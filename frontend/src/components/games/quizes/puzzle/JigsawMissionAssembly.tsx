@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -17,21 +24,21 @@ import {
   layoutFromPlacements,
   validateJigsawAssembly,
   allSlotsFilled,
-} from "@/lib/game/jigsaw-assembly";
+} from "@shared/game/jigsaw-assembly";
 import {
   ASSEMBLY_DRAG_THRESHOLD_COARSE_PX,
   ASSEMBLY_DRAG_THRESHOLD_PX,
   ASSEMBLY_SNAP_RATIO,
   ASSEMBLY_SNAP_RATIO_COARSE,
   findSnapSlot,
-} from "@/lib/game/jigsaw-assembly-drag";
+} from "@shared/game/jigsaw-assembly-drag";
 import {
   pointerMovedBeyondTapThreshold,
   ROTATE_TAP_STRICT_PX,
-} from "@/lib/game/jigsaw-tile-interaction";
-import type { TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
-import { buildJigsawTiles, type JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
-import { jigsawSkeletonBoardWidthClass } from "@/lib/game/jigsaw-grid";
+} from "@shared/game/jigsaw-tile-interaction";
+import type { TileLayoutMap, TileRotationMap } from "@shared/game/jigsaw-tile-rewards";
+import { buildJigsawTiles, type JigsawTileCardRotation } from "@shared/game/jigsaw-tiles";
+import { jigsawSkeletonBoardWidthClass } from "@shared/game/jigsaw-grid";
 import { cn } from "@/lib/utils";
 
 type DragState = {
@@ -100,7 +107,9 @@ export function JigsawMissionAssembly({
   const slotRefs = useRef<Array<HTMLDivElement | null>>([]);
   const coarsePointer = useCoarsePointer();
   const snapRatio = coarsePointer ? ASSEMBLY_SNAP_RATIO_COARSE : ASSEMBLY_SNAP_RATIO;
-  const dragThreshold = coarsePointer ? ASSEMBLY_DRAG_THRESHOLD_COARSE_PX : ASSEMBLY_DRAG_THRESHOLD_PX;
+  const dragThreshold = coarsePointer
+    ? ASSEMBLY_DRAG_THRESHOLD_COARSE_PX
+    : ASSEMBLY_DRAG_THRESHOLD_PX;
 
   const [placements, setPlacements] = useState<Array<number | null>>(() => {
     if (initialPlacements && initialPlacements.length === total) {
@@ -161,36 +170,45 @@ export function JigsawMissionAssembly({
     [snapRatio],
   );
 
-  const placePiece = useCallback((pieceId: number, slotIndex: number) => {
-    onClearSubmitMessage?.();
-    setLocalSubmitMessage(null);
-    setPlacements((prev) => {
-      const next = [...prev];
-      const fromSlot = next.findIndex((p) => p === pieceId);
-      if (fromSlot >= 0) next[fromSlot] = null;
+  const placePiece = useCallback(
+    (pieceId: number, slotIndex: number) => {
+      onClearSubmitMessage?.();
+      setLocalSubmitMessage(null);
+      setPlacements((prev) => {
+        const next = [...prev];
+        const fromSlot = next.findIndex((p) => p === pieceId);
+        if (fromSlot >= 0) next[fromSlot] = null;
 
-      const displaced = next[slotIndex];
-      next[slotIndex] = pieceId;
+        const displaced = next[slotIndex];
+        next[slotIndex] = pieceId;
 
-      if (displaced != null && displaced !== pieceId && fromSlot >= 0) {
-        next[fromSlot] = displaced;
-      }
+        if (displaced != null && displaced !== pieceId && fromSlot >= 0) {
+          next[fromSlot] = displaced;
+        }
 
-      return next;
-    });
-    setLandedSlot(slotIndex);
-    window.setTimeout(() => setLandedSlot((current) => (current === slotIndex ? null : current)), 280);
-  }, [onClearSubmitMessage]);
+        return next;
+      });
+      setLandedSlot(slotIndex);
+      window.setTimeout(
+        () => setLandedSlot((current) => (current === slotIndex ? null : current)),
+        280,
+      );
+    },
+    [onClearSubmitMessage],
+  );
 
-  const removeFromSlot = useCallback((slotIndex: number) => {
-    onClearSubmitMessage?.();
-    setLocalSubmitMessage(null);
-    setPlacements((prev) => {
-      const next = [...prev];
-      next[slotIndex] = null;
-      return next;
-    });
-  }, []);
+  const removeFromSlot = useCallback(
+    (slotIndex: number) => {
+      onClearSubmitMessage?.();
+      setLocalSubmitMessage(null);
+      setPlacements((prev) => {
+        const next = [...prev];
+        next[slotIndex] = null;
+        return next;
+      });
+    },
+    [onClearSubmitMessage],
+  );
 
   const clearActiveListeners = useCallback(() => {
     const active = activeListenersRef.current;
@@ -347,12 +365,28 @@ export function JigsawMissionAssembly({
 
     lastAutoSubmitKeyRef.current = submitKey;
     onSubmit(layout);
-  }, [puzzleComplete, locked, interactionsDisabled, drag, placements, tileRotations, onSubmit, submitMessage]);
+  }, [
+    puzzleComplete,
+    locked,
+    interactionsDisabled,
+    drag,
+    placements,
+    tileRotations,
+    onSubmit,
+    submitMessage,
+  ]);
 
   const handleSubmit = () => {
     if (locked || interactionsDisabled) return;
     const layout = layoutFromPlacements(placements);
-    const validation = validateJigsawAssembly(layout, tileRotations, total, cols, rows, earnedTileIds);
+    const validation = validateJigsawAssembly(
+      layout,
+      tileRotations,
+      total,
+      cols,
+      rows,
+      earnedTileIds,
+    );
     if (!validation.ok) {
       setLocalSubmitMessage(jigsawAssemblyValidationMessage(validation.reason));
       return;
@@ -481,34 +515,35 @@ export function JigsawMissionAssembly({
       {!showCelebration ? (
         <>
           <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[#F3F4F6] p-2.5 sm:p-4">
-        <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] sm:text-xs">
-          Your puzzle pieces
-        </p>
-        <JigsawMissionScrambledTiles
-          tileIds={pileTileIds}
-          tileRotations={tileRotations}
-          tileLayouts={tileLayouts}
-          imageSrc={imageUrl}
-          cols={cols}
-          rows={rows}
-          cardSize={assemblyCardSize}
-          draggingTileId={draggingTileId}
-          onRotateTile={onRotateTile}
-          rotateDisabled={interactionsDisabled}
-          onTilePointerDown={(tileId, e) => {
-            const pieceId = pieceIndexFromTileId(tileId, cols, rows);
-            if (pieceId == null) return;
-            onPointerDown(pieceId, tileId, e);
-          }}
-          emptyMessage="All pieces are on the board"
-          areaClassName="max-w-none"
-        />
+            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] sm:text-xs">
+              Your puzzle pieces
+            </p>
+            <JigsawMissionScrambledTiles
+              tileIds={pileTileIds}
+              tileRotations={tileRotations}
+              tileLayouts={tileLayouts}
+              imageSrc={imageUrl}
+              cols={cols}
+              rows={rows}
+              cardSize={assemblyCardSize}
+              draggingTileId={draggingTileId}
+              onRotateTile={onRotateTile}
+              rotateDisabled={interactionsDisabled}
+              onTilePointerDown={(tileId, e) => {
+                const pieceId = pieceIndexFromTileId(tileId, cols, rows);
+                if (pieceId == null) return;
+                onPointerDown(pieceId, tileId, e);
+              }}
+              emptyMessage="All pieces are on the board"
+              areaClassName="max-w-none"
+            />
           </div>
 
           <p className="text-center text-[11px] leading-snug text-[var(--muted-foreground)] md:text-xs">
             <span className="md:hidden">Tap to rotate · drag onto the board.</span>
             <span className="hidden md:inline">
-              Tap a piece to rotate it 90°. Drag pieces onto the board — they snap into the nearest slot.
+              Tap a piece to rotate it 90°. Drag pieces onto the board — they snap into the nearest
+              slot.
             </span>
           </p>
         </>

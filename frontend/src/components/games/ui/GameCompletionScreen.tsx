@@ -1,8 +1,8 @@
 import { CheckCircle2, Trophy } from "lucide-react";
 
 import { Confetti } from "@/components/games/ui/Confetti";
-import type { GameCompletionViewModel } from "@/lib/game/completion";
-import { formatDuration } from "@/lib/game/ranking";
+import type { GameCompletionViewModel } from "@shared/game/completion";
+import { formatDuration } from "@shared/game/ranking";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

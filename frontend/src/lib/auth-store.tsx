@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+
 export type UserRole = "student" | "author";
 
 export type AuthUser = {
@@ -18,14 +20,6 @@ export type AuthUser = {
 };
 
 const KEY = "gamibar.auth.v1";
-
-/** Legacy guest identity for student join flows only. */
-export const GUEST_STUDENT: AuthUser = {
-  id: "guest-student",
-  email: "student@guest.local",
-  name: "Student",
-  role: "student",
-};
 
 export function persistAuthUser(user: AuthUser | null) {
   if (typeof window === "undefined") return;
@@ -70,13 +64,6 @@ export function sanitizeAuthorRedirect(
   return query ? `${cleaned}?${query}` : cleaned;
 }
 
-/** Account id to attach when joining a room as a signed-in user. */
-export function getLinkedParticipantUserId(): string | undefined {
-  const auth = getStoredAuth();
-  if (!auth?.id || auth.id.startsWith("guest")) return undefined;
-  return auth.id;
-}
-
 type AuthCtx = {
   user: AuthUser | null;
   isAuthenticated: boolean;
@@ -104,8 +91,6 @@ type AuthCtx = {
     redirectPath?: string,
   ) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => Promise<void>;
-  /** Student join portal only - no Supabase account required. */
-  enterAsGuest: (role: UserRole) => AuthUser;
 };
 
 const AuthContext = createContext<AuthCtx | null>(null);
@@ -135,10 +120,7 @@ export function AuthProvider({
     setLoading(true);
 
     const initializeAuth = async () => {
-      const [{ isSupabaseConfigured, supabase }, { resolveAuthUserFromSession }] = await Promise.all([
-        import("@/lib/supabase/client"),
-        import("@/lib/supabase/auth"),
-      ]);
+      const { resolveAuthUserFromSession } = await import("@/lib/supabase/auth");
 
       if (!mounted) return;
       if (!isSupabaseConfigured) {
@@ -155,7 +137,10 @@ export function AuthProvider({
           persistAuthUser(resolved);
         } catch {
           if (!mounted) return;
-          setUser(getStoredAuth());
+          // A cached profile is only a UX hint. Protected routes must fail closed
+          // whenever the trusted Supabase session/backend profile check fails.
+          setUser(null);
+          persistAuthUser(null);
         } finally {
           if (mounted) setLoading(false);
         }
@@ -181,44 +166,73 @@ export function AuthProvider({
   }, [syncRemote]);
 
   const login = useCallback(async (email: string, password: string, expectedRole?: UserRole) => {
-    const { signInWithPassword } = await import("@/lib/supabase/auth");
-    const result = await signInWithPassword(email, password, expectedRole);
-    if (!result.ok) return result;
-    setUser(result.user);
-    persistAuthUser(result.user);
-    return { ok: true as const, role: result.user.role };
+    try {
+      const { signInWithPassword } = await import("@/lib/supabase/auth");
+      const result = await signInWithPassword(email, password, expectedRole);
+      if (!result.ok) return result;
+      setUser(result.user);
+      persistAuthUser(result.user);
+      return { ok: true as const, role: result.user.role };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Sign in could not be completed.",
+      };
+    }
   }, []);
 
   const registerAuthor = useCallback(
     async (name: string, email: string, password: string, redirectPath?: string) => {
-      const { signUpAuthor } = await import("@/lib/supabase/auth");
-      const result = await signUpAuthor(name, email, password, redirectPath);
-      if (!result.ok) return result;
+      try {
+        const { signUpAuthor } = await import("@/lib/supabase/auth");
+        const result = await signUpAuthor(name, email, password, redirectPath);
+        if (!result.ok) return result;
 
-      if (result.needsEmailConfirmation) {
+        if (result.needsEmailConfirmation) {
+          return {
+            ok: true as const,
+            role: "author" as const,
+            needsEmailConfirmation: true,
+            message: result.message,
+          };
+        }
+
+        setUser(result.user);
+        persistAuthUser(result.user);
+        return { ok: true as const, role: result.user.role };
+      } catch (error) {
         return {
-          ok: true as const,
-          role: "author" as const,
-          needsEmailConfirmation: true,
-          message: result.message,
+          ok: false as const,
+          error:
+            error instanceof Error ? error.message : "Account creation could not be completed.",
         };
       }
-
-      setUser(result.user);
-      persistAuthUser(result.user);
-      return { ok: true as const, role: result.user.role };
     },
     [],
   );
 
   const resetPassword = useCallback(async (email: string) => {
-    const { requestPasswordReset } = await import("@/lib/supabase/auth");
-    return requestPasswordReset(email);
+    try {
+      const { requestPasswordReset } = await import("@/lib/supabase/auth");
+      return requestPasswordReset(email);
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Reset email could not be sent.",
+      };
+    }
   }, []);
 
   const resendSignupConfirmation = useCallback(async (email: string, redirectPath?: string) => {
-    const { resendAuthorSignupConfirmation } = await import("@/lib/supabase/auth");
-    return resendAuthorSignupConfirmation(email, redirectPath);
+    try {
+      const { resendAuthorSignupConfirmation } = await import("@/lib/supabase/auth");
+      return resendAuthorSignupConfirmation(email, redirectPath);
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Confirmation email could not be sent.",
+      };
+    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -226,15 +240,6 @@ export function AuthProvider({
     await signOutSupabase();
     setUser(null);
     persistAuthUser(null);
-  }, []);
-
-  const enterAsGuest = useCallback((role: UserRole) => {
-    if (role !== "student") {
-      throw new Error("Author accounts must sign in.");
-    }
-    setUser(GUEST_STUDENT);
-    persistAuthUser(GUEST_STUDENT);
-    return GUEST_STUDENT;
   }, []);
 
   const value = useMemo(
@@ -248,18 +253,8 @@ export function AuthProvider({
       requestPasswordReset: resetPassword,
       resendSignupConfirmation,
       logout,
-      enterAsGuest,
     }),
-    [
-      user,
-      loading,
-      login,
-      registerAuthor,
-      resetPassword,
-      resendSignupConfirmation,
-      logout,
-      enterAsGuest,
-    ],
+    [user, loading, login, registerAuthor, resetPassword, resendSignupConfirmation, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -284,7 +279,6 @@ export function useAuthSafe(): AuthCtx {
       requestPasswordReset: async () => ({ ok: false as const, error: "Auth unavailable." }),
       resendSignupConfirmation: async () => ({ ok: false as const, error: "Auth unavailable." }),
       logout: async () => {},
-      enterAsGuest: () => GUEST_STUDENT,
     }
   );
 }

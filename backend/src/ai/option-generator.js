@@ -103,6 +103,7 @@ function buildGenerationRequest(input) {
   ];
 
   if (input.kind === "quiz_options") {
+    const fixedOptionIds = QUIZ_OPTION_IDS.filter((id) => input.context.existingOptions[id]);
     return {
       schemaName: "gamibar_quiz_options",
       schema: quizSchema(),
@@ -111,6 +112,12 @@ function buildGenerationRequest(input) {
         "Generate four multiple-choice answer options.",
         "Exactly one option must be correct, and correctOption must be the letter for that answer.",
         "Distractors should be plausible but clearly wrong.",
+        fixedOptionIds.length > 0
+          ? `The teacher already entered option${fixedOptionIds.length === 1 ? "" : "s"} ${fixedOptionIds.join(", ")}. Copy those option values exactly under the same letters and generate only the missing options.`
+          : "No answer options have been entered yet.",
+        input.context.correctOption
+          ? `The teacher marked ${input.context.correctOption} as correct. Preserve that correctOption.`
+          : "Choose the correctOption after considering both teacher-entered and generated options.",
         requestJson(input),
       ].join("\n"),
     };
@@ -218,12 +225,14 @@ function normalizeProviderResponse(input, parsed) {
   if (input.kind === "quiz_options") {
     const options = {};
     for (const id of QUIZ_OPTION_IDS) {
-      const value = cleanText(parsed.options?.[id], MAX_TEXT_LENGTH);
+      const value =
+        input.context.existingOptions[id] || cleanText(parsed.options?.[id], MAX_TEXT_LENGTH);
       if (!value) throw new HttpError("AI provider returned incomplete options.", 502);
       options[id] = value;
     }
 
-    const correctOption = normalizeQuizOptionId(parsed.correctOption);
+    const correctOption =
+      input.context.correctOption || normalizeQuizOptionId(parsed.correctOption);
     if (!correctOption) throw new HttpError("AI provider did not choose a correct answer.", 502);
     ensureDistinct(Object.values(options));
     return { kind: "quiz_options", options, correctOption };

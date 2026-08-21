@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { tileBackgroundStyle } from "@/lib/game/jigsaw-tiles";
+import { tileBackgroundStyle } from "@shared/game/jigsaw-tiles";
 
 type JigsawTileFaceProps = {
   col: number;
@@ -11,14 +11,7 @@ type JigsawTileFaceProps = {
 };
 
 /** Single square puzzle tile showing the correct image crop. */
-export function JigsawTileFace({
-  col,
-  row,
-  cols,
-  rows,
-  imageUrl,
-  className,
-}: JigsawTileFaceProps) {
+export function JigsawTileFace({ col, row, cols, rows, imageUrl, className }: JigsawTileFaceProps) {
   return (
     <div
       className={cn("size-full bg-[#111] bg-cover bg-no-repeat", className)}

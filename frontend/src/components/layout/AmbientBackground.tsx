@@ -33,12 +33,14 @@ export function AmbientBackground() {
       ref={containerRef}
       aria-hidden
       className="pointer-events-none fixed inset-0 overflow-hidden"
-      style={{
-        zIndex: -1,
-        background: "var(--gamibar-page)",
-        "--mx": "50%",
-        "--my": "40%",
-      } as CSSProperties}
+      style={
+        {
+          zIndex: -1,
+          background: "var(--gamibar-page)",
+          "--mx": "50%",
+          "--my": "40%",
+        } as CSSProperties
+      }
     >
       {/* Static grain */}
       <div

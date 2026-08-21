@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-import { PUZZLE_QUEST_GRID } from "@/lib/game/config";
+import { PUZZLE_QUEST_GRID } from "@shared/game/config";
 import { buildPieces } from "@/lib/jigsaw";
 
 const SIZE = 120;

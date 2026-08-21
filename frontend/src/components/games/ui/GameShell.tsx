@@ -21,7 +21,11 @@ export function GameShell({
   children: ReactNode;
 }) {
   return (
-    <div className={className ?? "mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 md:py-10 lg:px-8 lg:py-14"}>
+    <div
+      className={
+        className ?? "mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 md:py-10 lg:px-8 lg:py-14"
+      }
+    >
       <GameModeNav />
       <div className="mt-2 flex flex-col gap-4 rounded-[20px] border border-[var(--gamibar-border)] bg-white px-4 py-4 shadow-[var(--shadow-soft)] sm:px-5 sm:py-5 md:flex-row md:flex-wrap md:items-end md:justify-between md:px-7">
         <div className="min-w-0">

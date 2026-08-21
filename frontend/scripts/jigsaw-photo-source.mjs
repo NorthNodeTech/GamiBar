@@ -1,7 +1,8 @@
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 const USER_AGENT = "GamiBAR-JigsawLibrary/1.0 (educational classroom app; https://gamibar.com)";
 
-const REJECT_NAME = /cartoon|clipart|illustration|drawing|icon|svg|comic|vector|animation|logo|emblem|flag icon|pictogram|wikimedia-screenshot/i;
+const REJECT_NAME =
+  /cartoon|clipart|illustration|drawing|icon|svg|comic|vector|animation|logo|emblem|flag icon|pictogram|wikimedia-screenshot/i;
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_LICENSE = /public domain|cc0|cc by|cc-by|creative commons/i;
 
@@ -12,7 +13,9 @@ function metaValue(info, key) {
 function isAllowedLicense(info) {
   const license = `${metaValue(info, "LicenseShortName")} ${metaValue(info, "UsageTerms")} ${metaValue(info, "License")}`;
   if (!license.trim()) return true;
-  if (/fair use|all rights reserved|noncommercial|no derivatives|cc by-nc|cc-by-nc/i.test(license)) {
+  if (
+    /fair use|all rights reserved|noncommercial|no derivatives|cc by-nc|cc-by-nc/i.test(license)
+  ) {
     return false;
   }
   return ALLOWED_LICENSE.test(license);
@@ -104,7 +107,9 @@ export async function findRealisticPhoto(subject, usedUrls) {
     if (exactHit) return toPhoto(exactHit, exactHit.imageinfo[0]);
   }
 
-  const queries = subject.photoQueries?.length ? subject.photoQueries : [`${subject.title} photograph`];
+  const queries = subject.photoQueries?.length
+    ? subject.photoQueries
+    : [`${subject.title} photograph`];
   const searched = [];
   for (const query of queries) {
     searched.push(...(await commonsSearch(query)));

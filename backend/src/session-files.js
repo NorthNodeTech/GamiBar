@@ -2,11 +2,13 @@ import crypto from "node:crypto";
 
 import multer from "multer";
 
+import { getAuthorPlanLimits } from "./billing/service.js";
 import { HttpError } from "./http-error.js";
 import { createAdminClient } from "./supabase-admin.js";
+import { sendRealtimeSignal } from "./realtime.js";
 
 const BUCKET = "gamibar-session-files";
-const MAX_FILES_PER_SESSION = 10;
+const MAX_FILES_PER_SESSION = 1;
 const MAX_BYTES = 50 * 1024 * 1024;
 const DOWNLOAD_TTL_SECONDS = 90;
 const RETENTION_DAY_OPTIONS = new Set([7, 14, 28]);
@@ -39,10 +41,6 @@ export function registerSessionFileRoutes(app) {
         stringBody(req.body, "authorToken"),
       );
       const summary = await teacherSummary(admin, room);
-      await notifyResourceDropChanged(admin, {
-        roomId: room.id,
-        shareSlug: summary.shareSlug,
-      });
       res.json(summary);
     }),
   );
@@ -54,17 +52,23 @@ export function registerSessionFileRoutes(app) {
       const admin = createAdminClient();
       const roomId = stringBody(req.body, "roomId");
       const authorToken = stringBody(req.body, "authorToken");
-      const retentionDays = parseRetentionDays(req.body.expiryDays);
       const room = await verifyAuthor(admin, roomId, authorToken);
+      const planLimits = room.author_id
+        ? await getAuthorPlanLimits(room.author_id)
+        : { filesPerRoom: 1, fileSizeMb: 15, fileRetentionDays: 7 };
+      const retentionDays = parseRetentionDays(
+        req.body.expiryDays,
+        planLimits.fileRetentionDays,
+      );
+      const maxBytes = planLimits.fileSizeMb * 1024 * 1024;
       const files = Array.isArray(req.files) ? req.files : [];
       if (files.length === 0)
         throw new HttpError("Choose at least one document.", 400);
 
-      await cleanupExpired(admin);
       const current = await activeFilesForRoom(admin, room.id);
-      if (current.length + files.length > MAX_FILES_PER_SESSION) {
+      if (current.length + files.length > planLimits.filesPerRoom) {
         throw new HttpError(
-          `A resource drop can hold up to ${MAX_FILES_PER_SESSION} active documents.`,
+          `A resource drop can hold up to ${planLimits.filesPerRoom} active document.`,
           400,
         );
       }
@@ -72,7 +76,11 @@ export function registerSessionFileRoutes(app) {
       const uploadedPaths = [];
       try {
         for (const file of files) {
-          const prepared = validateUpload(file);
+          const prepared = validateUpload(
+            file,
+            maxBytes,
+            planLimits.fileSizeMb,
+          );
           const id = crypto.randomUUID();
           const storagePath = `${room.id}/${id}/${prepared.safeName}`;
 
@@ -101,13 +109,23 @@ export function registerSessionFileRoutes(app) {
         }
       } catch (error) {
         if (uploadedPaths.length > 0) {
-          await admin.storage.from(BUCKET).remove(uploadedPaths);
+          try {
+            await removeStoredFiles(admin, uploadedPaths);
+          } catch (cleanupError) {
+            console.error("Could not roll back uploaded Resource Drop files", {
+              count: uploadedPaths.length,
+              message:
+                cleanupError instanceof Error
+                  ? cleanupError.message
+                  : String(cleanupError),
+            });
+          }
         }
         throw error;
       }
 
       const summary = await teacherSummary(admin, room);
-      await notifyResourceDropChanged(admin, {
+      await notifyResourceDropChanged({
         roomId: room.id,
         shareSlug: summary.shareSlug,
       });
@@ -134,14 +152,19 @@ export function registerSessionFileRoutes(app) {
       if (!file || file.deleted_at)
         throw new HttpError("That document is already removed.", 404);
 
-      await admin.storage.from(BUCKET).remove([file.storage_path]);
+      await removeStoredFiles(admin, [file.storage_path]);
       const { error: updateError } = await admin
         .from("gamibar_session_files")
         .update({ deleted_at: new Date().toISOString() })
         .eq("id", file.id);
       if (updateError) throw updateError;
 
-      res.json(await teacherSummary(admin, room));
+      const summary = await teacherSummary(admin, room);
+      await notifyResourceDropChanged({
+        roomId: room.id,
+        shareSlug: summary.shareSlug,
+      });
+      res.json(summary);
     }),
   );
 
@@ -201,7 +224,6 @@ async function runSessionFileCleanup() {
 }
 
 async function teacherSummary(admin, room) {
-  await cleanupExpired(admin);
   const share = await ensureShare(admin, room.id);
   const files = await activeFilesForRoom(admin, room.id);
   return {
@@ -213,10 +235,9 @@ async function teacherSummary(admin, room) {
 
 async function publicList(admin, shareSlug) {
   const share = await shareBySlug(admin, shareSlug);
-  await cleanupExpired(admin);
   const { data: room, error: roomError } = await admin
     .from("gamibar_rooms")
-    .select("id, code, name, status, author_token_hash")
+    .select("id, code, name, status, author_id, author_token_hash")
     .eq("id", share.room_id)
     .maybeSingle();
   if (roomError) throw roomError;
@@ -281,7 +302,7 @@ async function cleanupExpired(admin) {
   const rows = expired ?? [];
   const paths = rows.map((row) => row.storage_path);
   if (paths.length > 0) {
-    await admin.storage.from(BUCKET).remove(paths);
+    await removeStoredFiles(admin, paths);
     const { error: updateError } = await admin
       .from("gamibar_session_files")
       .update({ deleted_at: now })
@@ -298,7 +319,7 @@ async function cleanupExpired(admin) {
       .in("room_id", roomIds);
     await Promise.all(
       roomIds.map((roomId) =>
-        notifyResourceDropChanged(admin, {
+        notifyResourceDropChanged({
           roomId,
           shareSlug: shares?.find((share) => share.room_id === roomId)
             ?.share_slug,
@@ -310,56 +331,26 @@ async function cleanupExpired(admin) {
   return { deleted: rows.length };
 }
 
-async function notifyResourceDropChanged(admin, { roomId, shareSlug }) {
+async function removeStoredFiles(admin, paths) {
+  const { error } = await admin.storage.from(BUCKET).remove(paths);
+  if (error) {
+    throw new Error(`Supabase Storage removal failed: ${error.message}`);
+  }
+}
+
+async function notifyResourceDropChanged({ roomId, shareSlug }) {
   await Promise.all([
-    sendBroadcast(admin, `resource-drop-room:${roomId}`, { roomId, shareSlug }),
+    sendRealtimeSignal(`resource-drop-room:${roomId}`, "changed", {
+      roomId,
+      shareSlug,
+    }),
     shareSlug
-      ? sendBroadcast(admin, `resource-drop:${shareSlug}`, {
+      ? sendRealtimeSignal(`resource-drop:${shareSlug}`, "changed", {
           roomId,
           shareSlug,
         })
       : Promise.resolve(),
   ]);
-}
-
-async function sendBroadcast(admin, topic, payload) {
-  const channel = admin.channel(topic);
-  try {
-    const subscribed = await new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve(false), 1500);
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          clearTimeout(timeout);
-          resolve(true);
-        }
-        if (
-          status === "CHANNEL_ERROR" ||
-          status === "TIMED_OUT" ||
-          status === "CLOSED"
-        ) {
-          clearTimeout(timeout);
-          resolve(false);
-        }
-      });
-    });
-    if (!subscribed) return;
-    await channel.send({
-      type: "broadcast",
-      event: "changed",
-      payload: {
-        ...payload,
-        changedAt: new Date().toISOString(),
-      },
-    });
-  } catch (error) {
-    console.warn(
-      error instanceof Error
-        ? `Resource Drop realtime skipped: ${error.message}`
-        : error,
-    );
-  } finally {
-    await admin.removeChannel(channel);
-  }
 }
 
 async function verifyAuthor(admin, roomId, authorToken) {
@@ -368,7 +359,7 @@ async function verifyAuthor(admin, roomId, authorToken) {
   }
   const { data: room, error } = await admin
     .from("gamibar_rooms")
-    .select("id, code, name, status, author_token_hash")
+    .select("id, code, name, status, author_id, author_token_hash")
     .eq("id", roomId)
     .maybeSingle();
   if (error) throw error;
@@ -426,7 +417,7 @@ async function activeFilesForRoom(admin, roomId) {
   return data ?? [];
 }
 
-function validateUpload(file) {
+function validateUpload(file, maxBytes = MAX_BYTES, maxSizeMb = 50) {
   const originalName = sanitizeOriginalName(file.originalname);
   const extension = originalName.split(".").pop()?.toLowerCase() ?? "";
   const expectedMime = MIME_BY_EXTENSION[extension];
@@ -437,8 +428,8 @@ function validateUpload(file) {
     );
   }
   if (file.size <= 0) throw new HttpError(`${originalName} is empty.`, 400);
-  if (file.size > MAX_BYTES)
-    throw new HttpError(`${originalName} is larger than 50 MB.`, 400);
+  if (file.size > maxBytes)
+    throw new HttpError(`${originalName} is larger than ${maxSizeMb} MB.`, 400);
   if (
     file.mimetype &&
     file.mimetype !== "application/octet-stream" &&
@@ -478,10 +469,16 @@ function safeStorageName(name) {
   return clean || "document";
 }
 
-function parseRetentionDays(value) {
+function parseRetentionDays(value, maxRetentionDays = 28) {
   const parsed = Number.parseInt(String(value ?? DEFAULT_RETENTION_DAYS), 10);
   if (!RETENTION_DAY_OPTIONS.has(parsed)) {
     throw new HttpError("Choose a retention window of 7, 14, or 28 days.", 400);
+  }
+  if (parsed > maxRetentionDays) {
+    throw new HttpError(
+      `Your current plan keeps shared files for up to ${maxRetentionDays} days.`,
+      403,
+    );
   }
   return parsed;
 }

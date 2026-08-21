@@ -1,4 +1,4 @@
-import type { QuizQuestionDraft } from "@/lib/game/types";
+import type { QuizQuestionDraft } from "@shared/game/types";
 
 const STORAGE_KEY = "gamibar_question_bank";
 
@@ -51,9 +51,7 @@ export function saveQuestionSet(input: {
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
-  const next = existing
-    ? all.map((s) => (s.id === set.id ? set : s))
-    : [set, ...all];
+  const next = existing ? all.map((s) => (s.id === set.id ? set : s)) : [set, ...all];
   writeAll(next);
   return set;
 }

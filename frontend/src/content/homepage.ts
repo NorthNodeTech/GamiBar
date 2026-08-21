@@ -28,8 +28,8 @@ import flowStep1 from "@/assets/flow-step-1.webp";
 import flowStep2 from "@/assets/flow-step-2.webp";
 import flowStep4 from "@/assets/flow-step-4.webp";
 import flowStep5 from "@/assets/flow-step-5.webp";
-import { CONNECT_DOTS_CONFIG } from "@/lib/connect-dots";
-import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, type GameMode } from "@/lib/game/config";
+import { CONNECT_DOTS_CONFIG } from "@shared/game/connect-dots";
+import { GAME_CONFIG, GAME_MODE_META, JIGSAW_GRID, type GameMode } from "@shared/game/config";
 
 export const HOMEPAGE_SEO = {
   title: "GamiBar | Make Classrooms and Live Sessions Interactive",
@@ -50,7 +50,6 @@ export const HOMEPAGE_HERO = {
   imageAlt:
     "Teacher leading an interactive GamiBar session while participants join and answer from their phones",
 } as const;
-
 
 export const HOMEPAGE_PROBLEM_SECTION = {
   eyebrow: "The problem",
@@ -266,7 +265,7 @@ export const HOMEPAGE_JOURNEY_MILESTONES = [
   },
   {
     title: "Participants join",
-    desc: `Share a ${GAME_CONFIG.room.codeLength}-digit code or QR link. People enter a nickname - no account required to play.`,
+    desc: `Share a ${GAME_CONFIG.room.codeLength}-digit code or QR link. People enter a nickname - no account, subscription, or payment required to play.`,
     badge: "Instant join",
     icon: Users,
     image: flowStep2,
@@ -315,7 +314,7 @@ export const HOMEPAGE_AUDIENCES = [
     eyebrow: "For learners and participants",
     title: "Just scan. Join. Play.",
     description:
-      "No app to install and no long sign-up process. Participants join from the phone already in their hand and can answer, vote, play, and get the resources they need.",
+      "No app, account, subscription, or payment is needed. Participants join from the phone already in their hand and can answer, vote, play, and get the resources they need.",
     image: audienceLearners,
     imageAlt: "Students participating in a live GamiBar quiz from their devices",
     points: [
@@ -325,7 +324,6 @@ export const HOMEPAGE_AUDIENCES = [
     ],
   },
 ] as const;
-
 
 export const HOMEPAGE_TESTIMONIALS_SECTION = {
   eyebrow: "Testimonials",
@@ -375,7 +373,7 @@ export const HOMEPAGE_FAQ = [
   {
     question: "Do students or participants need to install an app or create an account?",
     answer:
-      "No. Participants do not need to download any app or create an account. They simply scan the host's room QR code or type the 6-digit room code into their phone's browser to join instantly with a nickname.",
+      "No. Joining and playing are always free. Participants do not need an app, account, subscription, or purchase. They simply scan the host's room QR code or type the 6-digit room code into their phone's browser to join instantly with a nickname.",
   },
   {
     question: "How does live synchronization work between host and participants?",

@@ -1,15 +1,14 @@
 import type { User } from "@supabase/supabase-js";
 
 import type { AuthUser, UserRole } from "@/lib/auth-store";
+import { apiFetch } from "@/lib/api-client";
 import {
   clearSupabaseAuthSession,
   clearSupabaseAuthStorage,
   isSupabaseConfigured,
   supabase,
 } from "@/lib/supabase/client";
-import type { Database } from "@/lib/supabase/database.types";
-
-type AuthorRow = Database["public"]["Tables"]["gamibar_authors"]["Row"];
+type AuthorRow = { id: string; display_name: string; role: UserRole };
 const SUPABASE_CONFIG_ERROR =
   "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to frontend/.env, then restart the frontend dev server.";
 const AUTH_REQUEST_TIMEOUT_MS = 8000;
@@ -64,18 +63,9 @@ export function mapProfileToAuthUser(user: User, profile: AuthorRow): AuthUser {
 
 export async function fetchProfileForUser(userId: string) {
   if (!isSupabaseConfigured) throw new Error(SUPABASE_CONFIG_ERROR);
-
-  const { data, error } = await withAuthTimeout(
-    supabase
-      .from("gamibar_authors")
-      .select("id, display_name, role")
-      .eq("id", userId)
-      .maybeSingle(),
-    "Timed out while loading your author profile.",
-  );
-
-  if (error) throw new Error(error.message);
-  return data;
+  // apiFetch owns the longer timeout required while a free Render service wakes.
+  const { profile } = await apiFetch<{ profile: AuthorRow | null }>("/api/auth/profile");
+  return profile?.id === userId ? profile : null;
 }
 
 export async function resolveAuthUserFromSession() {
@@ -160,7 +150,6 @@ export async function signUpAuthor(
       emailRedirectTo: authorAuthRedirectUrl(redirectPath),
       data: {
         display_name: displayName.trim(),
-        signup_role: "author",
       },
     },
   });
@@ -257,7 +246,7 @@ export async function requestPasswordReset(email: string) {
   }
 
   const redirectTo =
-    typeof window !== "undefined" ? `${window.location.origin}/author/login` : undefined;
+    typeof window !== "undefined" ? `${window.location.origin}/update-password` : undefined;
 
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
     redirectTo,

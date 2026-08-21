@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@/lib/navigation";
 
 import { googleAnalyticsId, microsoftClarityId } from "@/lib/analytics-config";
 

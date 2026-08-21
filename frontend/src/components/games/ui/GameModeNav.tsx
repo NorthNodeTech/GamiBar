@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@/lib/navigation";
 import { Blocks, CircleDot, Timer } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -60,10 +60,7 @@ export function GameModeNav({
             <div className="min-w-0">
               <p className="truncate font-semibold">{mode.label}</p>
               <p
-                className={cn(
-                  "truncate text-[10px]",
-                  active ? "text-white/70" : "text-[#A3A3A3]",
-                )}
+                className={cn("truncate text-[10px]", active ? "text-white/70" : "text-[#A3A3A3]")}
               >
                 {mode.desc}
               </p>

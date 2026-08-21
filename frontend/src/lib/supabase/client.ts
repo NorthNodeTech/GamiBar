@@ -3,27 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 type RuntimeEnv = Record<string, string | undefined>;
 
 const viteEnv = ((import.meta as ImportMeta & { env?: RuntimeEnv }).env ?? {}) as RuntimeEnv;
-const processEnv = ((globalThis as typeof globalThis & { process?: { env?: RuntimeEnv } }).process
-  ?.env ?? {}) as RuntimeEnv;
 const isBrowserRuntime = typeof window !== "undefined";
 
-const url = readEnvValue(
-  viteEnv.VITE_SUPABASE_URL,
-  processEnv.VITE_SUPABASE_URL,
-  processEnv.SUPABASE_URL,
-);
-const anonKey = readEnvValue(viteEnv.VITE_SUPABASE_ANON_KEY, processEnv.VITE_SUPABASE_ANON_KEY);
-const serviceRoleKey = readEnvValue(processEnv.SUPABASE_SERVICE_ROLE_KEY);
-const serverKey = !isBrowserRuntime && serviceRoleKey ? serviceRoleKey : anonKey;
+const url = readEnvValue(viteEnv.VITE_SUPABASE_URL);
+const anonKey = readEnvValue(viteEnv.VITE_SUPABASE_ANON_KEY);
 const projectRef = getSupabaseProjectRef(url);
 
 export const SUPABASE_AUTH_STORAGE_KEY = `gamibar.supabase.${projectRef ?? "local"}.auth`;
 const LEGACY_SUPABASE_AUTH_STORAGE_KEYS = projectRef ? [`sb-${projectRef}-auth-token`] : [];
 export const isSupabaseConfigured = Boolean(
-  url &&
-    anonKey &&
-    !isPlaceholderConfigValue(url) &&
-    !isPlaceholderConfigValue(anonKey),
+  url && anonKey && !isPlaceholderConfigValue(url) && !isPlaceholderConfigValue(anonKey),
 );
 
 if (isBrowserRuntime && !isSupabaseConfigured) {
@@ -34,10 +23,9 @@ if (isBrowserRuntime && !isSupabaseConfigured) {
 
 const resolvedUrl = url ?? "http://127.0.0.1:54321";
 const resolvedAnonKey = anonKey ?? "missing-anon-key";
-const resolvedServerKey = serverKey ?? resolvedAnonKey;
 
-/** Browser Supabase client for auth/realtime; backend imports use the service role key. */
-export const supabase = createClient(resolvedUrl, resolvedServerKey, {
+/** Browser-only Supabase client. Privileged database work belongs to Express. */
+export const supabase = createClient(resolvedUrl, resolvedAnonKey, {
   auth: {
     persistSession: isBrowserRuntime,
     autoRefreshToken: isBrowserRuntime,
@@ -46,19 +34,15 @@ export const supabase = createClient(resolvedUrl, resolvedServerKey, {
   },
 });
 
-/** Live game client. Browser uses anon; backend imports use the service role key. */
-export const supabaseGame = createClient(
-  resolvedUrl,
-  isBrowserRuntime ? resolvedAnonKey : resolvedServerKey,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      storageKey: "gamibar-game",
-    },
+/** Anonymous Realtime Broadcast client; room data is fetched from Express. */
+export const supabaseGame = createClient(resolvedUrl, resolvedAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: "gamibar-game",
   },
-);
+});
 
 function getSupabaseProjectRef(value: string | undefined): string | null {
   if (!value) return null;

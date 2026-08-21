@@ -3,9 +3,13 @@ import { motion } from "framer-motion";
 
 import { JigsawTileFace } from "@/components/games/quizes/puzzle/JigsawTileFace";
 import { JigsawTileCardVisual } from "@/components/games/quizes/puzzle/JigsawTileCardVisual";
-import type { TileLayoutMap, TileRotationMap } from "@/lib/game/jigsaw-tile-rewards";
-import { bindExplicitRotateTap } from "@/lib/game/jigsaw-tile-interaction";
-import { buildJigsawTiles, tileIndexFromId, type JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
+import type { TileLayoutMap, TileRotationMap } from "@shared/game/jigsaw-tile-rewards";
+import { bindExplicitRotateTap } from "@shared/game/jigsaw-tile-interaction";
+import {
+  buildJigsawTiles,
+  tileIndexFromId,
+  type JigsawTileCardRotation,
+} from "@shared/game/jigsaw-tiles";
 import { cn } from "@/lib/utils";
 
 export const COLLECTION_CARD_SIZE = 56;
@@ -68,135 +72,133 @@ type JigsawMissionScrambledTilesProps = {
   areaClassName?: string;
 };
 
-export const JigsawMissionScrambledTiles = forwardRef<HTMLDivElement, JigsawMissionScrambledTilesProps>(
-  function JigsawMissionScrambledTiles(
-    {
-      tileIds,
-      tileRotations,
-      tileLayouts: _tileLayouts,
-      imageSrc,
-      cols,
-      rows,
-      cardSize = COLLECTION_CARD_SIZE,
-      landedTileId,
-      onRotateTile,
-      rotateDisabled,
-      onTilePointerDown,
-      draggingTileId,
-      emptyMessage = "Answer correctly to collect puzzle pieces",
-      className,
-      areaClassName,
-    },
-    ref,
-  ) {
-    const tilesById = useMemo(() => {
-      const map = new Map<string, ReturnType<typeof buildJigsawTiles>[number]>();
-      for (const tile of buildJigsawTiles(cols, rows)) {
-        map.set(tile.id, tile);
-      }
-      return map;
-    }, [cols, rows]);
-
-    const sortedTileIds = useMemo(
-      () => [...tileIds].sort((a, b) => a.localeCompare(b)),
-      [tileIds],
-    );
-
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "relative mx-auto flex w-full min-w-0 items-center justify-center overflow-x-auto px-3 py-2.5",
-          collectionAreaHeight(tileIds.length, cardSize),
-          cardSize >= 64 ? "max-w-none" : "max-w-none",
-          areaClassName,
-        )}
-        style={{ gap: COLLECTION_TILE_GAP_PX }}
-        aria-label={`${tileIds.length} puzzle pieces`}
-      >
-        {sortedTileIds.length === 0 ? (
-          <div className="flex h-full min-h-[inherit] w-full items-center justify-center rounded-xl border-2 border-dashed border-[#D1D5DB] bg-white/70 px-3">
-            <p className="text-center text-[11px] leading-snug text-[#737373]">{emptyMessage}</p>
-          </div>
-        ) : (
-          sortedTileIds.map((id) => {
-            const tile = tilesById.get(id);
-            if (!tile) return null;
-
-            const rotation = tileRotations[id] ?? (0 as JigsawTileCardRotation);
-            const isDragging = draggingTileId === id;
-            const canRotate = Boolean(onRotateTile) && !rotateDisabled;
-            const isDraggable = Boolean(onTilePointerDown);
-            const usesCombinedInteraction = canRotate && isDraggable;
-
-            return (
-              <motion.div
-                key={id}
-                initial={
-                  landedTileId === id ? { scale: 0.85, opacity: 0.6 } : { scale: 1, opacity: 1 }
-                }
-                animate={{ scale: 1, opacity: isDragging ? 0.35 : 1 }}
-                transition={{ type: "spring", stiffness: 420, damping: 26 }}
-                className={cn("shrink-0", className)}
-                style={{ width: cardSize, height: cardSize }}
-              >
-                <button
-                  type="button"
-                  disabled={!canRotate && !isDraggable}
-                  onClick={(e) => e.preventDefault()}
-                  onPointerDown={(e) => {
-                    if (e.button !== 0) return;
-                    if (!canRotate && !isDraggable) return;
-                    e.preventDefault();
-
-                    if (isDraggable) {
-                      onTilePointerDown?.(id, e);
-                      return;
-                    }
-
-                    bindExplicitRotateTap(
-                      e.currentTarget,
-                      { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY },
-                      () => onRotateTile?.(id),
-                    );
-                  }}
-                  aria-label={
-                    usesCombinedInteraction
-                      ? "Puzzle piece. Tap to rotate. Drag onto the board."
-                      : isDraggable
-                        ? "Puzzle piece. Drag onto the board."
-                        : canRotate
-                          ? "Puzzle piece. Tap to rotate clockwise."
-                          : "Puzzle piece."
-                  }
-                  style={canRotate || isDraggable ? { touchAction: "none" } : undefined}
-                  className={cn(
-                    "size-full touch-manipulation overflow-hidden rounded-lg border-2 border-white shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED] focus-visible:ring-offset-1",
-                    isDraggable && "cursor-grab active:cursor-grabbing",
-                    canRotate && !isDraggable && "cursor-pointer active:scale-[0.97]",
-                    usesCombinedInteraction && "cursor-grab active:cursor-grabbing",
-                    !canRotate && !isDraggable && "cursor-default",
-                  )}
-                >
-                  <JigsawTileCardVisual rotation={rotation}>
-                    <JigsawTileFace
-                      col={tile.col}
-                      row={tile.row}
-                      cols={cols}
-                      rows={rows}
-                      imageUrl={imageSrc}
-                      className="rounded-md"
-                    />
-                  </JigsawTileCardVisual>
-                </button>
-              </motion.div>
-            );
-          })
-        )}
-      </div>
-    );
+export const JigsawMissionScrambledTiles = forwardRef<
+  HTMLDivElement,
+  JigsawMissionScrambledTilesProps
+>(function JigsawMissionScrambledTiles(
+  {
+    tileIds,
+    tileRotations,
+    tileLayouts: _tileLayouts,
+    imageSrc,
+    cols,
+    rows,
+    cardSize = COLLECTION_CARD_SIZE,
+    landedTileId,
+    onRotateTile,
+    rotateDisabled,
+    onTilePointerDown,
+    draggingTileId,
+    emptyMessage = "Answer correctly to collect puzzle pieces",
+    className,
+    areaClassName,
   },
-);
+  ref,
+) {
+  const tilesById = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof buildJigsawTiles>[number]>();
+    for (const tile of buildJigsawTiles(cols, rows)) {
+      map.set(tile.id, tile);
+    }
+    return map;
+  }, [cols, rows]);
+
+  const sortedTileIds = useMemo(() => [...tileIds].sort((a, b) => a.localeCompare(b)), [tileIds]);
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative mx-auto flex w-full min-w-0 items-center justify-center overflow-x-auto px-3 py-2.5",
+        collectionAreaHeight(tileIds.length, cardSize),
+        cardSize >= 64 ? "max-w-none" : "max-w-none",
+        areaClassName,
+      )}
+      style={{ gap: COLLECTION_TILE_GAP_PX }}
+      aria-label={`${tileIds.length} puzzle pieces`}
+    >
+      {sortedTileIds.length === 0 ? (
+        <div className="flex h-full min-h-[inherit] w-full items-center justify-center rounded-xl border-2 border-dashed border-[#D1D5DB] bg-white/70 px-3">
+          <p className="text-center text-[11px] leading-snug text-[#737373]">{emptyMessage}</p>
+        </div>
+      ) : (
+        sortedTileIds.map((id) => {
+          const tile = tilesById.get(id);
+          if (!tile) return null;
+
+          const rotation = tileRotations[id] ?? (0 as JigsawTileCardRotation);
+          const isDragging = draggingTileId === id;
+          const canRotate = Boolean(onRotateTile) && !rotateDisabled;
+          const isDraggable = Boolean(onTilePointerDown);
+          const usesCombinedInteraction = canRotate && isDraggable;
+
+          return (
+            <motion.div
+              key={id}
+              initial={
+                landedTileId === id ? { scale: 0.85, opacity: 0.6 } : { scale: 1, opacity: 1 }
+              }
+              animate={{ scale: 1, opacity: isDragging ? 0.35 : 1 }}
+              transition={{ type: "spring", stiffness: 420, damping: 26 }}
+              className={cn("shrink-0", className)}
+              style={{ width: cardSize, height: cardSize }}
+            >
+              <button
+                type="button"
+                disabled={!canRotate && !isDraggable}
+                onClick={(e) => e.preventDefault()}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  if (!canRotate && !isDraggable) return;
+                  e.preventDefault();
+
+                  if (isDraggable) {
+                    onTilePointerDown?.(id, e);
+                    return;
+                  }
+
+                  bindExplicitRotateTap(
+                    e.currentTarget,
+                    { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY },
+                    () => onRotateTile?.(id),
+                  );
+                }}
+                aria-label={
+                  usesCombinedInteraction
+                    ? "Puzzle piece. Tap to rotate. Drag onto the board."
+                    : isDraggable
+                      ? "Puzzle piece. Drag onto the board."
+                      : canRotate
+                        ? "Puzzle piece. Tap to rotate clockwise."
+                        : "Puzzle piece."
+                }
+                style={canRotate || isDraggable ? { touchAction: "none" } : undefined}
+                className={cn(
+                  "size-full touch-manipulation overflow-hidden rounded-lg border-2 border-white shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED] focus-visible:ring-offset-1",
+                  isDraggable && "cursor-grab active:cursor-grabbing",
+                  canRotate && !isDraggable && "cursor-pointer active:scale-[0.97]",
+                  usesCombinedInteraction && "cursor-grab active:cursor-grabbing",
+                  !canRotate && !isDraggable && "cursor-default",
+                )}
+              >
+                <JigsawTileCardVisual rotation={rotation}>
+                  <JigsawTileFace
+                    col={tile.col}
+                    row={tile.row}
+                    cols={cols}
+                    rows={rows}
+                    imageUrl={imageSrc}
+                    className="rounded-md"
+                  />
+                </JigsawTileCardVisual>
+              </button>
+            </motion.div>
+          );
+        })
+      )}
+    </div>
+  );
+});
 
 export function tileMetaFromId(id: string, cols: number, rows: number) {
   const index = tileIndexFromId(id, cols, rows);
@@ -204,7 +206,11 @@ export function tileMetaFromId(id: string, cols: number, rows: number) {
   return buildJigsawTiles(cols, rows)[index] ?? null;
 }
 
-export function tileIdFromPieceIndex(pieceIndex: number, cols: number, rows: number): string | null {
+export function tileIdFromPieceIndex(
+  pieceIndex: number,
+  cols: number,
+  rows: number,
+): string | null {
   const tiles = buildJigsawTiles(cols, rows);
   return tiles[pieceIndex]?.id ?? null;
 }

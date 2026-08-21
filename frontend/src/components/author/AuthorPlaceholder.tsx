@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import type { LucideIcon } from "lucide-react";
 
 import { AuthorPageFrame } from "@/components/author/AuthorPageFrame";
@@ -24,7 +24,9 @@ export function AuthorPlaceholder({
           <h1 className="mt-6 font-display text-2xl font-bold tracking-tight text-[var(--foreground)]">
             {title}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">{description}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {description}
+          </p>
           <Button
             asChild
             className="mt-8 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]"

@@ -3,10 +3,11 @@ import { supabaseGame as supabase } from "@/lib/supabase/client";
 
 const PUBLIC_APP_URL = import.meta.env.VITE_PUBLIC_APP_URL?.replace(/\/$/, "");
 
-export const SESSION_FILE_MAX_FILES = 10;
+export const SESSION_FILE_MAX_FILES = 1;
 export const SESSION_FILE_MAX_BYTES = 50 * 1024 * 1024;
 export const SESSION_FILE_DEFAULT_RETENTION_DAYS = 7;
 export const SESSION_FILE_RETENTION_OPTIONS = [7, 14, 28] as const;
+const RESOURCE_DROP_RECONCILIATION_MS = 60_000;
 export const SESSION_FILE_ACCEPT =
   ".pdf,.ppt,.pptx,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -48,7 +49,11 @@ export type SessionFileValidation = {
   errors: string[];
 };
 
-export function validateSessionShareFiles(files: File[], activeCount = 0): SessionFileValidation {
+export function validateSessionShareFiles(
+  files: File[],
+  activeCount = 0,
+  maxBytes = SESSION_FILE_MAX_BYTES,
+): SessionFileValidation {
   const errors: string[] = [];
   if (files.length + activeCount > SESSION_FILE_MAX_FILES) {
     errors.push(`A session can share up to ${SESSION_FILE_MAX_FILES} active files.`);
@@ -63,8 +68,8 @@ export function validateSessionShareFiles(files: File[], activeCount = 0): Sessi
     if (file.size <= 0) {
       errors.push(`${file.name} is empty.`);
     }
-    if (file.size > SESSION_FILE_MAX_BYTES) {
-      errors.push(`${file.name} is larger than 50 MB.`);
+    if (file.size > maxBytes) {
+      errors.push(`${file.name} is larger than ${Math.round(maxBytes / 1024 / 1024)} MB.`);
     }
     if (file.type && file.type !== expectedMime) {
       errors.push(`${file.name} does not match its file type.`);
@@ -175,7 +180,7 @@ export function isSessionFileRetentionDays(value: number): value is SessionFileR
 
 export function subscribeResourceDropChanges(
   target: { roomId?: string; shareSlug?: string },
-  onChange: () => void,
+  onChange: () => void | Promise<void>,
   onStatus?: (status: "connecting" | "connected" | "disconnected") => void,
 ): () => void {
   const topic = target.shareSlug
@@ -188,21 +193,115 @@ export function subscribeResourceDropChanges(
     return () => {};
   }
 
-  const channel = supabase.channel(topic).on("broadcast", { event: "changed" }, () => onChange());
-  channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      onStatus?.("connected");
+  let channel: ReturnType<typeof supabase.channel> | null = null;
+  let pollTimer: ReturnType<typeof setTimeout> | undefined;
+  let reconciliation: Promise<void> | null = null;
+  let reconciliationQueued = false;
+  let reconnecting = false;
+  let disposed = false;
+
+  const clearPollTimer = () => {
+    if (pollTimer !== undefined) clearTimeout(pollTimer);
+    pollTimer = undefined;
+  };
+
+  const reconcile = (): Promise<void> => {
+    if (disposed) return Promise.resolve();
+    if (reconciliation) {
+      reconciliationQueued = true;
+      return reconciliation;
+    }
+
+    reconciliation = (async () => {
+      do {
+        reconciliationQueued = false;
+        if (disposed) return;
+        try {
+          await onChange();
+        } catch {
+          // Broadcast and polling are best-effort invalidation paths. Consumers
+          // retain their last durable Express snapshot when a refresh fails.
+        }
+      } while (reconciliationQueued && !disposed);
+    })().finally(() => {
+      reconciliation = null;
+    });
+    return reconciliation;
+  };
+
+  const schedulePoll = () => {
+    clearPollTimer();
+    if (disposed || typeof document === "undefined" || document.visibilityState !== "visible") {
       return;
     }
-    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      onStatus?.("disconnected");
+    pollTimer = setTimeout(() => {
+      pollTimer = undefined;
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        schedulePoll();
+        return;
+      }
+      void reconcile().finally(schedulePoll);
+    }, RESOURCE_DROP_RECONCILIATION_MS);
+  };
+
+  const reconcileNow = () => {
+    if (disposed || typeof document === "undefined" || document.visibilityState !== "visible") {
       return;
     }
-    onStatus?.("connecting");
-  });
+    clearPollTimer();
+    void reconcile().finally(schedulePoll);
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") reconcileNow();
+    else clearPollTimer();
+  };
+  const onOnline = () => reconcileNow();
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("online", onOnline);
+    schedulePoll();
+  }
+
+  onStatus?.("connecting");
+  void supabase.realtime
+    .setAuth()
+    .then(() => {
+      if (disposed) return;
+      channel = supabase
+        .channel(topic, { config: { private: true } })
+        .on("broadcast", { event: "changed" }, reconcileNow);
+      channel.subscribe((status) => {
+        if (disposed) return;
+        if (status === "SUBSCRIBED") {
+          onStatus?.("connected");
+          if (reconnecting) {
+            reconnecting = false;
+            reconcileNow();
+          }
+          return;
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          reconnecting = true;
+          onStatus?.("disconnected");
+          return;
+        }
+        onStatus?.("connecting");
+      });
+    })
+    .catch(() => {
+      if (!disposed) onStatus?.("disconnected");
+    });
 
   return () => {
-    void supabase.removeChannel(channel);
+    disposed = true;
+    clearPollTimer();
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("online", onOnline);
+    }
+    if (channel) void supabase.removeChannel(channel);
   };
 }
 
@@ -229,5 +328,6 @@ async function sessionFileFetch<T>(action: string, options: FetchOptions): Promi
     json,
     body,
     auth: false,
+    timeoutMs: body instanceof FormData ? 180_000 : undefined,
   });
 }

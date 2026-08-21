@@ -4,7 +4,7 @@ import {
   claimAuthorSession,
   createRoom,
   duplicateRoom,
-  ensureDemoRoom,
+  expireQuestionTimer,
   getAuthorRoomResults,
   getRoomSnapshot,
   joinRoom,
@@ -20,34 +20,58 @@ import {
   submitJigsawMissionAssembly,
   submitJigsawProgress,
   submitPollResponses,
+  submitPollQuestionResponse,
   submitQuizAnswer,
   submitQuizJigsawAnswer,
   submitVisualPointAnswer,
-} from "../../frontend/src/lib/game/room-engine.ts";
+} from "./game/room-engine.ts";
 import {
   deleteAuthorSession,
   fetchAuthorSessionPayload,
   fetchAuthorSessions,
-} from "../../frontend/src/lib/supabase/author-sessions.ts";
+} from "./game/author-sessions.ts";
 import {
   getJigsawCategories,
   getJigsawLibraryImages,
   getJigsawSubtopics,
-  incrementJigsawLibraryUsage,
-} from "../../frontend/src/lib/supabase/jigsaw-library.ts";
-import { fetchParticipatedGames } from "../../frontend/src/lib/supabase/participated-games.ts";
+} from "./game/jigsaw-library.ts";
+import { fetchParticipatedGames } from "./game/participated-games.ts";
 
-import { requireUser } from "./auth.js";
+import { optionalUser, requireAuthor, requireUser } from "./auth.js";
+import { getAuthorPlanLimits } from "./billing/service.js";
 import { HttpError } from "./http-error.js";
+import {
+  queueRealtimeSignal,
+  roomHostTopic,
+  roomPublicTopic,
+} from "./realtime.js";
+
+const PUBLIC_ROOM_ACTIONS = new Set([
+  "join-room",
+  "reconnect-participant",
+  "start-game",
+  "stop-game",
+  "set-student-leaderboard",
+]);
+
+const HOST_ROOM_ACTIONS = new Set([
+  ...PUBLIC_ROOM_ACTIONS,
+  "submit-poll-responses",
+  "submit-poll-question-response",
+  "expire-question-timer",
+  "submit-quiz-answer",
+  "submit-visual-point-answer",
+  "submit-quiz-jigsaw-answer",
+  "submit-jigsaw-mission-answer",
+  "rotate-jigsaw-mission-tile",
+  "submit-jigsaw-progress",
+  "submit-jigsaw-mission-assembly",
+  "submit-connect-dots-matches",
+  "submit-connect-dots-paths",
+  "record-connect-dots-incorrect-attempt",
+]);
 
 const gameActions = {
-  "ensure-demo-room": {
-    auth: false,
-    handler: async () => {
-      await ensureDemoRoom();
-      return { ok: true };
-    },
-  },
   "create-room": { authUserField: "authorId", handler: createRoom },
   "join-room": { auth: false, handler: joinRoom },
   "reconnect-participant": { auth: false, handler: reconnectParticipant },
@@ -68,6 +92,11 @@ const gameActions = {
     handler: setShowLeaderboardToStudents,
   },
   "submit-poll-responses": { auth: false, handler: submitPollResponses },
+  "submit-poll-question-response": {
+    auth: false,
+    handler: submitPollQuestionResponse,
+  },
+  "expire-question-timer": { auth: false, handler: expireQuestionTimer },
   "submit-quiz-answer": { auth: false, handler: submitQuizAnswer },
   "submit-visual-point-answer": {
     auth: false,
@@ -105,17 +134,51 @@ export function registerGameRoutes(app) {
       const action = gameActions[req.params.action];
       if (!action) throw new HttpError("Unknown game action.", 404);
 
-      const data = req.body ?? {};
-      if (action.authUserField) {
-        await requireUser(
+      let data = req.body ?? {};
+      if (req.params.action === "join-room") {
+        const user = await optionalUser(req);
+        data = { ...data, userId: user?.id ?? null };
+      } else if (action.authUserField) {
+        const user = await requireAuthor(
           req,
           stringValue(data[action.authUserField], action.authUserField),
         );
+        if (
+          req.params.action === "create-room" ||
+          req.params.action === "duplicate-room"
+        ) {
+          const limits = await getAuthorPlanLimits(user.id);
+          data = {
+            ...data,
+            maxParticipants: limits.livePlayersPerRoom,
+            roomLifespanDays: limits.roomLifespanDays,
+          };
+        }
       } else if (action.auth !== false) {
         await requireUser(req);
       }
 
-      res.json(await action.handler(data));
+      const result = await action.handler(data);
+      const roomId = resolveRoomId(data, result);
+      if (roomId) {
+        if (HOST_ROOM_ACTIONS.has(req.params.action)) {
+          queueRealtimeSignal(
+            roomHostTopic(roomId),
+            "room_changed",
+            { action: req.params.action },
+            100,
+          );
+        }
+        if (PUBLIC_ROOM_ACTIONS.has(req.params.action)) {
+          queueRealtimeSignal(
+            roomPublicTopic(roomId),
+            "room_changed",
+            { action: req.params.action },
+            250,
+          );
+        }
+      }
+      res.json(result);
     }),
   );
 
@@ -123,7 +186,7 @@ export function registerGameRoutes(app) {
     "/api/author-sessions",
     asyncRoute(async (req, res) => {
       const authorId = stringQuery(req.query, "authorId");
-      await requireUser(req, authorId);
+      await requireAuthor(req, authorId);
       res.json(
         await fetchAuthorSessions(authorId, intQuery(req.query, "limit", 50)),
       );
@@ -134,7 +197,7 @@ export function registerGameRoutes(app) {
     "/api/author-sessions/:roomId",
     asyncRoute(async (req, res) => {
       const authorId = stringValue(req.body?.authorId, "authorId");
-      await requireUser(req, authorId);
+      await requireAuthor(req, authorId);
       await deleteAuthorSession(authorId, req.params.roomId);
       res.json({ ok: true });
     }),
@@ -144,7 +207,7 @@ export function registerGameRoutes(app) {
     "/api/author-sessions/:roomId/payload",
     asyncRoute(async (req, res) => {
       const authorId = stringQuery(req.query, "authorId");
-      await requireUser(req, authorId);
+      await requireAuthor(req, authorId);
       res.json(await fetchAuthorSessionPayload(authorId, req.params.roomId));
     }),
   );
@@ -190,15 +253,13 @@ export function registerGameRoutes(app) {
     }),
   );
 
-  app.post(
-    "/api/jigsaw/usage",
-    asyncRoute(async (req, res) => {
-      await incrementJigsawLibraryUsage(
-        stringValue(req.body?.imageId, "imageId"),
-      );
-      res.json({ ok: true });
-    }),
-  );
+}
+
+function resolveRoomId(data, result) {
+  if (typeof data?.roomId === "string" && data.roomId) return data.roomId;
+  if (typeof result?.room?.id === "string" && result.room.id)
+    return result.room.id;
+  return null;
 }
 
 function stringValue(value, key) {

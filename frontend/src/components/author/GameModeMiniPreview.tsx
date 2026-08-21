@@ -3,7 +3,8 @@ import gameJigsawPreview from "@/assets/tool-jigsaw-mission.webp";
 import gamePollsPreview from "@/assets/tool-polls-survey.webp";
 import gameQuizPreview from "@/assets/tool-quiz-battle.webp";
 import gameTargetHuntPreview from "@/assets/tool-target-hunt.webp";
-import type { GameMode } from "@/lib/game/config";
+import resourceDropPreview from "@/assets/tool-resource-drop.webp";
+import type { GameMode } from "@shared/game/config";
 import { cn } from "@/lib/utils";
 
 const previews: Partial<Record<GameMode, string>> = {
@@ -17,13 +18,20 @@ const previews: Partial<Record<GameMode, string>> = {
 
 type GameModeMiniPreviewProps = {
   mode: GameMode;
+  subject?: string | null;
   className?: string;
   size?: "sm" | "md";
 };
 
 /** Compact gameplay thumbnail using real mode preview assets. */
-export function GameModeMiniPreview({ mode, className, size = "sm" }: GameModeMiniPreviewProps) {
-  const src = previews[mode] ?? gameQuizPreview;
+export function GameModeMiniPreview({
+  mode,
+  subject,
+  className,
+  size = "sm",
+}: GameModeMiniPreviewProps) {
+  const isResourceDrop = subject === "Resource Drop";
+  const src = isResourceDrop ? resourceDropPreview : (previews[mode] ?? gameQuizPreview);
   const sizeClass = size === "md" ? "size-16 sm:size-20" : "size-12 sm:size-14";
 
   return (
@@ -31,7 +39,7 @@ export function GameModeMiniPreview({ mode, className, size = "sm" }: GameModeMi
       className={cn(
         "relative shrink-0 overflow-hidden rounded-xl ring-1 ring-black/5",
         sizeClass,
-        modeTint(mode),
+        isResourceDrop ? "bg-emerald-50" : modeTint(mode),
         className,
       )}
     >
@@ -43,7 +51,7 @@ export function GameModeMiniPreview({ mode, className, size = "sm" }: GameModeMi
         loading="lazy"
       />
       <img src={src} alt="" className="relative z-10 size-full object-contain p-1" loading="lazy" />
-      <ModeDecor mode={mode} />
+      {!isResourceDrop && <ModeDecor mode={mode} />}
     </div>
   );
 }

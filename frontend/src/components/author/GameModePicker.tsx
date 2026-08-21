@@ -1,8 +1,8 @@
 import { ArrowRight, Check } from "lucide-react";
 
 import { GAME_MODE_CATALOG, getCoreModeCatalog } from "@/lib/game/mode-catalog";
-import type { GameMode } from "@/lib/game/config";
-import { GAME_MODE_META } from "@/lib/game/config";
+import type { GameMode } from "@shared/game/config";
+import { GAME_MODE_META } from "@shared/game/config";
 import { cn } from "@/lib/utils";
 
 const MODE_PRESENTATION = {

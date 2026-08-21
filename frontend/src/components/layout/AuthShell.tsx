@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, QrCode } from "lucide-react";
 import { useState, type ReactNode } from "react";

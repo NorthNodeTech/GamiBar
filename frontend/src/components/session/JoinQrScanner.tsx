@@ -78,6 +78,7 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
     handledRef.current = false;
     let cancelled = false;
     let scanner: Html5Qrcode | null = null;
+    const scannerContainer = containerRef.current;
 
     const startScanner = async () => {
       setStarting(true);
@@ -98,11 +99,11 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
         );
 
         if (cancelled) {
-          await stopScanner(scanner, containerRef.current);
+          await stopScanner(scanner, scannerContainer);
           return;
         }
 
-        const container = containerRef.current;
+        const container = scannerContainer;
         if (container) {
           container.querySelectorAll("video").forEach((video) => {
             video.style.position = "absolute";
@@ -124,7 +125,7 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
         setScanning(true);
       } catch {
         if (cancelled) {
-          await stopScanner(scanner, containerRef.current);
+          await stopScanner(scanner, scannerContainer);
           return;
         }
         const message = "Allow camera access to scan the QR on the host screen.";
@@ -144,7 +145,7 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
       scannerRef.current = null;
       setScanning(false);
       setStarting(false);
-      void stopScanner(active, containerRef.current);
+      void stopScanner(active, scannerContainer);
     };
   }, [elementId, facingMode, handleScan, scanComplete]);
 
@@ -163,8 +164,9 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
   }, []);
 
   useEffect(() => {
+    const scannerContainer = containerRef.current;
     return () => {
-      void stopScanner(scannerRef.current, containerRef.current);
+      void stopScanner(scannerRef.current, scannerContainer);
       releaseAllCameraStreams();
     };
   }, []);
@@ -199,7 +201,9 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
         {(starting || flipping) && !cameraError && !scanComplete && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[#0a0a0a]/95 text-white">
             <Camera className="size-8 animate-pulse" />
-            <p className="text-sm font-medium">{flipping ? "Switching camera…" : "Starting camera…"}</p>
+            <p className="text-sm font-medium">
+              {flipping ? "Switching camera…" : "Starting camera…"}
+            </p>
           </div>
         )}
 
@@ -233,7 +237,9 @@ export function JoinQrScanner({ onCode, onError, className }: JoinQrScannerProps
         {scanning && !cameraError && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-10 text-center">
             <p className="text-sm font-medium text-white">Align the QR inside the frame</p>
-            <p className="mt-0.5 text-xs text-white/70">Shown on the host&apos;s projector or screen</p>
+            <p className="mt-0.5 text-xs text-white/70">
+              Shown on the host&apos;s projector or screen
+            </p>
           </div>
         )}
       </div>

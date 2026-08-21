@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@/lib/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Hash, Loader2, QrCode, ScanLine } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { HOMEPAGE_HERO } from "@/content/homepage";
 import { getRoomSnapshotFn } from "@/lib/game/room.functions";
 import { friendlyGameError } from "@/lib/accessibility";
-import { normalizeRoomCode } from "@/lib/game/room-code";
+import { normalizeRoomCode } from "@shared/game/room-code";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },

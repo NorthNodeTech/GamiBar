@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 
-import type { JigsawTileCardRotation } from "@/lib/game/jigsaw-tiles";
+import type { JigsawTileCardRotation } from "@shared/game/jigsaw-tiles";
 import { cn } from "@/lib/utils";
 
 type JigsawTileCardVisualProps = {

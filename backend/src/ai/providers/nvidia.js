@@ -9,7 +9,7 @@ export const nvidiaProvider = {
   isConfigured() {
     return Boolean(nvidiaApiKey());
   },
-  async generateJson({ prompt, schema }) {
+  async generateJson({ prompt, schema, timeoutMs }) {
     return callOpenAiCompatibleProvider({
       baseUrl: process.env.NVIDIA_BASE_URL?.trim() || DEFAULT_NVIDIA_BASE_URL,
       apiKey: nvidiaApiKey(),
@@ -17,6 +17,7 @@ export const nvidiaProvider = {
       prompt,
       schema,
       schemaName: "gamibar_generation",
+      timeoutMs,
       bodyExtras: {
         nvext: { guided_json: schema },
       },

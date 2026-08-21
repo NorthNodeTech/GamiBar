@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 
 import { getModeCatalog } from "@/lib/game/mode-catalog";
-import type { GameMode } from "@/lib/game/config";
-import { GAME_MODE_META } from "@/lib/game/config";
+import type { GameMode } from "@shared/game/config";
+import { GAME_MODE_META } from "@shared/game/config";
 import { cn } from "@/lib/utils";
 
 const AVATAR_PALETTE = [

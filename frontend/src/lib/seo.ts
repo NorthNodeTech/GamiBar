@@ -21,10 +21,19 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
     title: "Author Achievements | GamiBar",
     description: "View achievements earned while creating and hosting GamiBar learning sessions.",
   },
+  "/author/billing": {
+    title: "Billing & Plans | GamiBar",
+    description: "Manage your GamiBar plan, Razorpay subscription, payments, and refund requests.",
+  },
   "/author/create": {
     title: "Create a Live Classroom Game | GamiBar",
     description:
       "Build a GamiBar quiz, jigsaw mission, Target Hunt challenge, or connect-the-dots session for your class.",
+  },
+  "/author/qr-file": {
+    title: "QRFile Instant Sharing | GamiBar",
+    description:
+      "Upload and share presentation files, documents, and resources instantly via QR code.",
   },
   "/author/tools": {
     title: "Tools | GamiBar",
@@ -64,6 +73,10 @@ const PRIVATE_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
   "/forgot-password": {
     title: "Reset Password | GamiBar",
     description: "Request a secure password reset link for your GamiBar account.",
+  },
+  "/update-password": {
+    title: "Choose a New Password | GamiBar",
+    description: "Set a new password from a secure GamiBar account-recovery link.",
   },
   "/join/lobby": {
     title: "Game Lobby | GamiBar",
@@ -126,6 +139,35 @@ const PUBLIC_ROUTE_SEO: Record<string, Omit<RouteSeo, "noIndex">> = {
     description:
       "Join a GamiBar classroom game from any phone, tablet, or computer. Enter the six-digit room code or scan the session QR code to begin.",
   },
+  "/pricing": {
+    title: "GamiBar Pricing | Free, Monthly, Yearly & Lifetime Plans",
+    description:
+      "Compare GamiBar Free, Pro Monthly, Pro Yearly, and Lifetime plans for live classroom games, AI generation, and QRFile sharing.",
+  },
+  "/terms": {
+    title: "Terms and Conditions | GamiBar",
+    description:
+      "Read the terms governing GamiBar accounts, classroom sessions, plans, payments, and fair use.",
+  },
+  "/privacy": {
+    title: "Privacy Policy | GamiBar",
+    description:
+      "Learn how GamiBar handles author, participant, session, payment, and support information.",
+  },
+  "/refund-policy": {
+    title: "Cancellation and Refund Policy | GamiBar",
+    description: "Read GamiBar's subscription cancellation and seven-day refund-request policy.",
+  },
+  "/contact": {
+    title: "Contact GamiBar Support | NorthNode Technologies",
+    description:
+      "Contact NorthNode Technologies for GamiBar account, billing, privacy, and security support.",
+  },
+  "/qr-file": {
+    title: "QRFile Instant Sharing | GamiBar",
+    description:
+      "Upload and share presentation files, documents, and resources instantly via QR code.",
+  },
 };
 
 export function getRouteSeo(pathname: string): RouteSeo {
@@ -154,6 +196,14 @@ export function getRouteSeo(pathname: string): RouteSeo {
     return {
       title: "Live Game | GamiBar",
       description: "Play a live GamiBar classroom activity from your connected device.",
+      noIndex: true,
+    };
+  }
+  if (/^\/share\/[^/]+$/.test(normalizedPath)) {
+    return {
+      title: "Shared Files Download | GamiBar",
+      description:
+        "Download presentation slides, worksheets, and resources shared via GamiBar QRFile.",
       noIndex: true,
     };
   }

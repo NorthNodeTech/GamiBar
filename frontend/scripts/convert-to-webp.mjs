@@ -32,9 +32,7 @@ for (const root of roots) {
     const input = sharp(file);
     const meta = await input.metadata();
 
-    await input
-      .webp({ quality: 88, effort: 4, alphaQuality: 90 })
-      .toFile(out);
+    await input.webp({ quality: 88, effort: 4, alphaQuality: 90 }).toFile(out);
 
     const before = (await stat(file)).size;
     const after = (await stat(out)).size;

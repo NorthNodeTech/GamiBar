@@ -14,10 +14,45 @@ const API_BASE_URL =
     : normalizeApiBaseUrl(rawApiBaseUrl);
 
 const AUTH_SESSION_TIMEOUT_MS = 8000;
-const API_REQUEST_TIMEOUT_MS = 15000;
+// Render's free web services can take close to a minute to wake after being idle.
+// Keep the browser request alive long enough for that first request to complete.
+const API_REQUEST_TIMEOUT_MS = 70_000;
+let warmupPromise: Promise<void> | null = null;
 
 function normalizeApiBaseUrl(value: string): string {
-  return (value.split(",")[0] ?? "").trim().replace(/\/+$/, "");
+  let candidate = (value.split(",")[0] ?? "").trim().replace(/\/+$/, "");
+  if (!candidate) return "";
+  if (/^[a-z0-9.-]+(?::\d+)?$/i.test(candidate)) candidate = `https://${candidate}`;
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    console.error("[GamiBAR] VITE_API_BASE_URL is not a valid HTTP(S) URL.");
+    return "";
+  }
+}
+
+/**
+ * Start a free-tier API cold start before the user submits a form or joins a room.
+ * The promise is shared inside this browser tab so route transitions do not
+ * duplicate its wake-up request.
+ */
+export function warmApi(): Promise<void> {
+  if (!API_BASE_URL || typeof window === "undefined") return Promise.resolve();
+  if (warmupPromise) return warmupPromise;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
+  warmupPromise = fetch(`${API_BASE_URL}/api/health`, {
+    headers: { accept: "application/json" },
+    signal: controller.signal,
+  })
+    .then(() => undefined)
+    .catch(() => undefined)
+    .finally(() => clearTimeout(timeout));
+  return warmupPromise;
 }
 
 type ApiFetchOptions = {
@@ -80,19 +115,27 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("GamiBar API took too long to respond. Check your connection and try again.");
+      throw new Error("GamiBar's server is still waking up. Wait a moment, then try again.");
     }
-    throw error;
+    throw new Error("Could not reach GamiBar's server. Check your connection and try again.");
   } finally {
     clearTimeout(timeout);
   }
 
-  const payload = (await response.json().catch(() => null)) as { error?: string } | T | null;
+  const contentType = response.headers.get("content-type") ?? "";
+  const payload = contentType.includes("application/json")
+    ? ((await response.json().catch(() => null)) as { error?: string } | T | null)
+    : null;
   if (!response.ok) {
     throw new Error(
       payload && typeof payload === "object" && "error" in payload && payload.error
         ? payload.error
         : "GamiBar request failed.",
+    );
+  }
+  if (payload === null) {
+    throw new Error(
+      "GamiBar's server returned an unexpected response. It may still be waking up; please retry.",
     );
   }
   return payload as T;

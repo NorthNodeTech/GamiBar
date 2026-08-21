@@ -14,7 +14,9 @@ class SoundSystem {
 
   private initCtx() {
     if (!this.ctx && typeof window !== "undefined") {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
@@ -49,11 +51,11 @@ class SoundSystem {
     try {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      
+
       osc.type = "sine";
       osc.frequency.setValueAtTime(800, this.ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.04);
-      
+
       gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.04);
 

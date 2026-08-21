@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@/lib/navigation";
 import { Menu, Plus, X } from "lucide-react";
 import { useState } from "react";
 
@@ -11,6 +11,7 @@ const publicNav = [
   { to: "/#games", label: "Tools", hash: true },
   { to: "/#journey", label: "Flow", hash: true },
   { to: "/#faq", label: "FAQ", hash: true },
+  { to: "/pricing", label: "Pricing", hash: false },
 ] as const;
 
 export function SiteHeader() {
@@ -158,11 +159,11 @@ export function SiteHeader() {
 
               <div className="mt-8 grid gap-2 border-t border-white/10 pt-6">
                 <Link
-                  to="/settings"
+                  to="/author"
                   onClick={() => setOpen(false)}
                   className="flex min-h-11 items-center rounded-xl px-4 text-base font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  <span className="min-w-0 truncate">Settings</span>
+                  <span className="min-w-0 truncate">Teacher dashboard</span>
                 </Link>
               </div>
             </div>

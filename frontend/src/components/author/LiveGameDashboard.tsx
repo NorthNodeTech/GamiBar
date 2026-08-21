@@ -1,7 +1,7 @@
 import { CheckCircle2, CircleDashed, Loader2, Users } from "lucide-react";
 
-import { GAME_MODE_META, type GameMode } from "@/lib/game/config";
-import type { LiveParticipantProgress, ParticipantStatus } from "@/lib/game/types";
+import { GAME_MODE_META, type GameMode } from "@shared/game/config";
+import type { LiveParticipantProgress, ParticipantStatus } from "@shared/game/types";
 import { cn } from "@/lib/utils";
 
 function statusLabel(status: ParticipantStatus, completed: boolean): string {
