@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@/lib/navigation";
-import { Home, LogOut, QrCode, Radio, ScanLine, Wrench } from "lucide-react";
+import { Home, LogOut, Plus, QrCode, Radio, ScanLine, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/layout/Logo";
@@ -16,10 +16,10 @@ function navItemActive(pathname: string, item: AuthorNavItem, onLiveRoom: boolea
 
 function navLinkClass(active: boolean) {
   return cn(
-    "tap-target inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200",
+    "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200",
     active
-      ? "bg-[#111111] text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)]"
-      : "text-[#5F6368] hover:bg-[#F8F9FB] hover:text-[#111111]",
+      ? "bg-[#111111] text-white shadow-xs font-bold"
+      : "text-[#5F6368] hover:bg-white hover:text-[#111111] hover:shadow-xs",
   );
 }
 
@@ -49,7 +49,7 @@ export function AuthorShell({ children }: { children: ReactNode }) {
         aria-current={active ? "page" : undefined}
         className={navLinkClass(active)}
       >
-        <Icon className="size-4 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+        <Icon className="size-3.5 shrink-0" strokeWidth={active ? 2.5 : 2} />
         <span>{item.label}</span>
       </Link>
     );
@@ -57,38 +57,68 @@ export function AuthorShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="author-shell flex min-h-dvh flex-col overflow-x-clip bg-[#F8F9FB]">
-      <header className="sticky top-0 z-30 border-b border-[#E7E9ED] bg-white/95 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-[#E7E9ED]/80 bg-white/85 backdrop-blur-xl transition-all">
         <div className="mx-auto max-w-[80rem] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between gap-2 sm:h-16">
+          <div className="flex h-15 items-center justify-between gap-3 sm:h-16">
+            {/* Brand Logo */}
             <Link
               to="/author"
-              className="flex min-w-0 shrink-0 items-center gap-2 tap-target"
+              className="group flex min-w-0 shrink-0 items-center gap-2.5 transition-transform active:scale-98"
               aria-label="GamiBar Portal Home"
             >
-              <img
-                src={logoBlack}
-                alt="GamiBar"
-                className="h-7 w-auto object-contain sm:h-8"
-              />
-              <span className="truncate font-display text-sm font-bold text-[#111111] sm:text-base">
-                Gami<span className="font-black text-[#FF3B30]">BAR</span>
-              </span>
+              <div className="relative grid place-items-center">
+                <img
+                  src={logoBlack}
+                  alt="GamiBar"
+                  className="h-7 w-auto object-contain transition-transform duration-300 group-hover:scale-105 sm:h-8"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="truncate font-display text-base font-extrabold tracking-tight text-[#111111] sm:text-lg">
+                  Gami<span className="font-black text-[#FF3B30]">BAR</span>
+                </span>
+                <span className="hidden rounded-md border border-[#E5E7EB] bg-[#F8F9FA] px-1.5 py-0.5 text-[10px] font-bold text-[#6B7280] lg:inline-flex">
+                  Host
+                </span>
+              </div>
             </Link>
 
+            {/* Floating Nav Segmented Island */}
             <nav
-              className="hidden flex-1 items-center justify-center gap-1 sm:flex"
+              className="hidden flex-1 items-center justify-center sm:flex"
               aria-label="Main navigation"
             >
-              {authorNavItems.map((item) => renderNavLink(item))}
-              {onLiveRoom && (
-                <span className="ml-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#FF3B30]/20 bg-[#FFF1F0] px-2.5 py-2 text-xs font-semibold text-[#FF3B30]">
-                  <Radio className="size-3.5" />
-                  Live
-                </span>
-              )}
+              <div className="flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-[#F1F3F6]/90 p-1 shadow-xs backdrop-blur-md">
+                {authorNavItems.map((item) => renderNavLink(item))}
+                {onLiveRoom && (
+                  <span className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-[#FF3B30] animate-pulse">
+                    <span className="size-1.5 rounded-full bg-[#FF3B30]" />
+                    Live Session
+                  </span>
+                )}
+              </div>
             </nav>
 
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {/* Action Buttons & Profile */}
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              {/* Desktop Create Room & Join Room Action Buttons */}
+              <div className="hidden items-center gap-2 sm:flex">
+                <Link
+                  to="/join"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#D9DDE3] bg-white px-3.5 text-xs font-bold text-[#374151] shadow-xs transition-all hover:border-[#111111] hover:text-[#111111] hover:shadow-sm active:scale-95"
+                >
+                  <ScanLine className="size-3.5 text-[#5F6368]" strokeWidth={2.25} />
+                  <span>Join room</span>
+                </Link>
+                <Link
+                  to="/author/create"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-b from-[#1E293B] to-[#0F172A] px-4 text-xs font-bold text-white shadow-xs transition-all hover:scale-[1.02] hover:shadow-sm active:scale-95 border border-white/10"
+                >
+                  <Plus className="size-3.5 stroke-[2.5]" />
+                  <span>Create room</span>
+                </Link>
+              </div>
+
               {onLiveRoom && (
                 <span className="inline-flex items-center gap-1 rounded-xl border border-[#FF3B30]/20 bg-[#FFF1F0] px-2 py-1 text-[10px] font-semibold text-[#FF3B30] sm:hidden">
                   <Radio className="size-3" />
@@ -131,54 +161,84 @@ export function AuthorShell({ children }: { children: ReactNode }) {
             }}
           />
         </div>
-        <main className="relative px-4 py-5 pb-[max(5.25rem,calc(4.75rem+env(safe-area-inset-bottom)))] sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
+        <main className="relative px-4 py-4 pb-[max(3.75rem,calc(3.25rem+env(safe-area-inset-bottom)))] sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
           {children}
         </main>
       </div>
 
-      {/* Mobile Bottom Dock Navigation */}
+      {/* Mobile Bottom Dock Navigation (Compact Sleek Bar with Large Icons) */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E7E9ED] bg-white/95 backdrop-blur-md pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E7E9ED]/90 bg-white/90 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
         aria-label="Mobile navigation"
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 items-center px-1">
-          {authorBottomNavItems.map((item) => {
-            const Icon = item.icon;
-            const active = navItemActive(pathname, item, onLiveRoom);
-            const label = item.mobileLabel ?? item.label;
-            return (
-              <Link
-                key={`mobile-bottom-${item.to}`}
-                to={item.to}
-                title={item.label}
-                aria-label={item.label}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-1 text-center transition-all",
-                  active ? "text-[#111111]" : "text-[#5F6368] hover:text-[#111111]",
-                )}
-              >
-                <span
-                  className={cn(
-                    "grid h-7 w-12 place-items-center rounded-full transition-colors",
-                    active
-                      ? "bg-[#111111] text-white shadow-sm"
-                      : "text-[#5F6368] hover:bg-[#F8F9FB]",
-                  )}
-                >
-                  <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.25 : 1.75} />
-                </span>
-                <span
-                  className={cn(
-                    "max-w-full truncate text-[10.5px] font-medium leading-tight",
-                    active && "font-bold text-[#111111]",
-                  )}
-                >
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
+        <div className="mx-auto flex h-13 max-w-xs items-center justify-around px-5 pb-[env(safe-area-inset-bottom)]">
+          {/* Home */}
+          <Link
+            to="/author"
+            title="Home"
+            aria-label="Home"
+            aria-current={pathname === "/author" || pathname === "/author/" ? "page" : undefined}
+            className={cn(
+              "flex flex-col items-center justify-center p-1 transition-transform active:scale-90",
+              pathname === "/author" || pathname === "/author/"
+                ? "text-[#111111]"
+                : "text-[#8A8F98] hover:text-[#111111]",
+            )}
+          >
+            <Home
+              className="size-6 shrink-0"
+              strokeWidth={pathname === "/author" || pathname === "/author/" ? 2.5 : 2}
+            />
+            {pathname === "/author" || pathname === "/author/" ? (
+              <span className="mt-0.5 size-1 rounded-full bg-[#111111]" />
+            ) : (
+              <span className="mt-0.5 size-1" />
+            )}
+          </Link>
+
+          {/* Center Scan / Join QR FAB (PhonePe Style) */}
+          <Link
+            to="/join"
+            title="Scan QR / Join Game"
+            aria-label="Scan QR or Enter Room Code"
+            className="group relative -top-3 flex flex-col items-center justify-center tap-target"
+          >
+            <div className="grid size-12 place-items-center rounded-full bg-gradient-to-b from-[#1E293B] via-[#111827] to-[#0A0E1A] text-white shadow-[0_6px_16px_rgba(15,23,42,0.35)] ring-[3px] ring-white transition-all duration-150 active:scale-90 group-hover:scale-105">
+              <ScanLine className="size-6 text-white stroke-[2.25]" />
+            </div>
+          </Link>
+
+          {/* Tools */}
+          <Link
+            to="/author/tools"
+            title="Tools"
+            aria-label="Tools"
+            aria-current={
+              pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+                ? "page"
+                : undefined
+            }
+            className={cn(
+              "flex flex-col items-center justify-center p-1 transition-transform active:scale-90",
+              pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+                ? "text-[#111111]"
+                : "text-[#8A8F98] hover:text-[#111111]",
+            )}
+          >
+            <Wrench
+              className="size-6 shrink-0"
+              strokeWidth={
+                pathname.startsWith("/author/tools") || pathname.startsWith("/author/create")
+                  ? 2.5
+                  : 2
+              }
+            />
+            {pathname.startsWith("/author/tools") || pathname.startsWith("/author/create") ? (
+              <span className="mt-0.5 size-1 rounded-full bg-[#111111]" />
+            ) : (
+              <span className="mt-0.5 size-1" />
+            )}
+          </Link>
         </div>
       </nav>
     </div>

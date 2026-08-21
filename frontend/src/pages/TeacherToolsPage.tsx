@@ -95,8 +95,8 @@ const fileSharingTags = ["PDF", "PPT", "PPTX", "DOC", "DOCX", "7/14/28 days"];
 export default function ToolsPage() {
   return (
     <AuthorShell>
-      <div className="mx-auto w-full max-w-[72rem] py-3 text-[#111111] sm:py-5">
-        <header className="grid gap-5 border-b border-[#E7E9ED] pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <div className="mx-auto w-full max-w-[72rem] py-1 text-[#111111] sm:py-5">
+        <header className="hidden sm:grid gap-5 border-b border-[#E7E9ED] pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase text-[#FF3B30]">
               No more boring classrooms, no more boring sessions
@@ -132,7 +132,7 @@ export default function ToolsPage() {
           </div>
         </header>
 
-        <div className="space-y-14 pt-10">
+        <div className="space-y-10 sm:space-y-14 pt-2 sm:pt-10">
           <ToolSection
             eyebrow="Quick checks"
             title="Simple Quiz and Polls"

@@ -2928,11 +2928,6 @@ function ReviewLaunchCard({
 
 function FittedPreviewImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="size-full object-cover object-center"
-      loading="lazy"
-    />
+    <img src={src} alt={alt} className="size-full object-cover object-center" loading="lazy" />
   );
 }

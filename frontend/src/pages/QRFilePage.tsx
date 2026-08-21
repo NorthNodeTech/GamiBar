@@ -254,43 +254,7 @@ export default function QRFilePage() {
 
   return (
     <AuthorShell>
-      <div className="mx-auto w-full max-w-5xl py-4 sm:py-8 text-[#111111] px-4 sm:px-6">
-        {/* Top Header */}
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#E2E8F0] pb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#FFD0CC] bg-[#FFF1F0] px-3 py-1 text-xs font-bold text-[#FF3B30]">
-                <QrCode className="size-3.5" />
-                QRFile Instant Sharing
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#CBD5E1] bg-white px-2.5 py-0.5 text-[11px] font-bold text-[#4B5563]">
-                One Upload · One QR
-              </span>
-            </div>
-            <h1 className="mt-2 font-display text-2xl sm:text-3xl font-extrabold text-[#111111]">
-              Files by QR
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-[#5F6368] max-w-2xl">
-              Upload your presentations, worksheets, or lecture handouts. Generate a live QR code so
-              your students and audience can download them instantly with zero friction.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 mt-3 sm:mt-0">
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="rounded-xl border-[#CBD5E1] bg-white hover:bg-[#F3F4F6]"
-            >
-              <Link to="/author/tools">
-                <ArrowLeft className="mr-1 size-3.5" />
-                All Tools
-              </Link>
-            </Button>
-          </div>
-        </div>
-
+      <div className="mx-auto w-full max-w-5xl py-2 sm:py-6 text-[#111111] px-4 sm:px-6">
         {error && (
           <InlineErrorBanner className="mb-6" message={error} onDismiss={() => setError(null)} />
         )}

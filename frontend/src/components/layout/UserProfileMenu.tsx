@@ -79,29 +79,29 @@ export function UserProfileMenu({ onUpgradeClick }: UserProfileMenuProps) {
         aria-expanded={open}
         aria-label="User account menu"
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-[#E7E9ED] bg-white p-1 transition-all duration-150 hover:border-[#CBD5E1] hover:bg-[#F8F9FB] focus:outline-none focus:ring-2 focus:ring-[#111111]/10 md:pr-3",
-          open && "border-[#111111] bg-[#F8F9FB] shadow-xs",
+          "flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white py-1 pl-1 pr-1 transition-all duration-150 hover:border-[#CBD5E1] hover:bg-[#FAFAFA] hover:shadow-xs focus:outline-none md:pr-3",
+          open && "border-[#111111] bg-[#F8F9FB] shadow-xs ring-2 ring-[#111111]/5",
         )}
       >
-        <div className="relative grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[#111111] to-[#2D3139] text-xs font-bold text-white shadow-xs md:size-8">
+        <div className="relative grid size-7 place-items-center rounded-full bg-gradient-to-br from-[#111111] to-[#2D3139] text-xs font-bold text-white shadow-xs md:size-8">
           {initial}
           {isPro && (
             <span
               title="GamiBar Pro Active"
-              className="absolute -right-1 -top-1 grid size-3.5 place-items-center rounded-full bg-amber-500 text-[8px] text-white shadow-xs ring-1 ring-white"
+              className="absolute -right-0.5 -top-0.5 grid size-3.5 place-items-center rounded-full bg-amber-500 text-[8px] text-white shadow-xs ring-1.5 ring-white"
             >
-              ★
+              ⚡
             </span>
           )}
         </div>
         <div className="hidden flex-col text-left md:flex">
           <span className="max-w-[6.5rem] truncate text-xs font-bold text-[#111111] leading-tight">
-            {user?.name ?? "Educator"}
+            {user?.name ?? "Host"}
           </span>
           <span
             className={cn(
-              "text-[10px] font-semibold leading-tight",
-              isPro ? "text-amber-600 font-bold" : "text-[#5F6368]",
+              "text-[9.5px] font-semibold leading-tight",
+              isPro ? "text-amber-600 font-bold" : "text-[#717680]",
             )}
           >
             {isPro ? "⚡ Pro Member" : "Free Plan"}

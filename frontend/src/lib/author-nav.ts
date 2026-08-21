@@ -33,22 +33,6 @@ export const authorNavItems: AuthorNavItem[] = [
     match: (pathname) => pathname.startsWith("/qr-file") || pathname.startsWith("/author/qr-file"),
     showInBottomNav: false,
   },
-  {
-    to: "/author/sessions",
-    label: "My sessions",
-    mobileLabel: "My sessions",
-    icon: Gamepad2,
-    match: (pathname) => pathname.startsWith("/author/sessions"),
-    showInBottomNav: true,
-  },
-  {
-    to: "/author/participated",
-    label: "Participated games",
-    mobileLabel: "Participated",
-    icon: Trophy,
-    match: (pathname) => pathname.startsWith("/author/participated"),
-    showInBottomNav: true,
-  },
 ];
 
 export const authorBottomNavItems = authorNavItems.filter((item) => item.showInBottomNav);

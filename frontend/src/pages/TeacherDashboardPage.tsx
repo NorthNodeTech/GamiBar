@@ -198,7 +198,6 @@ export default function AuthorHome() {
   const recentSessions = sessions.slice(0, 5);
   const isLoadingSessions = authLoading || sessionsQuery.isLoading;
   const busyRoomId = openLiveMutation.isPending ? openLiveMutation.variables?.id : null;
-  const firstName = firstDisplayName(user?.name);
   const activity = useMemo(
     () => getActivitySummary(sessions, activeRooms.length),
     [activeRooms.length, sessions],
@@ -210,40 +209,8 @@ export default function AuthorHome() {
 
   return (
     <AuthorShell>
-      <div className="mx-auto w-full max-w-[76rem] py-3 text-[#111111] sm:py-5">
-        <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#5F6368]">Command center</p>
-            <h1 className="mt-2 font-display text-[2rem] font-bold tracking-normal text-[#111111] sm:text-[2.4rem]">
-              Good afternoon, {firstName}
-            </h1>
-            <p className="mt-2 max-w-2xl text-[15px] leading-6 text-[#5F6368]">
-              Everything you need to run your next interactive session.
-            </p>
-          </div>
-
-          <div className="grid gap-2 min-[420px]:grid-cols-2 sm:flex sm:items-center">
-            <Button
-              type="button"
-              onClick={() => navigate({ to: "/author/create" })}
-              className="h-12 rounded-xl bg-[#111111] px-5 text-sm font-semibold text-white shadow-none transition-colors hover:bg-[#2A2A2A]"
-            >
-              <Plus className="size-4" />
-              Create room
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate({ to: "/join" })}
-              className="h-12 rounded-xl border-[#D9DDE3] bg-white px-5 text-sm font-semibold text-[#111111] shadow-none transition-colors hover:bg-[#F3F4F6]"
-            >
-              <ScanLine className="size-4" />
-              Join room
-            </Button>
-          </div>
-        </section>
-
-        <div className="mt-8 space-y-10">
+      <div className="mx-auto w-full max-w-[76rem] py-1 text-[#111111] sm:py-3">
+        <div className="space-y-6 sm:space-y-10">
           <section>
             <SectionHeader
               eyebrow={activeRooms.length > 0 ? "Active rooms" : undefined}
@@ -287,7 +254,7 @@ export default function AuthorHome() {
               title="Start something"
               description="Choose a tool and launch your next session."
             />
-            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
               {quickStartTools.map((tool) => (
                 <QuickStartCard key={tool.id} tool={tool} onMode={openCreateWithMode} />
               ))}
@@ -342,7 +309,7 @@ export default function AuthorHome() {
                 title="Your activity"
                 description="Simple totals from your workspace."
               />
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
                 {activity.map((item) => (
                   <StatCard key={item.label} label={item.label} value={item.value} />
                 ))}
@@ -507,31 +474,35 @@ function QuickStartCard({
             src={tool.image}
             alt={tool.imageAlt}
             loading="lazy"
-            className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+            className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-[#5F6368]">
-            <Icon className="size-6" />
+            <Icon className="size-5 sm:size-6" />
           </div>
         )}
       </div>
 
-      <div className="mt-3.5 flex flex-1 flex-col">
-        <div className="flex items-center gap-2">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-[#CBD5E1] bg-[#F8F9FA] text-[#111111]">
-            <Icon className="size-4" aria-hidden />
-          </span>
-          <h3 className="font-display text-base font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30]">
-            {tool.title}
-          </h3>
+      <div className="mt-2.5 sm:mt-3.5 flex flex-1 flex-col justify-between">
+        <div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="grid size-6 sm:size-8 shrink-0 place-items-center rounded-lg border border-[#CBD5E1] bg-[#F8F9FA] text-[#111111]">
+              <Icon className="size-3 sm:size-4" aria-hidden />
+            </span>
+            <h3 className="font-display text-xs sm:text-base font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30] truncate">
+              {tool.title}
+            </h3>
+          </div>
+
+          <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs leading-snug text-[#5F6368] line-clamp-1 sm:line-clamp-2">
+            {tool.description}
+          </p>
         </div>
 
-        <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#5F6368]">{tool.description}</p>
-
-        <div className="mt-auto flex items-center justify-between pt-4">
-          <span className="inline-flex items-center text-xs font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30]">
+        <div className="mt-2 sm:mt-auto flex items-center justify-between pt-2 sm:pt-4 border-t border-[#F0F2F5] sm:border-0">
+          <span className="inline-flex items-center text-[10.5px] sm:text-xs font-bold text-[#111111] transition-colors group-hover:text-[#FF3B30]">
             Launch
-            <ArrowRight className="ml-1 size-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1" />
+            <ArrowRight className="ml-1 size-3 sm:size-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </span>
         </div>
       </div>
@@ -539,7 +510,7 @@ function QuickStartCard({
   );
 
   const className =
-    "group flex h-full flex-col rounded-[20px] border border-[#CBD5E1] bg-white p-4 text-left shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-200 ease-out hover:-translate-y-1 hover:border-[#94A3B8] hover:shadow-[0_12px_28px_rgba(16,24,40,0.08)]";
+    "group flex h-full flex-col rounded-2xl sm:rounded-[20px] border border-[#CBD5E1] bg-white p-2.5 sm:p-4 text-left shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#94A3B8] hover:shadow-[0_12px_28px_rgba(16,24,40,0.08)]";
 
   if (tool.mode) {
     return (
@@ -602,9 +573,9 @@ function RecentSessionRow({ session, last }: { session: AuthorSessionSummary; la
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#E7E9ED] bg-white p-4 shadow-[0_1px_3px_rgba(16,24,40,0.04)]">
-      <p className="text-sm font-medium text-[#5F6368]">{label}</p>
-      <p className="mt-3 font-display text-[1.9rem] font-bold leading-none tracking-normal text-[#111111]">
+    <div className="rounded-2xl border border-[#E7E9ED] bg-white p-3 sm:p-4 shadow-[0_1px_3px_rgba(16,24,40,0.04)]">
+      <p className="truncate text-xs sm:text-sm font-medium text-[#5F6368]">{label}</p>
+      <p className="mt-2 sm:mt-3 font-display text-xl sm:text-[1.9rem] font-bold leading-none tracking-normal text-[#111111]">
         {value}
       </p>
     </div>
