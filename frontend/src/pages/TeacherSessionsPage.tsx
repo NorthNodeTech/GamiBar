@@ -1,12 +1,10 @@
 import { Link, useNavigate } from "@/lib/navigation";
 import { useMutation, useQuery, useQueryClient } from "@/lib/query";
 import {
-  ArrowRight,
-  Copy,
+  Filter,
   Gamepad2,
   Loader2,
   Play,
-  Plus,
   QrCode,
   RotateCcw,
   Search,
@@ -33,10 +31,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { GAME_MODE_META } from "@shared/game/config";
 import { saveAuthorRoom } from "@/lib/game/client-session";
-import { claimAuthorSessionFn, duplicateRoomFn } from "@/lib/game/room.functions";
+import { claimAuthorSessionFn } from "@/lib/game/room.functions";
 import { useAuth } from "@/lib/auth-store";
 import {
   deleteAuthorSession,
@@ -55,6 +59,16 @@ const statusLabel: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
+const TOOL_FILTER_OPTIONS: Array<{ id: string; label: string }> = [
+  { id: "all", label: "All Tools" },
+  { id: "quiz", label: "Quiz Challenge" },
+  { id: "connect_dots", label: "Connect Dots" },
+  { id: "jigsaw", label: "Jigsaw Puzzle" },
+  { id: "polls", label: "Live Polls" },
+  { id: "visual_point", label: "Target Hunt" },
+  { id: "resource_drop", label: "Resource Drop" },
+];
+
 function formatCreatedDate(value: string): string {
   const ms = Number(value);
   const date = Number.isFinite(ms) ? new Date(ms) : new Date(value);
@@ -64,26 +78,14 @@ function formatCreatedDate(value: string): string {
   }).format(date);
 }
 
-function isActiveSession(status: string) {
-  return (
-    status === "LIVE" ||
-    status === "LOBBY" ||
-    status === "COUNTDOWN" ||
-    status === "READY" ||
-    status === "DRAFT"
-  );
-}
-
 export default function MySessionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, isAuthor } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<AuthorSessionSummary | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
-  const [duplicateTarget, setDuplicateTarget] = useState<AuthorSessionSummary | null>(null);
-  const [duplicateName, setDuplicateName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "done">("all");
+  const [toolFilter, setToolFilter] = useState<string>("all");
 
   const sessionsQuery = useQuery({
     queryKey: ["author-sessions", user?.id],
@@ -122,116 +124,79 @@ export default function MySessionsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const duplicateMutation = useMutation({
-    mutationFn: (input: { session: AuthorSessionSummary; name: string }) =>
-      duplicateRoomFn({
-        data: {
-          sourceRoomId: input.session.id,
-          authorId: user!.id,
-          authorName: user!.name,
-          name: input.name,
-        },
-      }),
-    onSuccess: (result, { session, name }) => {
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      saveAuthorRoom({
-        roomId: result.room.id,
-        code: result.room.code,
-        authorToken: result.authorToken,
-      });
-      toast.success(`"${name}" created - new code ${result.room.code}`);
-      void queryClient.invalidateQueries({ queryKey: ["author-sessions", user?.id] });
-      setDuplicateTarget(null);
-      setDuplicateName("");
-      navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
 
   const filteredSessions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return sessions.filter((session) => {
-      if (statusFilter === "active" && !isActiveSession(session.status)) return false;
-      if (statusFilter === "done" && isActiveSession(session.status)) return false;
+      if (toolFilter !== "all") {
+        if (toolFilter === "resource_drop") {
+          if (session.subject !== "Resource Drop") return false;
+        } else {
+          if (session.mode !== toolFilter || session.subject === "Resource Drop") return false;
+        }
+      }
       if (!q) return true;
       return (
         session.name.toLowerCase().includes(q) ||
         session.code.includes(q) ||
-        (GAME_MODE_META[session.mode]?.title ?? session.mode).toLowerCase().includes(q)
+        (GAME_MODE_META[session.mode]?.title ?? session.mode).toLowerCase().includes(q) ||
+        (session.subject ?? "").toLowerCase().includes(q)
       );
     });
-  }, [sessions, searchQuery, statusFilter]);
+  }, [sessions, searchQuery, toolFilter]);
+
   const busyId = openLiveMutation.isPending
     ? openLiveMutation.variables?.id
-    : duplicateMutation.isPending
-      ? duplicateMutation.variables?.session.id
-      : deleteMutation.isPending
-        ? deleteMutation.variables?.id
-        : null;
+    : deleteMutation.isPending
+      ? deleteMutation.variables?.id
+      : null;
 
   return (
     <AuthorShell>
       <AuthorPageFrame width="md">
-        <AuthorPageHeader
-          title="My sessions"
-          actions={
-            <Button
-              asChild
-              className="w-full rounded-xl bg-[var(--gamibar-brand)] font-semibold shadow-[0_8px_24px_-8px_rgba(239,68,68,0.45)] hover:bg-[var(--gamibar-brand-hover)] sm:w-auto"
-            >
-              <Link to="/author/create">
-                <Plus className="mr-2 size-4" />
-                Create room
-              </Link>
-            </Button>
-          }
-        />
+        <AuthorPageHeader title="My sessions" />
 
         {sessions.length > 0 ? (
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, code, or mode..."
-                className="h-10 rounded-xl pl-9"
+                placeholder="Search sessions by name or code..."
+                className="h-11 rounded-2xl border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] pl-10 text-sm shadow-[var(--shadow-soft)] focus-visible:ring-1 focus-visible:ring-[var(--foreground)]"
               />
             </div>
-            <div className="flex w-full gap-1 rounded-xl bg-[var(--gamibar-page)] p-1 sm:w-auto">
-              {(
-                [
-                  ["all", "All"],
-                  ["active", "Active"],
-                  ["done", "Done"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setStatusFilter(key)}
-                  className={cn(
-                    "tap-target flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition-colors sm:flex-none sm:px-3 sm:py-1.5",
-                    statusFilter === key
-                      ? "bg-[var(--gamibar-surface)] text-[var(--foreground)] shadow-sm"
-                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+
+            {/* Tool / Mode Filter Dropdown */}
+            <div className="w-full sm:w-[185px]">
+              <Select value={toolFilter} onValueChange={setToolFilter}>
+                <SelectTrigger className="h-11 rounded-2xl border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-3.5 text-xs font-semibold text-[var(--foreground)] shadow-[var(--shadow-soft)] focus:ring-1 focus:ring-[var(--foreground)]">
+                  <div className="flex items-center gap-2 truncate">
+                    <Filter className="size-3.5 text-[var(--muted-foreground)] shrink-0" />
+                    <SelectValue placeholder="All Tools" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-lg">
+                  {TOOL_FILTER_OPTIONS.map((opt) => (
+                    <SelectItem
+                      key={opt.id}
+                      value={opt.id}
+                      className="rounded-xl text-xs font-medium cursor-pointer"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         ) : null}
 
         <div className="mt-5 sm:mt-6">
           {sessionsQuery.isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#737373]">
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--muted-foreground)]">
               <Loader2 className="size-4 animate-spin" />
               Loading sessions...
             </div>
@@ -243,36 +208,35 @@ export default function MySessionsPage() {
               retrying={sessionsQuery.isFetching}
             />
           ) : sessions.length === 0 ? (
-            <div className="author-card border-dashed px-6 py-14 text-center">
+            <div className="rounded-3xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-6 py-14 text-center">
               <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--gamibar-page)] text-[var(--muted-foreground)]">
                 <Gamepad2 className="size-7" />
               </div>
-              <p className="mt-4 text-sm font-medium text-[var(--foreground)]">No sessions yet</p>
+              <p className="mt-4 text-base font-bold text-[var(--foreground)]">No sessions yet</p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                Create your first game room and invite players.
+              </p>
               <Button
                 asChild
-                className="mt-5 rounded-xl bg-[var(--gamibar-brand)] hover:bg-[var(--gamibar-brand-hover)]"
+                className="mt-5 rounded-xl bg-[var(--gamibar-brand)] font-semibold text-white shadow-sm hover:bg-[var(--gamibar-brand-hover)]"
               >
                 <Link to="/author/create">Create room</Link>
               </Button>
             </div>
           ) : filteredSessions.length === 0 ? (
-            <div className="author-card border-dashed px-6 py-10 text-center">
-              <p className="text-sm text-[var(--muted-foreground)]">
-                No sessions match your search.
+            <div className="rounded-3xl border border-dashed border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-6 py-10 text-center">
+              <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                No sessions match your search or selected tool.
               </p>
             </div>
           ) : (
-            <ul className="grid gap-2.5 sm:gap-3">
+            <ul className="grid gap-3">
               {filteredSessions.map((session) => (
                 <MyGameCard
                   key={session.id}
                   session={session}
                   busy={busyId === session.id}
                   onOpenLive={() => openLiveMutation.mutate(session)}
-                  onDuplicate={() => {
-                    setDuplicateTarget(session);
-                    setDuplicateName("");
-                  }}
                   onDelete={() => {
                     setDeleteTarget(session);
                     setDeleteConfirmName("");
@@ -285,56 +249,6 @@ export default function MySessionsPage() {
       </AuthorPageFrame>
 
       <AlertDialog
-        open={duplicateTarget != null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDuplicateTarget(null);
-            setDuplicateName("");
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Duplicate session</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-left text-sm text-muted-foreground">
-                <p>
-                  Same questions and settings, new join code and QR. Choose a name for this room.
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="duplicate-game-name">New session name</Label>
-                  <Input
-                    id="duplicate-game-name"
-                    value={duplicateName}
-                    onChange={(e) => setDuplicateName(e.target.value)}
-                    placeholder="e.g. Period 2 - Connect Dots"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={duplicateMutation.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={duplicateMutation.isPending || duplicateName.trim().length === 0}
-              className="bg-[#111111] text-white hover:bg-black"
-              onClick={(e) => {
-                e.preventDefault();
-                if (!duplicateTarget) return;
-                duplicateMutation.mutate({
-                  session: duplicateTarget,
-                  name: duplicateName.trim(),
-                });
-              }}
-            >
-              {duplicateMutation.isPending ? "Creating..." : "Create duplicate"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
         open={deleteTarget != null}
         onOpenChange={(open) => {
           if (!open) {
@@ -343,35 +257,43 @@ export default function MySessionsPage() {
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display font-bold">
+              Delete this session?
+            </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-3 text-left text-sm text-muted-foreground">
+              <div className="space-y-3 text-left text-sm text-[var(--muted-foreground)]">
                 <p>
                   Permanently removes{" "}
-                  <span className="font-semibold text-foreground">{deleteTarget?.name}</span> and
-                  all its data.
+                  <span className="font-semibold text-[var(--foreground)]">
+                    {deleteTarget?.name}
+                  </span>{" "}
+                  and all its records.
                 </p>
                 <p>
-                  Type <span className="font-semibold text-foreground">DELETE</span> to confirm:
+                  Type <span className="font-bold text-[var(--foreground)]">DELETE</span> to
+                  confirm:
                 </p>
                 <Input
                   value={deleteConfirmName}
                   onChange={(e) => setDeleteConfirmName(e.target.value)}
                   placeholder="DELETE"
                   autoComplete="off"
+                  className="rounded-xl"
                 />
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending} className="rounded-xl">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={
                 deleteMutation.isPending || deleteConfirmName.trim().toUpperCase() !== "DELETE"
               }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-xl bg-red-600 font-bold text-white hover:bg-red-700"
               onClick={(e) => {
                 e.preventDefault();
                 if (deleteTarget) deleteMutation.mutate(deleteTarget);
@@ -390,37 +312,36 @@ function MyGameCard({
   session,
   busy,
   onOpenLive,
-  onDuplicate,
   onDelete,
 }: {
   session: AuthorSessionSummary;
   busy: boolean;
   onOpenLive: () => void;
-  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const isFinished = session.status === "FINISHED" || session.status === "CANCELLED";
-  const canOpenLive = isActiveSession(session.status);
   const isResourceDrop = session.subject === "Resource Drop";
   const modeTitle = isResourceDrop
     ? "Resource Drop"
     : (GAME_MODE_META[session.mode]?.title ?? session.mode);
 
   return (
-    <li className="author-card overflow-hidden">
-      <div className="flex items-start gap-3 p-3 sm:p-4">
+    <li className="overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)] transition-all hover:border-[var(--foreground)]/20">
+      <div className="flex items-start gap-3.5 p-4 sm:p-5">
         <GameModeMiniPreview mode={session.mode} subject={session.subject} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate font-semibold text-[var(--foreground)]">{session.name}</p>
+              <p className="truncate font-display text-base font-bold text-[var(--foreground)]">
+                {session.name}
+              </p>
               <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
                 {modeTitle} · {formatCreatedDate(session.createdAt)}
               </p>
             </div>
             <span
               className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
+                "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
                 session.status === "LIVE"
                   ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
                   : isFinished
@@ -431,17 +352,17 @@ function MyGameCard({
               {statusLabel[session.status] ?? session.status}
             </span>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--muted-foreground)]">
-            <span className="inline-flex items-center gap-1 font-mono tracking-wider">
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-[var(--muted-foreground)]">
+            <span className="inline-flex items-center gap-1 font-mono font-bold tracking-wider text-[var(--foreground)]">
               {session.code}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Users className="size-3.5" />
+            <span className="inline-flex items-center gap-1 font-medium">
+              <Users className="size-3.5 text-[var(--muted-foreground)]" />
               {session.playerCount}
             </span>
             {session.roundCount && session.roundCount > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">
-                <RotateCcw className="size-3" />
+              <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] px-2 py-0.5 text-[10px] font-bold text-[var(--foreground)]">
+                <RotateCcw className="size-3 text-[var(--gamibar-brand)]" />
                 {session.roundCount > 1 ? `${session.roundCount} rounds` : `1 round`}
               </span>
             ) : null}
@@ -449,52 +370,36 @@ function MyGameCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/50 px-3 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-1.5 sm:px-4 sm:py-2">
-        {session.subject === "Resource Drop" ? (
-          <Button
-            type="button"
-            size="sm"
-            className="col-span-2 h-10 rounded-lg bg-[var(--foreground)] px-3 text-xs text-[var(--background)] hover:opacity-90 sm:col-span-1 sm:h-8 sm:px-2.5"
-            disabled={busy}
-            onClick={onOpenLive}
-          >
-            <QrCode className="mr-1 size-3" />
-            Open QR Drop
-          </Button>
-        ) : (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              className="col-span-2 h-10 rounded-lg bg-[var(--foreground)] px-3 text-xs text-[var(--background)] hover:opacity-90 sm:col-span-1 sm:h-8 sm:px-2.5"
-              disabled={busy}
-              onClick={onOpenLive}
-            >
-              <Play className="mr-1 size-3 fill-current" />
+      <div className="flex items-center justify-between border-t border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/30 px-4 py-2.5 sm:px-5">
+        <Button
+          type="button"
+          size="sm"
+          className="h-9 rounded-xl bg-[var(--foreground)] px-4 text-xs font-bold text-[var(--background)] shadow-sm hover:opacity-90"
+          disabled={busy}
+          onClick={onOpenLive}
+        >
+          {session.subject === "Resource Drop" ? (
+            <>
+              <QrCode className="mr-1.5 size-3.5" />
+              Open QR Drop
+            </>
+          ) : (
+            <>
+              <Play className="mr-1.5 size-3.5 fill-current" />
               {isFinished ? "Open room" : "Open live"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-10 rounded-lg px-2.5 text-xs sm:h-8"
-              disabled={busy}
-              onClick={onDuplicate}
-            >
-              <Copy className="mr-1 size-3" />
-              Duplicate
-            </Button>
-          </>
-        )}
+            </>
+          )}
+        </Button>
+
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-10 rounded-lg px-2.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 sm:col-span-1 sm:ml-auto sm:h-8"
+          className="h-9 rounded-xl px-3 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
           disabled={busy}
           onClick={onDelete}
         >
-          <Trash2 className="mr-1 size-3" />
+          <Trash2 className="mr-1.5 size-3.5" />
           Delete
         </Button>
       </div>

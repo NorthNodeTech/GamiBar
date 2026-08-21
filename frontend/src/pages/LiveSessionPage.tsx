@@ -376,10 +376,6 @@ export default function AuthorRoomPage() {
 
   const sessionHeroCard = (
     <section className="relative overflow-hidden rounded-[28px] border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-4 py-5 shadow-[var(--shadow-soft)] sm:px-7 sm:py-6 lg:px-6 lg:py-5">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.18),transparent_50%)]"
-      />
       <div className="relative space-y-4 sm:space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-6 lg:space-y-0">
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">

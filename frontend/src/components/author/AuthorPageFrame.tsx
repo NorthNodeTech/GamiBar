@@ -16,7 +16,6 @@ const widthClass = {
   xl: "max-w-6xl",
 } as const;
 
-/** Consistent author page container with subtle ambient depth. */
 export function AuthorPageFrame({ children, className, width = "lg" }: AuthorPageFrameProps) {
   return (
     <div
@@ -26,14 +25,6 @@ export function AuthorPageFrame({ children, className, width = "lg" }: AuthorPag
         className,
       )}
     >
-      <div
-        className="pointer-events-none absolute -left-8 top-0 hidden size-48 rounded-full bg-[var(--gamibar-brand)]/8 blur-3xl sm:block sm:-left-16 sm:size-64"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -right-6 top-24 hidden size-40 rounded-full bg-blue-500/6 blur-3xl sm:block sm:-right-12 sm:size-56"
-        aria-hidden
-      />
       <div className="relative min-w-0">{children}</div>
     </div>
   );

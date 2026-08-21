@@ -924,26 +924,9 @@
     position: relative;
     overflow: hidden;
     border-radius: 1.5rem;
-    border: 1px solid color-mix(in srgb, var(--gamibar-brand) 18%, var(--gamibar-border));
-    background:
-      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(239, 68, 68, 0.1), transparent 55%),
-      var(--gamibar-surface);
+    border: 1px solid var(--gamibar-border);
+    background: var(--gamibar-surface);
     box-shadow: var(--shadow-soft);
-  }
-
-  .author-hero-panel::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in srgb, var(--gamibar-brand) 55%, transparent),
-      transparent
-    );
   }
 
   /* Author portal — touch targets + mobile layout helpers */

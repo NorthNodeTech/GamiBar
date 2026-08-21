@@ -365,10 +365,10 @@ export default function StudentPlayPage() {
         }
         timedOutIds={new Set(snapshot.myTimedOutQuestionIds)}
         myAnswers={snapshot.myAnswers}
-        instruction={room.instruction}
         endsAt={activeEndsAt}
         timerStepId={questionTimer?.stepId ?? null}
         timerMode={timerMode}
+        timeLimitSeconds={room.payload.timeLimitSeconds ?? null}
         onTimerExpired={onActiveTimerExpired}
       />,
     );
@@ -592,17 +592,113 @@ function TimerBar({
   );
 }
 
+function CircularQuestionTimer({
+  endsAt,
+  totalSeconds,
+  onTimedOut,
+  onExpired,
+}: {
+  endsAt: number | null;
+  totalSeconds?: number | null;
+  onTimedOut?: (timedOut: boolean) => void;
+  onExpired?: () => void;
+}) {
+  const [left, setLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!endsAt) {
+      setLeft(null);
+      return;
+    }
+    const tick = () => setLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [endsAt]);
+
+  const timedOutRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    timedOutRef.current = null;
+  }, [endsAt]);
+
+  useEffect(() => {
+    if (left == null) return;
+    const next = left === 0;
+    if (timedOutRef.current === next) return;
+    timedOutRef.current = next;
+    onTimedOut?.(next);
+    if (next) onExpired?.();
+  }, [left, onExpired, onTimedOut]);
+
+  if (left == null) return null;
+
+  const maxSec = totalSeconds && totalSeconds > 0 ? totalSeconds : Math.max(left, 15);
+  const progress = Math.max(0, Math.min(1, left / maxSec));
+  const radius = 15;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - progress);
+  const isUrgent = left <= 5 && left > 0;
+  const isZero = left === 0;
+
+  return (
+    <div className="flex items-center gap-2 rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-2.5 py-1 shadow-xs sm:px-3 sm:py-1.5">
+      <div className="relative grid size-8 place-items-center">
+        <svg className="size-8 -rotate-90" viewBox="0 0 38 38">
+          <circle
+            cx="19"
+            cy="19"
+            r={radius}
+            className="stroke-[var(--gamibar-border)] fill-none stroke-[3]"
+          />
+          <circle
+            cx="19"
+            cy="19"
+            r={radius}
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            className={cn(
+              "fill-none stroke-[3] transition-all duration-300",
+              isZero
+                ? "stroke-neutral-300 dark:stroke-neutral-700"
+                : isUrgent
+                  ? "stroke-red-600 animate-pulse"
+                  : "stroke-[var(--foreground)]",
+            )}
+          />
+        </svg>
+        <span
+          className={cn(
+            "absolute text-[11px] font-extrabold tabular-nums",
+            isZero
+              ? "text-[var(--muted-foreground)]"
+              : isUrgent
+                ? "text-red-600"
+                : "text-[var(--foreground)]",
+          )}
+        >
+          {left}
+        </span>
+      </div>
+      <span className="text-xs font-bold text-[var(--foreground)]">
+        {isZero ? "0s" : `${left}s`}
+      </span>
+    </div>
+  );
+}
+
 function QuizPlay({
   roomId,
   reconnectToken,
   questions,
   answeredIds,
-  timedOutIds,
+  timedOutIds: _timedOutIds,
   myAnswers,
-  instruction,
+  instruction: _instruction,
   endsAt,
   timerStepId,
   timerMode,
+  timeLimitSeconds,
   onTimerExpired,
 }: {
   roomId: string;
@@ -616,10 +712,11 @@ function QuizPlay({
   answeredIds: Set<string>;
   timedOutIds: Set<string>;
   myAnswers: Array<{ questionId: string; selectedOption: QuizOptionId }>;
-  instruction: string;
+  instruction?: string;
   endsAt: number | null;
   timerStepId: string | null;
   timerMode: TimerMode;
+  timeLimitSeconds?: number | null;
   onTimerExpired?: (stepId?: string) => void;
 }) {
   const answerByQuestion = useMemo(
@@ -725,144 +822,42 @@ function QuizPlay({
   }
 
   const options: QuizOptionId[] = ["A", "B", "C", "D"];
-  const canGoBack = viewIndex > 0;
-  const canGoForward = viewIndex < maxViewIndex;
-
-  const goToQuestion = (index: number) => {
-    if (index <= maxViewIndex) setViewIndex(index);
-  };
 
   return (
-    <div className="mx-auto flex min-h-dvh-screen w-full max-w-6xl flex-col px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:flex-row lg:items-stretch lg:gap-0 lg:px-8 lg:py-8">
-      {/* Main question area — ~75% on desktop */}
-      <div className="flex min-w-0 flex-1 flex-col lg:w-[75%] lg:max-w-[75%] lg:pr-8">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-[#111111] p-2 shadow-sm">
-            <Logo size={26} />
-          </div>
-          <TimerBar
+    <div className="mx-auto flex min-h-dvh-screen w-full max-w-2xl flex-col px-4 py-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8">
+      {/* Top Header: Logo on left, 1/3 and round countdown on right */}
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--gamibar-border)] pb-4 sm:pb-5">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-[#111111] p-2 shadow-sm">
+          <Logo size={26} />
+        </div>
+
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <span className="rounded-full border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-3.5 py-1.5 font-display text-xs font-extrabold tracking-wide text-[var(--foreground)] shadow-xs">
+            {viewIndex + 1} / {questions.length}
+          </span>
+          <CircularQuestionTimer
             endsAt={timerEndsAt}
-            label={timerMode === "per_question" ? "Question" : "Game"}
+            totalSeconds={timeLimitSeconds}
             onTimedOut={setTimedOut}
             onExpired={() => onTimerExpired?.(activeTimerStepId ?? undefined)}
           />
         </div>
+      </div>
 
-        {/* Mobile: compact progress above question */}
-        <div
-          className="mt-4 lg:hidden"
-          aria-label={`Question ${viewIndex + 1} of ${questions.length}`}
-        >
-          <p className="text-center font-display text-lg font-bold tabular-nums text-[var(--foreground)]">
-            {viewIndex + 1} / {questions.length}
-          </p>
-          <div
-            className="mt-2.5 flex flex-wrap items-center justify-center gap-2.5"
-            role="tablist"
-            aria-label="Question progress"
-          >
-            {questions.map((q, i) => {
-              const completed = localAnsweredIds.has(q.id);
-              const isCurrent = firstUnansweredIndex >= 0 && i === firstUnansweredIndex;
-              const reachable = timerMode !== "per_question" && i <= maxViewIndex;
-              return (
-                <button
-                  key={q.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={i === viewIndex}
-                  aria-label={`Question ${i + 1}${completed ? ", completed" : isCurrent ? ", current" : ""}`}
-                  disabled={!reachable}
-                  onClick={() => goToQuestion(i)}
-                  className={cn(
-                    "tap-target grid size-9 place-items-center rounded-full text-base leading-none transition-transform active:scale-95",
-                    !reachable && "cursor-default opacity-40",
-                    completed && "text-[var(--gamibar-brand)]",
-                    isCurrent && !completed && "text-[var(--foreground)]",
-                    !completed && !isCurrent && "text-[var(--gamibar-border)]",
-                  )}
-                >
-                  {completed ? (
-                    <span aria-hidden className="size-2.5 rounded-full bg-current" />
-                  ) : isCurrent ? (
-                    <span aria-hidden className="relative grid size-3.5 place-items-center">
-                      <Circle className="size-3.5 fill-current stroke-current" strokeWidth={2.5} />
-                      <span className="absolute size-1.5 rounded-full bg-[var(--gamibar-page)]" />
-                    </span>
-                  ) : (
-                    <Circle className="size-3 stroke-current" strokeWidth={2} aria-hidden />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <p className="mt-4 text-xs leading-relaxed text-[var(--gamibar-text-tertiary)] lg:mt-5">
-          {instruction}
-        </p>
-
-        {timedOut && isActive ? (
-          <p
-            className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-sm font-medium text-red-800"
-            role="status"
-          >
-            {timerMode === "per_question"
-              ? "Question time expired - moving to the next question..."
-              : "Time's up - no more answers can be submitted."}
-          </p>
-        ) : null}
-
-        {timerMode !== "per_question" && (
-          <div className="mt-4 space-y-2 lg:mt-5">
-            <p className="text-center text-xs font-semibold text-[var(--muted-foreground)]">
-              {isAnswered
-                ? timedOutIds.has(current.id)
-                  ? "Time expired for this question"
-                  : "Reviewing your answer"
-                : isActive
-                  ? "Your turn"
-                  : ""}
-            </p>
-            <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!canGoBack}
-                onClick={() => setViewIndex((i) => Math.max(0, i - 1))}
-                className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
-              >
-                <ChevronLeft className="mr-1 size-4" />
-                Back
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!canGoForward}
-                onClick={() => setViewIndex((i) => Math.min(maxViewIndex, i + 1))}
-                className="h-11 min-h-[2.75rem] w-full rounded-xl px-3 lg:h-10 lg:min-h-0 lg:min-w-[5.5rem] lg:w-auto"
-              >
-                Next
-                <ChevronRight className="ml-1 size-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
+      {/* Main question and choices */}
+      <div className="mt-6 flex flex-1 flex-col sm:mt-8">
         <h1
           id={`quiz-question-${current.id}`}
-          className="mt-5 font-display text-[clamp(1.25rem,4.5vw,1.75rem)] font-bold leading-snug text-[#111111] lg:mt-6"
+          className="font-display text-[clamp(1.25rem,4.5vw,1.65rem)] font-bold leading-snug text-[var(--foreground)]"
         >
           {current.prompt}
         </h1>
 
-        <fieldset className="mt-5 border-0 p-0 lg:mt-6">
+        <fieldset className="mt-6 border-0 p-0 sm:mt-8">
           <legend className="sr-only">
             Answer choices for question {viewIndex + 1} of {questions.length}
           </legend>
-          <div className="grid gap-3 lg:max-w-3xl lg:gap-2.5">
+          <div className="grid gap-3">
             {options.map((opt) => (
               <button
                 key={opt}
@@ -874,27 +869,29 @@ function QuizPlay({
                 aria-pressed={selected === opt}
                 aria-label={`Option ${opt}: ${current.options[opt]}`}
                 className={cn(
-                  "flex min-h-[3.25rem] w-full touch-manipulation items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-medium transition-colors active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 lg:min-h-12 lg:py-3",
+                  "flex min-h-[3.5rem] w-full touch-manipulation items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
                   selected === opt
-                    ? "border-[#111111] bg-[#111111] text-white shadow-md ring-2 ring-[#111111]/20 ring-offset-2"
-                    : "border-[var(--gamibar-border)] bg-white text-[#111111] hover:border-[#D1D5DB]",
+                    ? "border-[#111111] bg-[#111111] text-white shadow-md"
+                    : "border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] text-[var(--foreground)] hover:border-[var(--foreground)]/30",
                   (isAnswered || !isActive || timedOut) && "cursor-default",
                 )}
               >
                 <span
                   className={cn(
-                    "grid size-10 shrink-0 place-items-center rounded-lg text-xs font-bold lg:size-9",
+                    "grid size-9 shrink-0 place-items-center rounded-xl text-xs font-bold transition-colors",
                     selected === opt
                       ? "bg-white text-[#111111]"
-                      : "bg-[var(--gamibar-page)] text-[#111111]",
+                      : "bg-[var(--gamibar-page)] text-[var(--foreground)]",
                   )}
                   aria-hidden="true"
                 >
                   {selected === opt ? <Check className="size-4" strokeWidth={3} /> : opt}
                 </span>
-                <span className="min-w-0 flex-1">{current.options[opt]}</span>
+                <span className="min-w-0 flex-1 font-medium leading-snug">
+                  {current.options[opt]}
+                </span>
                 {selected === opt && !isAnswered && isActive && !timedOut && (
-                  <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-white/90">
+                  <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white/90">
                     <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
                     Selected
                   </span>
@@ -904,16 +901,10 @@ function QuizPlay({
           </div>
         </fieldset>
 
-        {isAnswered ? (
-          <p className="mt-6 text-center text-sm font-medium text-[var(--muted-foreground)] lg:max-w-3xl">
-            {timedOutIds.has(current.id)
-              ? "This question was skipped when its timer expired. Use Back or Next to continue."
-              : "You already answered this question. Use Back or Next to continue."}
-          </p>
-        ) : isActive ? (
-          <>
+        {isActive && !isAnswered && (
+          <div className="mt-6 sm:mt-8">
             <Button
-              className="mt-6 h-12 w-full touch-manipulation rounded-xl bg-[#111111] hover:bg-black lg:max-w-3xl lg:h-12"
+              className="h-12 w-full touch-manipulation rounded-2xl bg-[#111111] text-sm font-bold text-white shadow-sm hover:bg-black active:scale-[0.99]"
               disabled={!selected || submitting || timedOut}
               onClick={() => void submit()}
             >
@@ -921,89 +912,16 @@ function QuizPlay({
             </Button>
             {submitError ? (
               <InlineErrorBanner
-                className="mt-4 text-left lg:max-w-3xl"
+                className="mt-4 text-left"
                 message={submitError}
                 onRetry={() => void submit()}
                 retrying={submitting}
                 onDismiss={() => setSubmitError(null)}
               />
             ) : null}
-            <p className="mt-3 text-center text-xs text-[var(--gamibar-text-tertiary)] lg:max-w-3xl">
-              One attempt — you cannot change this answer.
-            </p>
-          </>
-        ) : null}
+          </div>
+        )}
       </div>
-
-      {/* Desktop: progress sidebar — ~25% */}
-      <aside
-        className="hidden min-h-0 lg:flex lg:w-[25%] lg:max-w-[25%] lg:flex-col lg:border-l lg:border-[var(--gamibar-border)] lg:pl-8"
-        aria-label="Your progress"
-      >
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
-          Your progress
-        </p>
-        <ol className="mt-5 flex flex-1 flex-col gap-4">
-          {questions.map((q, i) => {
-            const completed = localAnsweredIds.has(q.id);
-            const isCurrent = firstUnansweredIndex >= 0 && i === firstUnansweredIndex;
-            const reachable = i <= maxViewIndex;
-            const isViewing = i === viewIndex;
-
-            return (
-              <li key={q.id}>
-                <button
-                  type="button"
-                  disabled={!reachable}
-                  onClick={() => goToQuestion(i)}
-                  aria-current={isViewing ? "step" : undefined}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg py-1.5 text-left transition-colors",
-                    reachable && "hover:opacity-80",
-                    !reachable && "cursor-not-allowed opacity-40",
-                    isViewing && "opacity-100",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid size-6 shrink-0 place-items-center",
-                      completed && "text-[var(--gamibar-brand)]",
-                      isCurrent && !completed && "text-[var(--foreground)]",
-                      !completed && !isCurrent && "text-[var(--muted-foreground)]/45",
-                    )}
-                    aria-hidden
-                  >
-                    {completed ? (
-                      <Check className="size-4 stroke-[2.5]" />
-                    ) : isCurrent ? (
-                      <span className="relative grid size-4 place-items-center">
-                        <Circle className="size-4 fill-current stroke-current" strokeWidth={2.5} />
-                        <span className="absolute size-1.5 rounded-full bg-[var(--gamibar-page)]" />
-                      </span>
-                    ) : (
-                      <Circle className="size-4 stroke-current" strokeWidth={2} />
-                    )}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-sm font-semibold",
-                      completed && "text-[var(--muted-foreground)]",
-                      isCurrent && !completed && "text-[var(--foreground)]",
-                      !completed && !isCurrent && "text-[var(--muted-foreground)]/50",
-                      isViewing &&
-                        !completed &&
-                        isCurrent &&
-                        "underline decoration-[var(--gamibar-brand)] decoration-2 underline-offset-4",
-                    )}
-                  >
-                    Question {i + 1}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </aside>
     </div>
   );
 }
