@@ -8,6 +8,7 @@ import { ConnectionBanner, PageErrorState, PageLoader } from "@/components/ui/as
 import { friendlyGameError } from "@/lib/accessibility";
 import { loadParticipantSession } from "@/lib/game/client-session";
 import { useRoomSync } from "@/lib/game/useRoomSync";
+import { normalizeRoomCode } from "@shared/game/room-code";
 
 export default function StudentLobbyPage() {
   const navigate = useNavigate();
