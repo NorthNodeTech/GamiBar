@@ -16,7 +16,7 @@ export async function createRoomFn({
 }: {
   data: {
     name: string;
-    subject: string;
+    subject?: string;
     authorId: string;
     authorName: string;
     mode: GameMode;

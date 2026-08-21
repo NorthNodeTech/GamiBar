@@ -162,9 +162,16 @@ export default function AuthorRoomPage() {
   }
 
   const room = snapshot.room;
-  const isResourceDrop =
+  const isResourceDrop = Boolean(
+    ("isResourceDrop" in room.payload && room.payload.isResourceDrop === true) ||
     room.subject === "Resource Drop" ||
-    ("isResourceDrop" in room.payload && room.payload.isResourceDrop === true);
+    room.name === "Presentation Resources" ||
+    room.name === "Presentation Resource" ||
+    room.name.toLowerCase().includes("presentation resource") ||
+    room.name.toLowerCase().includes("qr drop") ||
+    room.name.toLowerCase().includes("qrfile") ||
+    room.name.toLowerCase().includes("resource drop"),
+  );
 
   if (isResourceDrop) {
     return (
@@ -390,7 +397,6 @@ export default function AuthorRoomPage() {
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(460px,520px)_minmax(0,1fr)] lg:items-start">
             <div className="space-y-5 lg:sticky lg:top-20">
               <RoomJoinShare code={room.code} prominent />
-              <SessionFilesPanel roomId={room.id} authorToken={authorToken} />
               {room.participantCount < 1 && (
                 <div className="hidden items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--gamibar-brand)]/35 bg-[var(--gamibar-brand-soft)] px-4 py-3.5 text-sm text-[var(--muted-foreground)] lg:flex">
                   <Sparkles className="size-4 shrink-0 text-[var(--gamibar-brand)]" />
@@ -402,7 +408,6 @@ export default function AuthorRoomPage() {
           </div>
         ) : (
           <>
-            <SessionFilesPanel roomId={room.id} authorToken={authorToken} />
             {isLive && (
               <LiveGameDashboard
                 mode={room.mode}

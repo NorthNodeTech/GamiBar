@@ -7,7 +7,7 @@ export type AuthorSessionSummary = {
   id: string;
   code: string;
   name: string;
-  subject: string;
+  subject?: string;
   status: string;
   mode: GameMode;
   createdAt: string;
@@ -30,7 +30,7 @@ export async function deleteAuthorSession(authorId: string, roomId: string) {
 }
 
 export function fetchAuthorSessionPayload(authorId: string, roomId: string) {
-  return apiFetch<{ mode: GameMode; payload: GamePayload; name: string; subject: string }>(
+  return apiFetch<{ mode: GameMode; payload: GamePayload; name: string; subject?: string }>(
     `/api/author-sessions/${roomId}/payload`,
     { searchParams: { authorId } },
   );

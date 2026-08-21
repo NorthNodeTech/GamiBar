@@ -489,7 +489,7 @@ async function finalizeGame(stored: StoredRoom) {
 
 export async function createRoom(input: {
   name: string;
-  subject: string;
+  subject?: string;
   authorId: string;
   authorName: string;
   mode: GameMode;
@@ -499,7 +499,7 @@ export async function createRoom(input: {
   duplicatedFromName?: string | null;
 }) {
   const name = sanitizeRoomText(input.name, 80);
-  const subject = sanitizeRoomText(input.subject || "General", 60);
+  const subject = sanitizeRoomText(input.subject || input.name || "General", 60);
   if (!name) return { ok: false as const, error: "Room name is required." };
 
   const validated = validateGamePayload(input.mode, input.payload);

@@ -167,47 +167,54 @@ export function AiGenerateQuestionsPanel({
 
   return (
     <>
-      <section className="rounded-2xl border border-[#D8D4FE] bg-gradient-to-br from-[#F8F7FF] via-white to-[#F2FAFF] p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#111111] text-white shadow-sm">
-            <Sparkles className="size-5" />
+      <section className="rounded-xl sm:rounded-2xl border border-[#D8D4FE] bg-gradient-to-br from-[#F8F7FF] via-white to-[#F2FAFF] p-3 sm:p-5">
+        <div className="flex items-center sm:items-start gap-2.5 sm:gap-3">
+          <span className="grid size-8 sm:size-10 shrink-0 place-items-center rounded-lg sm:rounded-xl bg-[#111111] text-white shadow-xs">
+            <Sparkles className="size-4 sm:size-5" />
           </span>
-          <div>
-            <h3 className="text-sm font-bold text-[#111111]">Generate a complete quiz with AI</h3>
-            <p className="mt-1 text-xs leading-relaxed text-[#626262]">
-              Give GamiBAR AI the topic, learner level, and any teaching notes. It will create each
-              question, four options, and the correct answer for your review.
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs sm:text-sm font-bold text-[#111111]">Generate quiz with AI</h3>
+            <p className="mt-0.5 text-[11px] sm:text-xs leading-snug sm:leading-relaxed text-[#626262]">
+              <span className="sm:hidden">Enter topic & audience to auto-generate questions.</span>
+              <span className="hidden sm:inline">
+                Give GamiBAR AI the topic, learner level, and teaching notes to create questions,
+                options, and answers.
+              </span>
             </p>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor={`ai-topic-${mode}`}>Topic name</Label>
+        <div className="mt-2.5 sm:mt-4 grid gap-2 sm:gap-3 sm:grid-cols-2">
+          <div className="grid gap-1 sm:gap-1.5">
+            <Label htmlFor={`ai-topic-${mode}`} className="text-[11px] sm:text-xs font-semibold">
+              Topic name
+            </Label>
             <Input
               id={`ai-topic-${mode}`}
               value={topic}
               maxLength={180}
               onChange={(event) => setTopic(event.target.value)}
-              placeholder="e.g. The solar system"
-              className="h-11 rounded-xl bg-white"
+              placeholder="e.g. Solar System"
+              className="h-9 sm:h-11 rounded-lg sm:rounded-xl text-xs sm:text-sm bg-white"
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor={`ai-audience-${mode}`}>Target audience</Label>
+          <div className="grid gap-1 sm:gap-1.5">
+            <Label htmlFor={`ai-audience-${mode}`} className="text-[11px] sm:text-xs font-semibold">
+              Target audience
+            </Label>
             <Input
               id={`ai-audience-${mode}`}
               value={audience}
               maxLength={180}
               onChange={(event) => setAudience(event.target.value)}
-              placeholder="e.g. Grade 6 students, beginner level"
-              className="h-11 rounded-xl bg-white"
+              placeholder="e.g. Grade 6 students"
+              className="h-9 sm:h-11 rounded-lg sm:rounded-xl text-xs sm:text-sm bg-white"
             />
           </div>
         </div>
 
-        <div className="mt-3 grid gap-1.5">
-          <Label htmlFor={`ai-guidance-${mode}`}>
+        <div className="mt-2 sm:mt-3 grid gap-1 sm:gap-1.5">
+          <Label htmlFor={`ai-guidance-${mode}`} className="text-[11px] sm:text-xs font-semibold">
             Author notes <span className="font-normal text-[#737373]">(optional)</span>
           </Label>
           <Textarea
@@ -215,14 +222,16 @@ export function AiGenerateQuestionsPanel({
             value={guidance}
             maxLength={1000}
             onChange={(event) => setGuidance(event.target.value)}
-            placeholder="e.g. Focus on planet order and simple real-world comparisons. Avoid calculations."
-            className="min-h-20 resize-y rounded-xl bg-white"
+            placeholder="e.g. Focus on concepts. Avoid calculations."
+            className="min-h-12 sm:min-h-20 resize-y rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-xs sm:text-sm bg-white"
           />
         </div>
 
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="grid w-full gap-1.5 sm:w-44">
-            <Label htmlFor={`ai-count-${mode}`}>Number of questions</Label>
+        <div className="mt-2.5 sm:mt-3 grid grid-cols-[5.5rem_minmax(0,1fr)] sm:flex sm:items-end sm:justify-between items-end gap-2 sm:gap-3">
+          <div className="grid gap-1 sm:gap-1.5 sm:w-44">
+            <Label htmlFor={`ai-count-${mode}`} className="text-[11px] sm:text-xs font-semibold">
+              Questions
+            </Label>
             <Input
               id={`ai-count-${mode}`}
               type="number"
@@ -234,24 +243,24 @@ export function AiGenerateQuestionsPanel({
                 const next = Math.trunc(Number(event.target.value));
                 setCount(Math.max(1, Math.min(Number.isFinite(next) ? next : 1, maxCount || 1)));
               }}
-              className="h-11 rounded-xl bg-white"
+              className="h-9 sm:h-11 rounded-lg sm:rounded-xl text-xs sm:text-sm bg-white text-center sm:text-left"
             />
-            <p className="text-[11px] text-[#737373]">Maximum 10 at once.</p>
+            <p className="hidden sm:block text-[11px] text-[#737373]">Maximum 10 at once.</p>
           </div>
           <Button
             type="button"
-            className="h-11 rounded-xl bg-[#111111] px-5 hover:bg-black"
+            className="h-9 sm:h-11 rounded-lg sm:rounded-xl bg-[#111111] px-3 sm:px-5 text-xs sm:text-sm font-bold hover:bg-black w-full sm:w-auto"
             disabled={pending || maxCount < 1}
             onClick={startGeneration}
           >
-            <Sparkles className="size-4" />
-            Generate questions
+            <Sparkles className="size-3.5 sm:size-4" />
+            <span>Generate questions</span>
           </Button>
         </div>
 
         {maxCount < 1 && (
-          <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-[#737373]">
-            This game has no empty slots. Clear a blank row or remove a question before generating.
+          <p className="mt-2.5 sm:mt-3 rounded-lg sm:rounded-xl bg-white px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs text-[#737373]">
+            No empty slots available in this game.
           </p>
         )}
       </section>

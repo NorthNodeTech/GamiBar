@@ -710,7 +710,7 @@ function buildStoredRoom(
     id: string;
     code: string;
     name: string;
-    subject: string;
+    subject?: string;
     author_id: string | null;
     author_name: string;
     author_token_hash: string;
@@ -834,7 +834,7 @@ function buildStoredRoom(
       id: row.id,
       code: row.code,
       name: row.name,
-      subject: row.subject,
+      subject: row.subject ?? "",
       authorId: row.author_id ?? "",
       authorName: row.author_name,
       status: row.status,
@@ -1108,7 +1108,6 @@ export async function persist(stored: StoredRoom) {
     id: room.id,
     code: room.code,
     name: room.name,
-    subject: room.subject,
     author_id: isUuid(room.authorId) ? room.authorId : null,
     author_name: room.authorName,
     author_token_hash: authorTokenHash,

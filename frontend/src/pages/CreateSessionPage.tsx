@@ -38,7 +38,6 @@ import {
 } from "@/components/games/quizes/puzzle/JigsawImageSourceSelector";
 import { JigsawLibrary } from "@/components/games/quizes/puzzle/JigsawLibrary";
 import { AuthorShell } from "@/components/layout/AuthorShell";
-import { SessionFilesPicker } from "@/components/sharing-files/SessionFilesPicker";
 import { Button } from "@/components/ui/button";
 import { InlineErrorBanner } from "@/components/ui/async-state";
 import { Input } from "@/components/ui/input";
@@ -89,6 +88,7 @@ import {
   tileUnlockScheduleEntries,
 } from "@shared/game/jigsaw-tile-rewards";
 import { assessConnectDotsContentSolvability } from "@shared/game/connect-dots-solvability";
+import { BILLING_PLANS, isPaidBillingPlanCode } from "@shared/billing/plans";
 import { getModeCatalog, type GameModeCatalogItem } from "@/lib/game/mode-catalog";
 import { modeUsesQuestions } from "@shared/game/mode-registry";
 import { UpgradeToProDialog } from "@/components/billing/UpgradeToProDialog";
@@ -126,12 +126,6 @@ import {
   prepareVisualPointImage,
 } from "@shared/game/visual-point";
 import { listQuestionSets } from "@/lib/question-bank";
-import {
-  SESSION_FILE_DEFAULT_RETENTION_DAYS,
-  type SessionFileRetentionDays,
-  uploadSessionFiles,
-  validateSessionShareFiles,
-} from "@/lib/sharing-files/session-files";
 import { cn } from "@/lib/utils";
 import type {
   AiGenerationContext,
@@ -169,7 +163,6 @@ export default function CreateRoomWizard() {
   const skipModeStep = useRef(Boolean(presetMode));
   const [step, setStep] = useState<Step>("mode");
   const [name, setName] = useState("");
-  const [subject, setSubject] = useState("");
   const [mode, setMode] = useState<GameMode | null>(presetMode ?? "quiz");
   const [questions, setQuestions] = useState<QuizQuestionDraft[]>(() => emptyQuizQuestions("quiz"));
   const [pollQuestions, setPollQuestions] = useState<PollQuestionDraft[]>(() =>
@@ -211,16 +204,13 @@ export default function CreateRoomWizard() {
   const aiGenerationContext = useMemo<AiGenerationContext>(
     () => ({
       roomName: name.trim(),
-      subject: subject.trim() || "General",
+      subject: name.trim() || "General",
       modeLabel: mode ? GAME_MODE_META[mode].title : "",
     }),
-    [mode, name, subject],
+    [mode, name],
   );
   const [createError, setCreateError] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [sessionFiles, setSessionFiles] = useState<File[]>([]);
-  const [sessionFileRetentionDays, setSessionFileRetentionDays] =
-    useState<SessionFileRetentionDays>(SESSION_FILE_DEFAULT_RETENTION_DAYS);
 
   const quizProgress = quizCompletionCount(questions, mode ?? "quiz");
   const pollProgress = pollCompletionCount(pollQuestions);
@@ -624,20 +614,12 @@ export default function CreateRoomWizard() {
       toast.error(v.error);
       return;
     }
-    const fileValidation = validateSessionShareFiles(sessionFiles);
-    if (!fileValidation.ok) {
-      const message = fileValidation.errors[0] ?? "Some session files cannot be uploaded.";
-      setCreateError(message);
-      toast.error(message);
-      return;
-    }
     setSubmitting(true);
     setCreateError(null);
     try {
       const result = await createRoomFn({
         data: {
           name: name.trim(),
-          subject: subject.trim() || "General",
           authorId: user.id,
           authorName: user.name,
           mode,
@@ -662,23 +644,7 @@ export default function CreateRoomWizard() {
         code: result.room.code,
         authorToken: result.authorToken,
       });
-      if (sessionFiles.length > 0) {
-        try {
-          await uploadSessionFiles(
-            result.room.id,
-            result.authorToken,
-            sessionFiles,
-            sessionFileRetentionDays,
-          );
-          toast.success(`Room ${result.room.code} is ready with a Resource Drop.`);
-        } catch (uploadError) {
-          const message =
-            uploadError instanceof Error ? uploadError.message : "Could not upload session files.";
-          toast.error(`Room is ready, but files were not uploaded. ${message}`);
-        }
-      } else {
-        toast.success(`Room ${result.room.code} is ready.`);
-      }
+      toast.success(`Room ${result.room.code} is ready.`);
       navigate({ to: "/author/room/$roomId", params: { roomId: result.room.id } });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not create room.";
@@ -767,7 +733,7 @@ export default function CreateRoomWizard() {
             )}
 
             {step === "details" && (
-              <div className="mx-auto grid w-full max-w-xl gap-4 py-1 sm:py-3">
+              <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="room-name">Room / session name</Label>
                   <Input
@@ -777,16 +743,6 @@ export default function CreateRoomWizard() {
                     placeholder="e.g. Biology Battle - Period 3"
                     className="h-11 rounded-xl text-base"
                     autoFocus
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="subject">Subject / topic (optional)</Label>
-                  <Input
-                    id="subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Biology, Algebra, Civics..."
-                    className="h-11 rounded-xl"
                   />
                 </div>
               </div>
@@ -898,7 +854,6 @@ export default function CreateRoomWizard() {
                                 id: `q-${i + 1}`,
                               })),
                             );
-                            if (set.subject) setSubject(set.subject);
                             toast.success(
                               `Loaded "${set.name}" (${Math.min(set.questions.length, count)} questions).`,
                             );
@@ -1251,7 +1206,6 @@ export default function CreateRoomWizard() {
                 )}
                 <ReviewLaunchCard
                   name={name}
-                  subject={subject}
                   mode={mode}
                   preview={modeCatalog.preview}
                   accentClass={modeCatalog.accentClass}
@@ -1263,12 +1217,6 @@ export default function CreateRoomWizard() {
                   (mode === "visual_point" && payload.mode === "visual_point")
                     ? { questionCount: payload.questions.length }
                     : {})}
-                />
-                <SessionFilesPicker
-                  files={sessionFiles}
-                  onChange={setSessionFiles}
-                  retentionDays={sessionFileRetentionDays}
-                  onRetentionDaysChange={setSessionFileRetentionDays}
                 />
               </div>
             )}
@@ -1551,7 +1499,7 @@ function QuizEditor({
         )}
       </div>
 
-      <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4 sm:p-5">
+      <div className="rounded-xl sm:rounded-2xl border border-[var(--gamibar-border)] bg-white p-3 sm:p-5">
         <div className="flex items-center justify-between">
           <Label className="text-xs uppercase tracking-wider text-[#737373]">
             Question {activeQ + 1} of {questions.length}
@@ -1565,10 +1513,9 @@ function QuizEditor({
               onClick={deleteQuestion}
               title="Delete this question"
               aria-label="Delete this question"
-              className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#737373] transition-colors hover:bg-red-50 hover:text-red-600"
+              className="grid size-8 place-items-center rounded-lg text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
             >
-              <Trash2 className="size-3.5 text-[#737373] transition-colors group-hover:text-red-600" />
-              <span>Delete</span>
+              <Trash2 className="size-4 text-red-500 transition-colors hover:text-red-600" />
             </button>
           )}
         </div>
@@ -1577,7 +1524,7 @@ function QuizEditor({
             value={q.prompt}
             onChange={(e) => update({ prompt: e.target.value })}
             placeholder="What should participants answer?"
-            className="h-11 rounded-xl text-base"
+            className="h-9 sm:h-11 rounded-lg sm:rounded-xl text-xs sm:text-base"
           />
           <AiGenerateOptionsButton
             request={{
@@ -1592,6 +1539,7 @@ function QuizEditor({
             }}
             disabled={!q.prompt.trim()}
             buttonLabel="Generate options"
+            className="h-9 sm:h-11 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold"
             onApply={(response) => {
               if (response.kind !== "quiz_options") return;
               update({ options: response.options, correctOption: response.correctOption });
@@ -1599,9 +1547,12 @@ function QuizEditor({
           />
         </div>
 
-        <div className="mt-4 grid gap-2.5">
-          <p className="text-xs font-medium text-[#525252]">
-            Tap the letter or row to mark the correct answer — it turns green.
+        <div className="mt-3 sm:mt-4 grid gap-1.5 sm:gap-2.5">
+          <p className="text-[11px] sm:text-xs font-medium text-[#525252]">
+            <span className="sm:hidden">Tap letter to mark correct answer.</span>
+            <span className="hidden sm:inline">
+              Tap the letter or row to mark the correct answer — it turns green.
+            </span>
           </p>
           {options.map((opt) => {
             const isCorrect = q.correctOption === opt;
@@ -1618,7 +1569,7 @@ function QuizEditor({
                   }
                 }}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-xl border-2 p-2 transition-all",
+                  "flex cursor-pointer items-center gap-2 rounded-lg sm:rounded-xl border-2 p-1.5 sm:p-2 transition-all",
                   isCorrect
                     ? "border-green-500 bg-green-50 shadow-[0_0_0_1px_rgba(34,197,94,0.2)]"
                     : "border-transparent hover:border-[var(--gamibar-border)] hover:bg-[var(--gamibar-page)]",
@@ -1626,14 +1577,14 @@ function QuizEditor({
               >
                 <span
                   className={cn(
-                    "grid size-10 shrink-0 place-items-center rounded-xl text-xs font-bold transition-all",
+                    "grid size-8 sm:size-10 shrink-0 place-items-center rounded-lg sm:rounded-xl text-xs font-bold transition-all",
                     isCorrect
                       ? "bg-green-600 text-white ring-2 ring-green-200"
                       : "border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] text-[#525252]",
                   )}
                   aria-label={`Mark ${opt} as correct`}
                 >
-                  {isCorrect ? <Check className="size-4" /> : opt}
+                  {isCorrect ? <Check className="size-3.5 sm:size-4" /> : opt}
                 </span>
                 <Input
                   value={q.options[opt]}
@@ -1642,12 +1593,12 @@ function QuizEditor({
                   onKeyDown={(e) => e.stopPropagation()}
                   placeholder={`Answer choice ${opt}`}
                   className={cn(
-                    "h-11 rounded-xl border-0 bg-transparent shadow-none focus-visible:ring-0",
+                    "h-8 sm:h-11 rounded-lg sm:rounded-xl border-0 bg-transparent text-xs sm:text-sm shadow-none focus-visible:ring-0",
                     isCorrect && "font-medium text-green-900",
                   )}
                 />
                 {isCorrect && (
-                  <span className="shrink-0 pr-1 text-[10px] font-bold uppercase tracking-wide text-green-600">
+                  <span className="shrink-0 pr-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-green-600">
                     Correct
                   </span>
                 )}
@@ -1656,32 +1607,35 @@ function QuizEditor({
           })}
         </div>
 
-        <div className="mt-5 space-y-3 border-t border-[var(--gamibar-border)] pt-4">
-          <p className="text-center text-xs text-[#737373]">
+        <div className="mt-3 sm:mt-5 flex items-center justify-between border-t border-[var(--gamibar-border)] pt-3 sm:pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            title="Previous question"
+            aria-label="Previous question"
+            className="size-9 sm:size-10 rounded-lg sm:rounded-xl"
+            disabled={!hasPrev}
+            onClick={() => setActiveQ(activeQ - 1)}
+          >
+            <ChevronLeft className="size-4 sm:size-5" />
+          </Button>
+
+          <span className="text-xs font-medium text-[#737373]">
             Question {activeQ + 1} of {questions.length}
-            {currentComplete ? " · Ready" : ""}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 min-h-[2.75rem] w-full rounded-xl"
-              disabled={!hasPrev}
-              onClick={() => setActiveQ(activeQ - 1)}
-            >
-              <ChevronLeft className="mr-1 size-4" />
-              Previous
-            </Button>
-            <Button
-              type="button"
-              className="h-11 min-h-[2.75rem] w-full rounded-xl bg-[#111111] hover:bg-black"
-              disabled={!hasNext}
-              onClick={() => setActiveQ(activeQ + 1)}
-            >
-              Next question
-              <ChevronRight className="ml-1 size-4" />
-            </Button>
-          </div>
+          </span>
+
+          <Button
+            type="button"
+            size="icon"
+            title="Next question"
+            aria-label="Next question"
+            className="size-9 sm:size-10 rounded-lg sm:rounded-xl bg-[#111111] text-white hover:bg-black"
+            disabled={!hasNext}
+            onClick={() => setActiveQ(activeQ + 1)}
+          >
+            <ChevronRight className="size-4 sm:size-5" />
+          </Button>
         </div>
       </div>
     </div>
@@ -2875,66 +2829,73 @@ function ConnectDotsPairEditor({
 
 function ReviewLaunchCard({
   name,
-  subject,
   mode,
   preview,
-  accentClass,
   badgeClass,
   timeLimitSeconds,
   timerMode,
   questionCount,
 }: {
   name: string;
-  subject: string;
   mode: GameMode;
   preview: string;
-  accentClass: string;
+  accentClass?: string;
   badgeClass: string;
   timeLimitSeconds: number | null;
   timerMode: TimerMode;
   questionCount?: number;
 }) {
+  const { user } = useAuth();
+  const isPro = Boolean(user?.isPro || (user?.plan && isPaidBillingPlanCode(user.plan)));
+  const maxPlayers = isPro
+    ? BILLING_PLANS.pro_monthly.limits.livePlayersPerRoom
+    : BILLING_PLANS.free.limits.livePlayersPerRoom;
+
   const catalog = getModeCatalog(mode);
   const instruction = gameInstruction(mode, timeLimitSeconds, questionCount, timerMode);
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-stretch">
+      <div className="flex flex-col gap-3 lg:col-span-7">
         <div className="rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-page)] p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
             What happens next
           </p>
-          <ul className="mt-3 space-y-2 text-sm text-[#525252]">
-            <li className="flex gap-2">
+          <ul className="mt-2.5 space-y-2 text-xs sm:text-sm text-[#525252]">
+            <li className="flex items-start gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
-              6-digit room code generated
+              <span>6-digit room code generated instantly</span>
             </li>
-            <li className="flex gap-2">
+            <li className="flex items-start gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
-              QR code ready for participants to scan
+              <span>QR code ready for participants to scan & join</span>
             </li>
-            <li className="flex gap-2">
+            <li className="flex items-start gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
-              Unlimited participants can join with the room code or QR
+              <span>
+                Up to <strong>{maxPlayers} participants</strong> can join{" "}
+                <span className="text-xs text-[#737373]">({isPro ? "Pro Plan" : "Free Plan"})</span>
+              </span>
             </li>
-            <li className="flex gap-2">
+            <li className="flex items-start gap-2">
               <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#111111]" />
-              You control Start from the live lobby
+              <span>You control Start, pacing, and results from the live lobby</span>
             </li>
           </ul>
         </div>
-        <div className="rounded-2xl border border-[var(--gamibar-border)] bg-white p-4">
+
+        <div className="flex-1 rounded-2xl border border-[var(--gamibar-border)] bg-white p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
             Game rules
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-[#525252]">{instruction}</p>
-          <p className="mt-3 inline-flex items-center rounded-full bg-[var(--gamibar-page)] px-3 py-1 text-[11px] font-semibold text-[#111111]">
-            Timer - {formatTimerLong(timeLimitSeconds)}
-            {timerMode === "per_question" && timeLimitSeconds != null ? " each" : ""}
-          </p>
-          {catalog && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {catalog.specs.map((spec) => (
+          <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-[#525252]">{instruction}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-[var(--gamibar-page)] px-3 py-1 text-[11px] font-semibold text-[#111111]">
+              Timer - {formatTimerLong(timeLimitSeconds)}
+              {timerMode === "per_question" && timeLimitSeconds != null ? " each" : ""}
+            </span>
+            {catalog &&
+              catalog.specs.map((spec) => (
                 <span
                   key={spec}
                   className="rounded-full bg-[var(--gamibar-page)] px-2.5 py-0.5 text-[10px] font-semibold text-[#525252]"
@@ -2942,34 +2903,28 @@ function ReviewLaunchCard({
                   {spec}
                 </span>
               ))}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
-      <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-[var(--gamibar-border)]">
-        <div className="relative aspect-video">
-          <FittedPreviewImage src={preview} alt="" />
-          <div
-            className={cn(
-              "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent",
-              accentClass,
-              "mix-blend-multiply opacity-70",
-            )}
-          />
-          <div className="absolute inset-0 flex flex-col justify-end p-4">
-            <span
-              className={cn(
-                "inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
-                badgeClass,
-              )}
-            >
-              {GAME_MODE_META[mode].title}
-            </span>
-            <h3 className="mt-1.5 font-display text-lg font-extrabold text-white sm:text-xl">
-              {name}
-            </h3>
-            <p className="mt-0.5 text-xs text-white/75 sm:text-sm">{subject || "General"}</p>
+      <div className="flex flex-col lg:col-span-5">
+        <div className="relative flex flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-white p-2.5 shadow-xs">
+          <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-[#111111] lg:aspect-auto lg:h-full">
+            <FittedPreviewImage src={preview} alt={name} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-3.5 sm:p-4">
+              <span
+                className={cn(
+                  "inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white",
+                  badgeClass,
+                )}
+              >
+                {GAME_MODE_META[mode].title}
+              </span>
+              <h3 className="mt-1.5 line-clamp-2 font-display text-base font-extrabold text-white sm:text-lg">
+                {name}
+              </h3>
+            </div>
           </div>
         </div>
       </div>

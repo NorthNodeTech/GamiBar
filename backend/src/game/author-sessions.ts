@@ -28,7 +28,7 @@ export async function fetchAuthorSessions(authorId: string, limit = 50) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("gamibar_rooms")
-    .select("id, code, name, subject, status, mode, created_at, config, gamibar_participants(count)")
+    .select("id, code, name, status, mode, created_at, config, gamibar_participants(count)")
     .eq("author_id", authorId)
     .order("created_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 100));
@@ -38,7 +38,6 @@ export async function fetchAuthorSessions(authorId: string, limit = 50) {
     id: row.id,
     code: row.code,
     name: row.name,
-    subject: row.subject,
     status: row.status,
     mode: row.mode,
     createdAt: row.created_at,
@@ -85,11 +84,11 @@ export async function deleteAuthorSession(authorId: string, roomId: string) {
 export async function fetchAuthorSessionPayload(
   authorId: string,
   roomId: string,
-): Promise<{ mode: GameMode; payload: GamePayload; name: string; subject: string }> {
+): Promise<{ mode: GameMode; payload: GamePayload; name: string }> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("gamibar_rooms")
-    .select("id, name, subject, mode, config")
+    .select("id, name, mode, config")
     .eq("id", roomId)
     .eq("author_id", authorId)
     .maybeSingle();
@@ -98,7 +97,6 @@ export async function fetchAuthorSessionPayload(
   if (!data) throw new HttpError("Game not found or you do not have access.", 404);
   return {
     name: data.name,
-    subject: data.subject,
     mode: data.mode as GameMode,
     payload: data.config as GamePayload,
   };

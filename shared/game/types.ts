@@ -228,7 +228,7 @@ export type Room = {
   id: string;
   code: string;
   name: string;
-  subject: string;
+  subject?: string;
   authorId: string;
   authorName: string;
   status: RoomStatus;

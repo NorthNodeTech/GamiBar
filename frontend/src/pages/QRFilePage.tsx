@@ -165,6 +165,7 @@ export default function QRFilePage() {
             authorName: user?.name || "Host",
             payload: {
               mode: "polls",
+              isResourceDrop: true,
               questions: [
                 {
                   id: "q-1",
