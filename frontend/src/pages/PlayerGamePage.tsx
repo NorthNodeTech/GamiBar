@@ -2040,7 +2040,9 @@ function JigsawMissionPlay({
   const [submitting, setSubmitting] = useState(false);
   const [showComplete, setShowComplete] = useState(completed);
   const [localAssembly, setLocalAssembly] = useState(
-    () => readJigsawMissionPayload(missionPayload).phase === "assemble",
+    () =>
+      readJigsawMissionPayload(missionPayload).phase === "assemble" ||
+      (correctQuestionIds.length >= questions.length && questions.length > 0),
   );
   const [assemblySubmitting, setAssemblySubmitting] = useState(false);
   const [assemblyMessage, setAssemblyMessage] = useState<string | null>(null);
@@ -2283,10 +2285,14 @@ function JigsawMissionPlay({
   }, [completed]);
 
   useEffect(() => {
-    if (readJigsawMissionPayload(missionPayload).phase === "assemble") {
+    if (
+      readJigsawMissionPayload(missionPayload).phase === "assemble" ||
+      (correctSet.size >= total && total > 0) ||
+      !activeQuestion
+    ) {
       setLocalAssembly(true);
     }
-  }, [missionPayloadKey, missionPayload]);
+  }, [missionPayloadKey, missionPayload, correctSet.size, total, activeQuestion]);
 
   const submit = async () => {
     if (!activeQuestion || !selected || feedback || timedOut) return;
@@ -2424,6 +2430,14 @@ function JigsawMissionPlay({
     }
   };
 
+  const isAssemblyPhase = Boolean(
+    localAssembly ||
+    mission.phase === "assemble" ||
+    (!activeQuestion && total > 0) ||
+    correctSet.size >= total ||
+    tilesUnlocked >= tileCount,
+  );
+
   if (assemblySuccess && imageUrl) {
     return (
       <div className="flex min-h-dvh-screen flex-col overflow-x-hidden bg-[#FAFAFA]">
@@ -2445,7 +2459,7 @@ function JigsawMissionPlay({
     );
   }
 
-  if (!localAssembly && !activeQuestion) {
+  if (!isAssemblyPhase && !activeQuestion) {
     return (
       <PageLoader
         message={submitting ? "Saving your answer…" : "Loading question…"}
@@ -2473,7 +2487,7 @@ function JigsawMissionPlay({
           {timerMode === "per_question"
             ? "Question time expired - moving to the next question..."
             : `Time's up - ${
-                localAssembly
+                isAssemblyPhase
                   ? "assembly can no longer be submitted."
                   : "no more answers can be submitted."
               }`}
@@ -2481,7 +2495,7 @@ function JigsawMissionPlay({
       ) : null}
 
       <AnimatePresence mode="wait">
-        {!localAssembly && activeQuestion ? (
+        {!isAssemblyPhase && activeQuestion ? (
           <motion.div
             key="jigsaw-quiz"
             initial={{ opacity: 1, y: 0 }}
@@ -2561,7 +2575,7 @@ function JigsawMissionPlay({
                 })()
               : null}
           </motion.div>
-        ) : localAssembly && imageUrl ? (
+        ) : isAssemblyPhase ? (
           <motion.div
             key="jigsaw-assembly"
             initial={{ opacity: 0, y: 20 }}
@@ -2576,10 +2590,14 @@ function JigsawMissionPlay({
               </span>
             </p>
             <JigsawMissionAssembly
-              imageUrl={imageUrl}
+              imageUrl={imageUrl || tileImageSrc}
               cols={cols}
               rows={rows}
-              earnedTileIds={earnedTileIds}
+              earnedTileIds={
+                earnedTileIds.length >= tileCount
+                  ? earnedTileIds
+                  : Array.from({ length: tileCount }, (_, i) => tileIdFromIndex(i, cols))
+              }
               tileRotations={tileRotations}
               tileLayouts={tileLayouts}
               onRotateTile={handleRotateTile}

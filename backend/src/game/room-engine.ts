@@ -748,14 +748,19 @@ function backfillJigsawMissionTilePresentation(
       earnedTileIds,
       readTileRotations(attempt.payload),
     );
-  const { tileLayouts, changed: layoutsChanged } = ensureTileLayoutsForEarned(
-    earnedTileIds,
-    readTileLayouts(attempt.payload),
-  );
-  if (!earnedChanged && !rotationsChanged && !layoutsChanged) return false;
+  const answers = stored.quizAnswers.get(participantId) ?? new Map();
+  const correctCount = [...answers.values()].filter((a) => a.isCorrect).length;
+  const tileCount = jigsaw.cols * jigsaw.rows;
+  const allQuestionsDone = total > 0 && correctCount >= total;
+  const allTilesDone = earnedTileIds.length >= tileCount;
+  const shouldAssemble = allQuestionsDone || allTilesDone;
+  const phaseChanged = shouldAssemble && attempt.payload?.phase !== "assemble";
+
+  if (!earnedChanged && !rotationsChanged && !layoutsChanged && !phaseChanged) return false;
 
   attempt.payload = {
     ...attempt.payload,
+    ...(shouldAssemble ? { phase: "assemble", firstRoundComplete: true, retryQuestionId: null } : {}),
     earnedTileIds,
     tileRotations,
     tileLayouts,
@@ -2012,15 +2017,18 @@ export async function submitJigsawMissionAnswer(input: {
   const allQuestionsDone = allQuestionsAnsweredCorrectly(
     correctQuestionCount,
     total,
-  );
+  ) || poolAfter.length === 0;
   const allPiecesUnlocked =
-    allQuestionsDone && allTilesEarned(earnedTileIds, tileCount);
+    allQuestionsDone || allTilesEarned(earnedTileIds, tileCount);
+  const finalEarnedTileIds = allPiecesUnlocked && earnedTileIds.length < tileCount
+    ? Array.from({ length: tileCount }, (_, i) => tileIdFromIndex(i, cols))
+    : earnedTileIds;
   const { tileRotations } = ensureTileRotationsForEarned(
-    earnedTileIds,
+    finalEarnedTileIds,
     readTileRotations(attempt.payload),
   );
   const { tileLayouts } = ensureTileLayoutsForEarned(
-    earnedTileIds,
+    finalEarnedTileIds,
     readTileLayouts(attempt.payload),
   );
 
