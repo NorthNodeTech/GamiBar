@@ -18,7 +18,7 @@ import { fetchSharedSessionFiles } from "@/lib/sharing-files/session-files";
 export default function NicknamePage() {
   const navigate = useNavigate();
   const search = useSearch<{ code?: string }>();
-  const cleanCode = normalizeRoomCode(search.code);
+  const cleanCode = normalizeRoomCode(search.code ?? "");
   const [name, setName] = useState("");
   const [roomName, setRoomName] = useState("");
   const [authorName, setAuthorName] = useState("");

@@ -1,4 +1,4 @@
-import { useParams } from "@/lib/navigation";
+import { Link, useParams } from "@/lib/navigation";
 import { Clock, Play, RotateCcw, Sparkles, Square, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";

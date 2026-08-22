@@ -184,7 +184,7 @@ export default function QRFilePage() {
                 showLiveResults: true,
               },
               timeLimitSeconds: null,
-            },
+            } as any,
           },
         });
 

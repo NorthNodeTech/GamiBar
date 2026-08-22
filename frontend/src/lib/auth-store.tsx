@@ -236,8 +236,13 @@ export function AuthProvider({
   }, []);
 
   const logout = useCallback(async () => {
-    const { signOutSupabase } = await import("@/lib/supabase/auth");
+    const [{ signOutSupabase }, { clearAuthorRoom, clearParticipantSession }] = await Promise.all([
+      import("@/lib/supabase/auth"),
+      import("@/lib/game/client-session"),
+    ]);
     await signOutSupabase();
+    clearAuthorRoom();
+    clearParticipantSession();
     setUser(null);
     persistAuthUser(null);
   }, []);

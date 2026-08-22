@@ -41,8 +41,22 @@ export function loadAuthorRoom(roomId?: string): AuthorRoomSession | null {
   }
 }
 
-export function clearAuthorRoom() {
-  sessionStorage.removeItem(AUTHOR_KEY);
+export function clearAuthorRoom(roomId?: string) {
+  if (storageAvailable("sessionStorage")) {
+    sessionStorage.removeItem(AUTHOR_KEY);
+  }
+  if (storageAvailable("localStorage")) {
+    if (roomId) {
+      localStorage.removeItem(`${AUTHOR_KEY}.${roomId}`);
+    } else {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(AUTHOR_KEY)) {
+          localStorage.removeItem(key);
+        }
+      }
+    }
+  }
 }
 
 function storageAvailable(type: "sessionStorage" | "localStorage"): boolean {

@@ -21,6 +21,7 @@ import {
   useState,
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import { toast } from "sonner";
@@ -2846,7 +2847,8 @@ function ReviewLaunchCard({
   questionCount?: number;
 }) {
   const { user } = useAuth();
-  const isPro = Boolean(user?.isPro || (user?.plan && isPaidBillingPlanCode(user.plan)));
+  const authRecord = user as (typeof user & { isPro?: boolean; plan?: string }) | null;
+  const isPro = Boolean(authRecord?.isPro || (authRecord?.plan && isPaidBillingPlanCode(authRecord.plan)));
   const maxPlayers = isPro
     ? BILLING_PLANS.pro_monthly.limits.livePlayersPerRoom
     : BILLING_PLANS.free.limits.livePlayersPerRoom;
