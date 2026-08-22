@@ -1737,32 +1737,31 @@ function VisualPointCompletionCard({
           </div>
         )}
       </div>
-      <div className="relative min-h-0 flex-1 overflow-hidden p-2">
-        <div className="relative flex size-full items-center justify-center overflow-hidden rounded-xl bg-[var(--gamibar-page)]">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-2">
+        <div className="relative inline-block max-h-full max-w-full overflow-hidden rounded-xl bg-[var(--gamibar-page)] shadow-xs">
           <img
             src={current.imageUrl}
             alt={current.prompt || "Target Hunt"}
-            className="max-h-full max-w-full rounded-lg object-contain select-none"
+            className="block max-h-[46vh] w-auto max-w-full rounded-xl object-contain select-none"
             draggable={false}
           />
-          {current.points.map((point, index) => {
+          {current.points.map((point) => {
             const isSelected = selectedPointId === point.id;
             return (
               <div
                 key={point.id}
-                className={cn(
-                  "pointer-events-none absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition-all",
-                  isSelected
-                    ? "border-2 border-emerald-500 bg-emerald-500/30 text-white shadow-lg ring-2 ring-emerald-400/50"
-                    : "border border-black/40 bg-black/25 text-white/90 shadow-xs",
-                )}
+                className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 grid size-6 place-items-center"
                 style={{ left: `${point.x}%`, top: `${point.y}%` }}
               >
-                {isSelected ? (
-                  <CheckCircle2 className="size-4 text-emerald-600 drop-shadow-xs" />
-                ) : (
-                  <span className="text-[10px] font-bold drop-shadow-xs">{index + 1}</span>
-                )}
+                <span
+                  className={cn(
+                    "block size-3.5 rounded-full border-2 border-white shadow-[0_2px_8px_rgba(0,0,0,0.35)] transition-all",
+                    isSelected && "size-4.5 ring-4 ring-emerald-500 shadow-md",
+                  )}
+                  style={{
+                    backgroundColor: isSelected ? "#10B981" : point.color || "#111111",
+                  }}
+                />
               </div>
             );
           })}

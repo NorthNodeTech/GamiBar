@@ -483,6 +483,8 @@ export function ConnectDots({
   const activeColor = activePairId ? pairById(board, activePairId)?.color : undefined;
   const linkColor = linkFrom ? pairById(board, linkFrom.pairId)?.color : undefined;
 
+  const isSelectedLocked = selectedDot ? lockedPairIds.has(selectedDot.pairId) : false;
+
   return (
     <div className={cn("w-full", className)}>
       {showControls && (
@@ -526,29 +528,20 @@ export function ConnectDots({
         {selectedDot ? (
           <div
             role="tooltip"
-            className="pointer-events-none absolute z-30 max-w-[min(340px,92vw)] -translate-x-1/2 rounded-xl border-2 bg-white px-3.5 py-2 text-xs font-semibold leading-relaxed text-[#111111] shadow-xl animate-in fade-in zoom-in-95 duration-150 break-words text-center"
+            className="pointer-events-none absolute z-30 max-w-[min(340px,92vw)] -translate-x-1/2 rounded-xl border-2 bg-white px-3.5 py-2.5 text-xs font-semibold leading-relaxed text-[#111111] shadow-xl animate-in fade-in zoom-in-95 duration-150 break-words text-center"
             style={{
               left: `${Math.max(18, Math.min(82, selectedDot.x))}%`,
               top:
                 selectedDot.y < 28
                   ? `${selectedDot.y + cellSize * 0.42}%`
                   : `${selectedDot.y - cellSize * 0.42}%`,
-              borderColor: selectedDot.color,
+              borderColor: isSelectedLocked ? selectedDot.color : "#111111",
               transform:
                 selectedDot.y < 28
                   ? "translate(-50%, 8px)"
                   : "translate(-50%, calc(-100% - 8px))",
             }}
           >
-            <div className="mb-1 flex items-center justify-center gap-1.5">
-              <span
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: selectedDot.color }}
-              />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
-                {selectedDot.side === "a" ? "Prompt / Question" : "Match / Answer"}
-              </span>
-            </div>
             <p className="text-xs sm:text-sm font-bold text-[#111111] leading-snug break-words">
               {selectedDot.text}
             </p>
@@ -624,7 +617,7 @@ export function ConnectDots({
                 })
                 .join(" ")}
               fill="none"
-              stroke={hasContent ? DRAFT_PATH : (activeColor ?? DRAFT_PATH)}
+              stroke={DRAFT_PATH}
               strokeWidth={cellSize * 0.42}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -632,13 +625,13 @@ export function ConnectDots({
             />
           )}
 
-          {useLinkMode && linkFrom && pointerPreview && linkColor && (
+          {useLinkMode && linkFrom && pointerPreview && (
             <line
               x1={cellCenter(linkFrom.cell, cellSize).x}
               y1={cellCenter(linkFrom.cell, cellSize).y}
               x2={pointerPreview.x}
               y2={pointerPreview.y}
-              stroke={linkColor}
+              stroke={lockedPairIds.has(linkFrom.pairId) ? (linkColor ?? DRAFT_PATH) : DRAFT_PATH}
               strokeWidth={cellSize * 0.12}
               strokeLinecap="round"
               opacity={0.45}
@@ -681,7 +674,7 @@ export function ConnectDots({
                       cy={cy}
                       r={r * 1.38}
                       fill="none"
-                      stroke={pair.color}
+                      stroke={isLocked ? pair.color : "#111111"}
                       strokeWidth={cellSize * 0.08}
                       opacity={0.85}
                       className="animate-pulse"
@@ -691,12 +684,12 @@ export function ConnectDots({
                     cx={cx}
                     cy={cy}
                     r={r}
-                    fill={hasContent && !isLocked ? UNCONNECTED_DOT : pair.color}
+                    fill={isLocked ? pair.color : UNCONNECTED_DOT}
                     stroke={
                       isReject
                         ? "#DC2626"
                         : isSelected
-                          ? pair.color
+                          ? (isLocked ? pair.color : "#111111")
                           : isLinkSource
                             ? "#111111"
                             : "transparent"
@@ -735,23 +728,14 @@ export function ConnectDots({
 
         {hasContent ? (
           selectedDot ? (
-            <div className="mt-3.5 flex items-start gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-3.5 shadow-xs transition-all animate-in fade-in">
-              <span
-                className="mt-0.5 size-3.5 shrink-0 rounded-full ring-2 ring-white shadow-xs"
-                style={{ backgroundColor: selectedDot.color }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-                  {selectedDot.side === "a" ? "Prompt / Question" : "Match / Answer"}
-                </p>
-                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-[var(--foreground)] leading-snug break-words">
-                  {selectedDot.text}
-                </p>
-              </div>
+            <div className="mt-3.5 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-3.5 shadow-xs transition-all animate-in fade-in">
+              <p className="text-xs sm:text-sm font-semibold text-[var(--foreground)] leading-snug break-words">
+                {selectedDot.text}
+              </p>
             </div>
           ) : !disabled ? (
             <p className="mt-2.5 text-center text-xs text-[var(--muted-foreground)]">
-              Tap any dot to view its full text and connect matching pairs.
+              Tap any dot to view its text and connect matching pairs.
             </p>
           ) : null
         ) : null}
