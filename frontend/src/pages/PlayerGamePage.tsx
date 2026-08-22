@@ -1,6 +1,6 @@
 import { useParams } from "@/lib/navigation";
 import { Link, useNavigate } from "@/lib/navigation";
-import { ChevronLeft, ChevronRight, Check, Circle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Circle, CheckCircle2 } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -305,6 +305,20 @@ export default function StudentPlayPage() {
             attemptPayload={snapshot.myAttempt?.payload}
           />
         )}
+        {room.mode === "visual_point" &&
+          room.payload.mode === "visual_point" &&
+          room.payload.questions.length > 0 && (
+            <VisualPointCompletionCard
+              questions={room.payload.questions as VisualPointQuestionPublic[]}
+              answers={
+                snapshot.myAnswers as Array<{
+                  questionId: string;
+                  selectedPointId: string;
+                  submittedAt?: number;
+                }>
+              }
+            />
+          )}
         {room.mode === "polls" && snapshot.pollResults && (
           <PollResultsPanel results={snapshot.pollResults as PollResults} compact />
         )}
@@ -1658,6 +1672,102 @@ function VisualPointStudentImage({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function VisualPointCompletionCard({
+  questions,
+  answers,
+}: {
+  questions: VisualPointQuestionPublic[];
+  answers: Array<{ questionId: string; selectedPointId: string; submittedAt?: number }>;
+}) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const current = questions[selectedIdx] ?? questions[0];
+  const answerMap = useMemo(
+    () => new Map(answers.map((a) => [a.questionId, a.selectedPointId])),
+    [answers],
+  );
+
+  if (!current || !current.imageUrl) {
+    const catalog = getModeCatalog("visual_point");
+    return catalog ? (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
+        <p className="shrink-0 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+          Target Hunt
+        </p>
+        <div className="flex min-h-0 flex-1 items-center justify-center p-3">
+          <img
+            src={catalog.preview}
+            alt="Target Hunt"
+            className="size-full rounded-xl object-contain"
+            draggable={false}
+          />
+        </div>
+      </div>
+    ) : null;
+  }
+
+  const selectedPointId = answerMap.get(current.id);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] shadow-[var(--shadow-soft)]">
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--gamibar-border)] bg-[var(--gamibar-page)]/40 px-3 py-1.5">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+          {current.prompt || "Target Hunt"}
+        </p>
+        {questions.length > 1 && (
+          <div className="flex gap-1">
+            {questions.map((q, idx) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => setSelectedIdx(idx)}
+                className={cn(
+                  "size-5 rounded-full text-[10px] font-bold transition-transform active:scale-95",
+                  idx === selectedIdx
+                    ? "bg-[var(--game-visual-point-deep)] text-white"
+                    : "bg-[var(--gamibar-page)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                )}
+              >
+                {idx + 1}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative min-h-0 flex-1 overflow-hidden p-2">
+        <div className="relative flex size-full items-center justify-center overflow-hidden rounded-xl bg-[var(--gamibar-page)]">
+          <img
+            src={current.imageUrl}
+            alt={current.prompt || "Target Hunt"}
+            className="max-h-full max-w-full rounded-lg object-contain select-none"
+            draggable={false}
+          />
+          {current.points.map((point, index) => {
+            const isSelected = selectedPointId === point.id;
+            return (
+              <div
+                key={point.id}
+                className={cn(
+                  "pointer-events-none absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition-all",
+                  isSelected
+                    ? "border-2 border-emerald-500 bg-emerald-500/30 text-white shadow-lg ring-2 ring-emerald-400/50"
+                    : "border border-black/40 bg-black/25 text-white/90 shadow-xs",
+                )}
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              >
+                {isSelected ? (
+                  <CheckCircle2 className="size-4 text-emerald-600 drop-shadow-xs" />
+                ) : (
+                  <span className="text-[10px] font-bold drop-shadow-xs">{index + 1}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

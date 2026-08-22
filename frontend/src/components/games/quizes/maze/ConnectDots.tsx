@@ -101,6 +101,17 @@ function pathOverlapsOccupied(
 const UNCONNECTED_DOT = "#111111";
 const DRAFT_PATH = "#525252";
 
+type SelectedDotInfo = {
+  text: string;
+  label: string;
+  color: string;
+  pairId: string;
+  side: "a" | "b";
+  cell: Cell;
+  x: number;
+  y: number;
+};
+
 export function ConnectDots({
   board,
   disabled = false,
@@ -116,6 +127,7 @@ export function ConnectDots({
   className,
 }: ConnectDotsProps) {
   const n = board.gridSize;
+  const cellSize = 100 / n;
   const hasContent = board.pairs.some((p) => p.question?.trim() || p.answer?.trim());
   /** Manual grid drawing — never auto-apply solution paths unless explicitly opted in. */
   const useLinkMode = linkMode === true;
@@ -132,9 +144,7 @@ export function ConnectDots({
   const [linkFrom, setLinkFrom] = useState<EndpointInfo | null>(null);
   const [pointerPreview, setPointerPreview] = useState<{ x: number; y: number } | null>(null);
   const [rejectFlash, setRejectFlash] = useState<string | null>(null);
-  const [hoverTooltip, setHoverTooltip] = useState<{ text: string; x: number; y: number } | null>(
-    null,
-  );
+  const [selectedDot, setSelectedDot] = useState<SelectedDotInfo | null>(null);
 
   const lockedPairIds = useMemo(
     () =>
@@ -224,9 +234,33 @@ export function ConnectDots({
     [board, occupied],
   );
 
+  const selectDotAtCell = useCallback(
+    (cell: Cell) => {
+      const ep = endpointInfo(board, cell);
+      if (!ep) return;
+      const pair = pairById(board, ep.pairId);
+      if (!pair) return;
+      const idx = ep.side === "a" ? 0 : 1;
+      const text = endpointTooltip(pair, idx as 0 | 1) || endpointLabel(pair, idx as 0 | 1);
+      const { x: cx, y: cy } = cellCenter(cell, cellSize);
+      setSelectedDot({
+        text,
+        label: endpointLabel(pair, idx as 0 | 1),
+        color: pair.color,
+        pairId: ep.pairId,
+        side: ep.side,
+        cell,
+        x: (cx / 100) * 100,
+        y: (cy / 100) * 100,
+      });
+    },
+    [board, cellSize],
+  );
+
   const beginAt = useCallback(
     (cell: Cell) => {
       if (disabled) return;
+      selectDotAtCell(cell);
       const pairId = endpointPairId(board, cell);
       if (!pairId) return;
       if (lockedPairIds.has(pairId)) return;
@@ -244,7 +278,7 @@ export function ConnectDots({
       }
       setDraft([cell]);
     },
-    [board, disabled, lockedPairIds, paths, pushHistory],
+    [board, disabled, lockedPairIds, paths, pushHistory, selectDotAtCell],
   );
 
   const extendTo = useCallback(
@@ -356,6 +390,7 @@ export function ConnectDots({
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     const cell = cellFromPointer(e.clientX, e.clientY);
     if (!cell) return;
+    selectDotAtCell(cell);
     const ep = endpointInfo(board, cell);
     if (!ep || lockedPairIds.has(ep.pairId)) return;
 
@@ -437,9 +472,9 @@ export function ConnectDots({
     setActivePairId(null);
     setLinkFrom(null);
     setPointerPreview(null);
+    setSelectedDot(null);
   };
 
-  const cellSize = 100 / n;
   const viewPad = fitToContainer ? cellSize * 0.35 : 0;
   const viewBox =
     viewPad > 0
@@ -488,13 +523,35 @@ export function ConnectDots({
             : "mx-auto w-full max-w-[min(100%,100vw-2rem)] sm:max-w-[min(100%,520px)]",
         )}
       >
-        {hoverTooltip ? (
+        {selectedDot ? (
           <div
             role="tooltip"
-            className="pointer-events-none absolute z-20 max-w-[min(240px,80vw)] -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-lg border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] px-2.5 py-1.5 text-xs font-medium leading-snug text-[var(--foreground)] shadow-[var(--shadow-soft)]"
-            style={{ left: `${hoverTooltip.x}%`, top: `${hoverTooltip.y}%` }}
+            className="pointer-events-none absolute z-30 max-w-[min(340px,92vw)] -translate-x-1/2 rounded-xl border-2 bg-white px-3.5 py-2 text-xs font-semibold leading-relaxed text-[#111111] shadow-xl animate-in fade-in zoom-in-95 duration-150 break-words text-center"
+            style={{
+              left: `${Math.max(18, Math.min(82, selectedDot.x))}%`,
+              top:
+                selectedDot.y < 28
+                  ? `${selectedDot.y + cellSize * 0.42}%`
+                  : `${selectedDot.y - cellSize * 0.42}%`,
+              borderColor: selectedDot.color,
+              transform:
+                selectedDot.y < 28
+                  ? "translate(-50%, 8px)"
+                  : "translate(-50%, calc(-100% - 8px))",
+            }}
           >
-            {hoverTooltip.text}
+            <div className="mb-1 flex items-center justify-center gap-1.5">
+              <span
+                className="size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: selectedDot.color }}
+              />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#737373]">
+                {selectedDot.side === "a" ? "Prompt / Question" : "Match / Answer"}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm font-bold text-[#111111] leading-snug break-words">
+              {selectedDot.text}
+            </p>
           </div>
         ) : null}
 
@@ -601,15 +658,14 @@ export function ConnectDots({
               const isReject = rejectFlash === pair.id;
               const isLinkSource =
                 linkFrom?.pairId === pair.id && linkFrom.side === (idx === 0 ? "a" : "b");
+              const isSelected =
+                cellsEqual(selectedDot?.cell ?? { r: -1, c: -1 }, cell);
 
               return (
                 <g
                   key={`${pair.id}-${idx}`}
-                  onPointerEnter={() => {
-                    if (!tooltip) return;
-                    setHoverTooltip({ text: tooltip, x: (cx / 100) * 100, y: (cy / 100) * 100 });
-                  }}
-                  onPointerLeave={() => setHoverTooltip(null)}
+                  onClick={() => selectDotAtCell(cell)}
+                  style={{ cursor: "pointer" }}
                 >
                   {tooltip ? <title>{tooltip}</title> : null}
                   <circle
@@ -619,13 +675,41 @@ export function ConnectDots({
                     fill="transparent"
                     style={{ pointerEvents: disabled ? "none" : "all" }}
                   />
+                  {isSelected ? (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={r * 1.38}
+                      fill="none"
+                      stroke={pair.color}
+                      strokeWidth={cellSize * 0.08}
+                      opacity={0.85}
+                      className="animate-pulse"
+                    />
+                  ) : null}
                   <circle
                     cx={cx}
                     cy={cy}
                     r={r}
                     fill={hasContent && !isLocked ? UNCONNECTED_DOT : pair.color}
-                    stroke={isReject ? "#DC2626" : isLinkSource ? "#111111" : "transparent"}
-                    strokeWidth={isReject || isLinkSource ? 0.35 : 0}
+                    stroke={
+                      isReject
+                        ? "#DC2626"
+                        : isSelected
+                          ? pair.color
+                          : isLinkSource
+                            ? "#111111"
+                            : "transparent"
+                    }
+                    strokeWidth={
+                      isReject
+                        ? 0.5
+                        : isSelected
+                          ? cellSize * 0.06
+                          : isLinkSource
+                            ? 0.35
+                            : 0
+                    }
                     opacity={isLocked ? 1 : 0.95}
                     className={cn(isReject && "animate-pulse")}
                   />
@@ -649,10 +733,27 @@ export function ConnectDots({
           )}
         </svg>
 
-        {hasContent && !disabled ? (
-          <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
-            Hover a dot to read its text, then draw a path between the matching question and answer.
-          </p>
+        {hasContent ? (
+          selectedDot ? (
+            <div className="mt-3.5 flex items-start gap-3 rounded-2xl border border-[var(--gamibar-border)] bg-[var(--gamibar-surface)] p-3.5 shadow-xs transition-all animate-in fade-in">
+              <span
+                className="mt-0.5 size-3.5 shrink-0 rounded-full ring-2 ring-white shadow-xs"
+                style={{ backgroundColor: selectedDot.color }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                  {selectedDot.side === "a" ? "Prompt / Question" : "Match / Answer"}
+                </p>
+                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-[var(--foreground)] leading-snug break-words">
+                  {selectedDot.text}
+                </p>
+              </div>
+            </div>
+          ) : !disabled ? (
+            <p className="mt-2.5 text-center text-xs text-[var(--muted-foreground)]">
+              Tap any dot to view its full text and connect matching pairs.
+            </p>
+          ) : null
         ) : null}
       </div>
     </div>
