@@ -74,6 +74,7 @@ function buildBatchQuestionPrompt(input) {
     "Match vocabulary, assumed knowledge, and difficulty to the target audience. Never use university or engineering-level detail for school learners unless explicitly requested.",
     "For each question, provide exactly four short options labeled A, B, C, D.",
     "Exactly one option must be correct. The other three must be plausible but unambiguously wrong.",
+    "CRITICAL FORMATTING RULE: All four options must have completely identical plain text formatting, capitalization, and punctuation. Never wrap the correct option or any option in backticks, quotes, asterisks, markdown, or HTML tags.",
     "Avoid trick questions, duplicate options, unsafe content, markdown, explanations, and extra keys.",
     "Do not repeat or closely paraphrase any question in avoidQuestions or within the generated batch.",
     `Request JSON:\n${JSON.stringify(input, null, 2)}`,
@@ -88,6 +89,7 @@ function buildQuestionPrompt(input) {
     "Match vocabulary, assumed knowledge, and difficulty to the target audience. Never use university or engineering-level detail for school learners unless the teacher explicitly requests it.",
     "Return one concise standalone multiple-choice question with exactly four short options.",
     "Exactly one option must be correct. The other three must be plausible but unambiguously wrong.",
+    "CRITICAL FORMATTING RULE: All four options must have completely identical plain text formatting, capitalization, and punctuation. Never wrap the correct option or any option in backticks, quotes, asterisks, markdown, or HTML tags.",
     "Avoid trick questions, duplicate options, unsafe content, markdown, explanations, and extra keys.",
     "Do not repeat or closely paraphrase any question in avoidQuestions.",
     `Request JSON:\n${JSON.stringify(input, null, 2)}`,
@@ -307,7 +309,13 @@ function normalizeComparison(value) {
 
 function cleanText(value, maxLength) {
   if (typeof value !== "string") return "";
-  return value.replace(/\s+/g, " ").trim().slice(0, maxLength);
+  return value
+    .replace(/[`*_~]+/g, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
 }
 
 function toInteger(value) {

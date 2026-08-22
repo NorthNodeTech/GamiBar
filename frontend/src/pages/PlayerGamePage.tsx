@@ -908,7 +908,7 @@ function QuizPlay({
                   {selected === opt ? <Check className="size-4" strokeWidth={3} /> : opt}
                 </span>
                 <span className="min-w-0 flex-1 font-medium leading-snug">
-                  {current.options[opt]}
+                  {(current.options[opt] || "").replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim()}
                 </span>
                 {selected === opt && !isAnswered && isActive && !timedOut && (
                   <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white/90">

@@ -132,7 +132,9 @@ export function SlidoQuizPanel({
                   OPTION_LABELS[opt]
                 )}
               </span>
-              <span className="min-w-0 flex-1">{question.options[opt]}</span>
+              <span className="min-w-0 flex-1">
+                {(question.options[opt] || "").replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim()}
+              </span>
               {selected === opt && feedback === null && (
                 <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
                   <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />

@@ -86,7 +86,7 @@ export function AiGenerateQuestionsPanel({
     setPending(true);
 
     const completed: QuizQuestionGenerationResponse[] = [];
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 1;
 
     try {
       let remaining = requestedCount;
@@ -131,7 +131,18 @@ export function AiGenerateQuestionsPanel({
           throw lastErr || new Error("Could not generate questions for this topic.");
         }
 
-        completed.push(...batchQuestions);
+        const sanitizedBatch = batchQuestions.map((q) => ({
+          ...q,
+          question: q.question.replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim(),
+          options: {
+            A: q.options.A.replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim(),
+            B: q.options.B.replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim(),
+            C: q.options.C.replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim(),
+            D: q.options.D.replace(/[`*_~]+/g, "").replace(/<[^>]*>/g, "").replace(/^["'`]+|["'`]+$/g, "").trim(),
+          },
+        }));
+
+        completed.push(...sanitizedBatch);
         setGenerated([...completed]);
         remaining -= batchQuestions.length;
         batchIndex += 1;

@@ -289,5 +289,11 @@ function ensureDistinct(values) {
 
 function cleanText(value, maxLength) {
   if (typeof value !== "string") return "";
-  return value.replace(/\s+/g, " ").trim().slice(0, maxLength);
+  return value
+    .replace(/[`*_~]+/g, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
 }
